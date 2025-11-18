@@ -411,19 +411,23 @@ process BAMREADCOUNT {
 
 }
 
-process VT_DECOMPOSE {
+process VT_POSTPROCESS {
     
-    conda "bioconda::vt"
-
+    conda "bioconda::vt bioconda::bcftools=1.22"
+    publishDir "${params.outdir}/vt_test"
     input:
         tuple val(meta), path(somatic_vcf), path(somatic_vcf_index)
+        path(reference_fa)
+        path(reference_index_dir)
 
     output:
-        tuple val(meta), path("${meta.somatic_name}_vt_decomp.vcf.gz"), emit: vt_vcf
+        tuple val(meta), path("${meta.somatic_name}_postprocess.vcf.gz"), emit: vt_vcf
 
     script:
         """
-        vt decompose -s $somatic_vcf -o "${meta.somatic_name}_vt_decomp.vcf.gz"
+        vt decompose -s $somatic_vcf -o decomp.vcf.gz
+        vt normalize decomp.vcf.gz -r $reference_fa -o decomp_norm.vcf.gz
+        vt uniq decomp_norm.vcf.gz -o "${meta.somatic_name}_postprocess.vcf.gz"
         """
 }
 
@@ -497,25 +501,27 @@ process INDEX_FINAL_VCF {
 
 }
 
+//process MERGE_SOMATIC_VCFS {
+//    tuple 
+//
+//}
 
 process ADD_VCF_GT_FIELD {
     
     container "griffithlab/vatools:5.2.0"
 
     input:
-        tuple val(somatic_name), val(tumor_meta), val(normal_meta), val(somatic_caller), 
-              path(somatic_vcf), path(somatic_vcf_index)
+        tuple val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index)
          
     output:
-        tuple val(somatic_name), val(tumor_meta), val(normal_meta), val(somatic_caller),
-              path("${somatic_name}_${somatic_caller}_gt.vcf.gz"),
-              emit: gt_vcf
+        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_${somatic_meta.somatic_caller}_gt.vcf.gz"), emit: gt_vcf
 
     script:
         """
-        vcf-genotype-annotator $somatic_vcf "${tumor_meta.sample_name}" 0/1 -o "${somatic_name}_${somatic_caller}_gt.vcf.gz"
-        
-        #vcf-genotype-annotator "${somatic_name}_${somatic_caller}_gt.vcf.gz" "${normal_meta.sample_name}" 0/0 -o "${somatic_name}_${somatic_caller}_gt.vcf.gz"
+        vcf-genotype-annotator $somatic_vcf \
+            "${somatic_meta.tumor_metamap.sample_name}" \
+            0/1 \
+            -o "${somatic_meta.somatic_name}_${somatic_meta.somatic_caller}_gt.vcf.gz"
 
         """
 
@@ -528,25 +534,37 @@ process POSTPROCESS_STRELKA {
     publishDir "${params.outdir}/somatic/strelka", mode: "copy"
 
     input:
-        tuple val(somatic_name), val(tumor_meta), val(normal_meta), val(somatic_caller),
+        tuple val(somatic_meta),
               path(strelka_snvs), path(strelka_snvs_index), 
               path(strelka_indels), path(strelka_indels_index)
 
     output:
-        tuple val(somatic_name), val(tumor_meta), val(normal_meta), val(somatic_caller), 
-              path("${somatic_name}_strelka.vcf.gz"), path("${somatic_name}_strelka.vcf.gz.tbi"), 
+        tuple val(somatic_meta),
+              path("${somatic_meta.somatic_name}_strelka.vcf.gz"), path("${somatic_meta.somatic_name}_strelka.vcf.gz.tbi"), 
               emit: strelka_vcf
     
     script:
         """
-        bcftools concat --allow-overlaps --remove-duplicates -Oz -o "${somatic_name}_strelka_merged.vcf.gz" --threads $task.cpus $strelka_snvs $strelka_indels
-        bcftools view -s NORMAL,TUMOR "${somatic_name}_strelka_merged.vcf.gz" -Oz -o "${somatic_name}_strelka_merged_order_samples.vcf.gz"
+        bcftools concat \
+            --allow-overlaps \
+            --remove-duplicates \
+            -Oz \
+            -o "${somatic_meta.somatic_name}_strelka_merged.vcf.gz" \
+            --threads $task.cpus \
+            $strelka_snvs $strelka_indels
 
-        echo ${normal_meta.sample_name} > new_names.txt
-        echo ${tumor_meta.sample_name} >> new_names.txt
+        bcftools view -s NORMAL,TUMOR "${somatic_meta.somatic_name}_strelka_merged.vcf.gz" \
+            -Oz -o "${somatic_meta.somatic_name}_strelka_merged_order_samples.vcf.gz"
+
+        echo ${somatic_meta.normal_metamap.sample_name} > new_names.txt
+        echo ${somatic_meta.tumor_metamap.sample_name} >> new_names.txt
         
-        bcftools reheader --samples new_names.txt  --output "${somatic_name}_strelka.vcf.gz" "${somatic_name}_strelka_merged_order_samples.vcf.gz"
-        bcftools index -t "${somatic_name}_strelka.vcf.gz"
+        bcftools reheader \
+            --samples new_names.txt \
+            --output "${somatic_meta.somatic_name}_strelka.vcf.gz" \
+            "${somatic_meta.somatic_name}_strelka_merged_order_samples.vcf.gz"
+
+        bcftools index -t "${somatic_meta.somatic_name}_strelka.vcf.gz"
         """
 }
 
@@ -564,12 +582,18 @@ process STRELKA {
 
     output:
 
-        tuple val(somatic_name), val(tumor_meta), val(normal_meta), val("strelka"),
+        tuple val(somatic_meta),
               path("./strelka/results/variants/somatic.snvs.vcf.gz"), path("./strelka/results/variants/somatic.snvs.vcf.gz.tbi"),
               path("./strelka/results/variants/somatic.indels.vcf.gz"), path("./strelka/results/variants/somatic.indels.vcf.gz.tbi"),
               emit: strelka_vcf
 
     script:
+        somatic_meta = [
+            somatic_name: somatic_name,
+            somatic_caller: 'strelka',
+            tumor_metamap: tumor_meta,
+            normal_metamap: normal_meta
+        ]
         """
         configManta.py \
             --normalBam $normal_bam \
@@ -600,7 +624,7 @@ process POSTPROCESS_MUTECT2_SCATTER {
 
     container "broadinstitute/gatk:4.6.1.0"
 
-    publishDir "${params.outdir}/somatic/mutect2", mode: "copy"
+    publishDir "${params.outdir}/somatic/mutect", mode: "copy"
 
     input:
         tuple val(meta), path(vcfs), path(vcf_indices), path(f1r2s), path(stats)
@@ -697,7 +721,7 @@ process MUTECT2_SCATTER {
 
         somatic_meta = [
             somatic_name: somatic_name,
-            somatic_caller: 'mutect2',
+            somatic_caller: 'mutect',
             tumor_metamap: tumor_meta,
             normal_metamap: normal_meta
         ]
@@ -1165,17 +1189,17 @@ workflow {
     //filtered_vcf = FILTER_SOMATIC_NONPASSING(mutect_postprocess.vcf, mutect_postprocess.caller_info)
 
     // Use vt decompose to get simplest/standardized variant representation for vcf compatibility
-    vt = VT_DECOMPOSE(mutect_postprocess.mutect_vcf)
+    vt = VT_POSTPROCESS(mutect_postprocess.mutect_vcf, reference_fa, reference_index_files)
 
     // Annotate VCF with VEP
-    vep = VEP_ANNOTATE(vt.vt_vcf,
+    vep = VEP_ANNOTATE(vt,
                        params.reference_fa,
                        params.vep_cache,
                        params.vep_plugins)
     
-     
+    
+    /*
     // Add Read Coverage to VCF
-    // Currently only for Tumor RNA as Mutect2 handles the DNA already
     bamreadcount = BAMREADCOUNT(vep.vep_vcf,
                                 params.reference_fa,
                                 mapped_dna_rna_branch.mapped_rna)
@@ -1225,6 +1249,7 @@ workflow {
                       preproc_bams_type_branched.tumor,
                       preproc_bams_type_branched.normal,
                       hla_calls.normal_dna)
+    */
 
 
 }
