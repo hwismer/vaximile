@@ -3,8 +3,8 @@
 
 process {
     executor = "slurm"
-    cpus = 30
-    memory = "128GB"
+    cpus = 8 
+    memory = "256GB"
     time = 14.d
     maxForks = 30
     //clusterOptions '--gres=scratch:500G'
@@ -13,6 +13,9 @@ process {
 apptainer {
     enabled = true
     autoMounts= true
+    //runOptions = '--writable-tmpfs -B ${projectDir}/work/:/tmp'
+    runOptions = "-B ${projectDir}/work:/scratch"
+    //home = '${project_dir}/work'
 }
 
 executor {

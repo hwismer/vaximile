@@ -45,19 +45,18 @@ process VT_DECOMPOSE_GERMLINE {
     publishDir "${params.outdir}/germline/HaplotypeCaller", mode: "copy"
 
     input:
-        tuple val(sample_id), val(sample_type)
-        tuple path(vcf), path(vcf_index)
+        tuple val(meta), path(germline_vcf), path(germline_vcf_index)
 
     output:
-        tuple path("${sample_id}_germline_decomp.vcf.gz"), path("${sample_id}_germline_decomp.vcf.gz.tbi"), emit: vcf
-        tuple val(sample_id), val(sample_type), emit: sample_info
+        tuple val(meta), path("${meta.sample_name}_germline.vcf.gz"), path("${meta.sample_name}_germline.vcf.gz.tbi"), emit: germline_vcf
     script:
         """
-        vt decompose -s $vcf -o "${sample_id}_germline_decomp.vcf.gz"
+        vt decompose -s $germline_vcf -o "${meta.sample_name}_germline.vcf.gz"
 
-        tabix -p vcf "${sample_id}_germline_decomp.vcf.gz"
+        tabix -p vcf "${meta.sample_name}_germline.vcf.gz"
         """
 }
+
 
 
 
@@ -68,35 +67,33 @@ process PHASE_VCF_INDEX {
     publishDir "${params.outdir}/variants/phased_variants/", mode: "copy"
 
     input:
-        path(phased_vcf)
-        tuple val(somatic_name), val(somatic_caller), val(tumor_name), val(normal_name)
+        tuple val(meta), path(phased_vcf)
 
     output:
-        tuple path("${somatic_name}_phased_annotated.vcf.gz"), path("${somatic_name}_phased_annotated.vcf.gz.tbi"), emit: phased_vcf
+        tuple val(meta), path("${meta.somatic_name}_phased_annotated.vcf.gz"), path("${meta.somatic_name}_phased_annotated.vcf.gz.tbi"), emit: phased_vcf
 
 
     script:
         """
-        bgzip -c $phased_vcf > ${somatic_name}_phased_annotated.vcf.gz
+        bgzip -c $phased_vcf > ${meta.somatic_name}_phased_annotated.vcf.gz
         
-        tabix -p vcf ${somatic_name}_phased_annotated.vcf.gz
+        tabix -p vcf ${meta.somatic_name}_phased_annotated.vcf.gz
         """
 
 }
 
 process PHASE_VCF_VEP {
 
-    //container "/c4/home/hwismer/0_execs/vep/vep.sif"
     container "ensemblorg/ensembl-vep:release_115.0"
 
     input:
-        path phased_vcf
+        tuple val(meta), path(phased_vcf)
         path reference_fa
         path vep_cache
-        path(vep_plugins)
+        path vep_plugins
 
     output:
-        path "phased_vcf_vep.vcf", emit: vcf
+        tuple val(meta), path("phased_vcf_vep.vcf"), emit: vcf
 
     script:
         """
@@ -121,21 +118,20 @@ process PHASE_VCF_RBPHASING {
     container "broadinstitute/gatk3:3.6-0" 
 
     input:
-        path(combined_sorted_vcf)
+        tuple val(meta), path(combined_sorted_vcf)
         path(reference_fa)
         path(reference_index_dir)
-        tuple val(tumor_sample), val(sample_type), path(tumor_reads), path(tumor_reads_index)
+        tuple val(meta), path(tumor_reads), path(tumor_reads_index)
 
     output:
-        path("phased.vcf"), emit:vcf
-        
+        tuple val(meta), path("phased.vcf")
 
     script:
 
         """
         java -Xmx16g -jar /usr/GenomeAnalysisTK.jar \
             -T ReadBackedPhasing \
-                -R $reference_index_dir/$reference_fa \
+                -R $reference_fa \
                 -I $tumor_reads \
                 --variant $combined_sorted_vcf \
                 -L $combined_sorted_vcf \
@@ -153,23 +149,21 @@ process PHASE_VCF_SORT_VCF {
     container 'broadinstitute/picard:3.4.0'
     
     input:
-        path(somatic_germline_vcf_combined)
+        tuple val(meta), path(combined_vcf)
         path(reference_dict)
 
     output:
-        path("combined_somatic_plus_germline.sorted.vcf"), emit: vcf
+        tuple val(meta), path("combined.sorted.vcf"), emit: vcf
 
     script:
         """
         java -jar /usr/picard/picard.jar \
             SortVcf \
-                -I $somatic_germline_vcf_combined \
-                -O combined_somatic_plus_germline.sorted.vcf \
+                -I $combined_vcf \
+                -O combined.sorted.vcf \
                 -SD $reference_dict
 
-
         """
-
 
 
 }
@@ -177,29 +171,25 @@ process PHASE_VCF_SORT_VCF {
 
 process PHASE_VCF_COMBINE_VARIANTS {
 
-    //container "/c4/home/hwismer/pvac_pipeline/containers/broadinstitute-gatk3-3.6-0.sif"
     container "broadinstitute/gatk3:3.6-0"
 
-    //publishDir "${params.outdir}/phase_vcf/", mode: "copy"
-
     input:
-        path(tumor_only_vcf)
-        path(tumor_only_vcf_index)
-        tuple path(germline_vcf), path(germline_vcf_index)
+        tuple val(meta), path(subset_vcf), path(subset_vcf_index)
+        tuple val(germline_meta), path(germline_vcf), path(germline_vcf_index)
         path(reference_fa)
         path(reference_index_dir)
 
     output:
-        path("combined_somatic_plus_germline.vcf"), emit: combined_vcf
+        tuple val(meta), path("combined_somatic_plus_germline.vcf"), emit: combined_vcf
 
     script:
         """
         
         java -jar /usr/GenomeAnalysisTK.jar \
             -T CombineVariants \
-                -R $reference_index_dir/$reference_fa \
+                -R $reference_fa \
                 --variant $germline_vcf \
-                --variant $tumor_only_vcf \
+                --variant $subset_vcf \
                 -o combined_somatic_plus_germline.vcf \
                 --assumeIdenticalSamples
 
@@ -210,28 +200,23 @@ process PHASE_VCF_COMBINE_VARIANTS {
 
 process PHASE_VCF_SELECT_VARIANTS {
 
-    //container "/c4/home/hwismer/pvac_pipeline/containers/gatk_4.6.1.0.sif"
     container "broadinstitute/gatk:4.6.1.0"
     
-    //publishDir "${params.outdir}/phase_vcf/", mode: "copy"
-
     input:
-        tuple val(sample_name), val(sample_type), path(sample_reads), path(sample_reads_index)
-        tuple path(somatic_vcf), path(somatic_vcf_index)
+        tuple val(sample_meta), path(sample_reads), path(sample_reads_index)
+        tuple val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index)
         path(reference_fa)
         path(reference_index_dir)
 
-
     output:
-        path("tumor_only.vcf.gz"), emit: vcf
-        path("tumor_only.vcf.gz.tbi"), emit: vcf_index
+        tuple val(somatic_meta), path("tumor_only.vcf.gz"), path("tumor_only.vcf.gz.tbi"), emit:vcf
 
     script:
         """
         gatk SelectVariants \
             -V $somatic_vcf \
-            -R "${reference_index_dir}/${reference_fa}" \
-            --sample-name $sample_name \
+            -R "${reference_fa}" \
+            --sample-name ${sample_meta.sample_name} \
             -O tumor_only.vcf.gz
 
         gatk IndexFeatureFile \
@@ -243,26 +228,20 @@ process PHASE_VCF_SELECT_VARIANTS {
 
 process POSTPROCESS_HAPLOTYPE_SCATTER {
 
-    //container "/c4/home/hwismer/pvac_pipeline/containers/gatk_4.3.0.0.sif"
-
     container "broadinstitute/gatk:4.3.0.0"
 
-    //publishDir "${params.outdir}/germline/HaplotypeCaller", mode: "copy"
-
     input:
-        tuple val(sample_id), val(sample_type)
-        path(vcfs)
-        path(reference_fa)
-        path(reference_index_dir)
-        path(hapmap)
+        tuple val(meta), path(vcfs)
+        path reference_fa
+        path reference_index_dir
+        path hapmap
         path hapmap_index
-        path(mills)
+        path mills
         path mills_index
 
 
     output:
-        tuple val(sample_id), val(sample_type), emit: germline_sample_info
-        tuple path("${sample_id}_germline_filtered.vcf.gz"), path("${sample_id}_germline_filtered.vcf.gz.tbi"), emit: germline_vcf
+        tuple val(meta), path("${meta.sample_name}_germline_filtered.vcf.gz"), path("${meta.sample_name}_germline_filtered.vcf.gz.tbi"), emit: germline_vcf
 
     script:
 
@@ -278,22 +257,22 @@ process POSTPROCESS_HAPLOTYPE_SCATTER {
         """
         gatk GatherVcfs \
             $vcf_as_input \
-            -O "${sample_id}_germline_merged.vcf.gz"
+            -O "${meta.sample_name}_germline_merged.vcf.gz"
     
         gatk IndexFeatureFile \
-            -I "${sample_id}_germline_merged.vcf.gz"
+            -I "${meta.sample_name}_germline_merged.vcf.gz"
 
         gatk FilterVariantTranches \
-            -V "${sample_id}_germline_merged.vcf.gz" \
+            -V "${meta.sample_name}_germline_merged.vcf.gz" \
             --resource $hapmap \
             --resource $mills \
             --info-key CNN_1D \
             --snp-tranche 99.95 \
             --indel-tranche 99.4 \
-            -O "${sample_id}_germline_filtered.vcf.gz"
+            -O "${meta.sample_name}_germline_filtered.vcf.gz"
 
         gatk IndexFeatureFile \
-            -I "${sample_id}_germline_filtered.vcf.gz"
+            -I "${meta.sample_name}_germline_filtered.vcf.gz"
 
         """
 }
@@ -308,39 +287,32 @@ process HAPLOTYPE_CALLER_SCATTER {
     cpus 2
     memory "16GB"
 
-    //container "/c4/home/hwismer/pvac_pipeline/containers/gatk_4.3.0.0.sif"
-
     container "broadinstitute/gatk:4.3.0.0"
 
-
-    // publishDir "${params.outdir}/germline/scatter/", mode: "copy"
-
-
     input:
-        tuple val(sample_id), val(sample_type), path(sample_reads), path(sample_reads_index)
+        tuple val(meta), path(sample_reads), path(sample_reads_index)
         each path(interval_shard)
         path reference_fa
         path reference_index_dir
 
     output:
-        tuple val(sample_id), val(sample_type), emit: sample_info
-        path("${sample_id}_${interval_shard}_CNN.vcf.gz"), emit: vcf
+        tuple val(meta), path("${meta.sample_name}_${interval_shard}_CNN.vcf.gz"), emit: vcfs
 
     script:
 
         """
         gatk HaplotypeCaller \
-            -R $reference_index_dir/$reference_fa \
+            -R $reference_fa \
             -I $sample_reads \
             -L $interval_shard \
-            -O "${sample_id}_${interval_shard}.vcf.gz" \
+            -O "${meta.sample_name}_${interval_shard}.vcf.gz" \
             -ERC NONE
 
         gatk CNNScoreVariants \
-            -V "${sample_id}_${interval_shard}.vcf.gz" \
+            -V "${meta.sample_name}_${interval_shard}.vcf.gz" \
             -L $interval_shard \
-            -R $reference_index_dir/$reference_fa \
-            -O "${sample_id}_${interval_shard}_CNN.vcf.gz" \
+            -R $reference_fa \
+            -O "${meta.sample_name}_${interval_shard}_CNN.vcf.gz" \
 
 
         """
@@ -356,21 +328,20 @@ process ANNOTATE_VCF_EXPRESSION {
     publishDir "${params.outdir}/coverage/", mode: "copy"
 
     input:
-        path(coverage_annotated_vcf)
-        tuple val(sample_id), val(sample_type), path(kallisto_quant_dir)
-        tuple val(somatic_name), val(somatic_caller), val(tumor_name), val(normal_name)
+        tuple val(somatic_meta), path(vcf)
+        tuple val(sample_meta), path(kallisto_dir)
 
     output:
-        path("${somatic_name}_cov_expr_annotated.vcf")
+        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_cov_expr_annotated.vcf")
 
     script:
         """
         vcf-expression-annotator \
-            $coverage_annotated_vcf \
-            -s $sample_id \
-            "${kallisto_quant_dir}/abundance.tsv" \
+            $vcf \
+            -s ${sample_meta.sample_name} \
+            "${kallisto_dir}/abundance.tsv" \
             kallisto transcript \
-            -o "${somatic_name}_cov_expr_annotated.vcf"
+            -o "${somatic_meta.somatic_name}_cov_expr_annotated.vcf"
 
         """
 
@@ -383,12 +354,11 @@ process ANNOTATE_VCF_COVERAGE {
     publishDir "${params.outdir}/coverage/", mode: "copy"
 
     input:
-        path(vcf)
-        tuple val(sample_name), val(sample_type), path(brc_indels), path(brc_snvs)
-        tuple val(somatic_name), val(somatic_caller), val(tumor_name), val(normal_name)
+        tuple val(somatic_meta), path(vcf), val(sample_meta),
+        path(brc_indels), path(brc_snvs)
 
     output:
-        path("${somatic_name}_annotated.vcf")
+        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_annotated.vcf")
 
     script:
         """
@@ -396,68 +366,64 @@ process ANNOTATE_VCF_COVERAGE {
             $vcf \
             $brc_snvs \
             RNA \
-            -s $sample_name \
+            -s ${sample_meta.sample_name} \
             -t snv \
-            -o "${somatic_name}_snv_annotated.vcf"
+            -o "${somatic_meta.somatic_name}_snv_annotated.vcf"
 
         vcf-readcount-annotator \
-            "${somatic_name}_snv_annotated.vcf" \
+            "${somatic_meta.somatic_name}_snv_annotated.vcf" \
             $brc_indels \
             RNA \
-            -s $sample_name \
+            -s ${sample_meta.sample_name} \
             -t indel \
-            -o ${somatic_name}_annotated.vcf
+            -o ${somatic_meta.somatic_name}_annotated.vcf
 
         """
 
 }
 
 process BAMREADCOUNT {
-    //container "/c4/home/hwismer/pvac_pipeline/containers/bam_readcount_helper-cwl_1.2.1.sif"
 
     container "mgibio/bam_readcount_helper-cwl:1.2.1"
 
     publishDir "${params.outdir}/coverage/", mode: "copy"
 
     input:
-        path(vt_vcf)
-        tuple val(somatic_name), val(somatic_caller), val(tumor_name), val(normal_name)
+        tuple val(somatic_meta), path(vt_vcf)
         path reference_fa
-        tuple val(sample_name), val(sample_type), path(sample_bam), path(sample_bam_index)
+        tuple val(sample_meta), path(sample_bam), path(sample_bam_index)
 
     output:
-        tuple val(sample_name), val(sample_type), path("${sample_name}_bamrc_helper/${sample_name}_bam_readcount_indel.tsv"), path("${sample_name}_bamrc_helper/${sample_name}_bam_readcount_snv.tsv"), emit: brc_files
-        tuple val(somatic_name), val(somatic_caller), val(tumor_name), val(normal_name), emit: somatic_info
+        tuple val(somatic_meta), path(vt_vcf), val(sample_meta),
+        path("${sample_meta.sample_name}_bamrc_helper/${sample_meta.sample_name}_bam_readcount_indel.tsv"), 
+        path("${sample_meta.sample_name}_bamrc_helper/${sample_meta.sample_name}_bam_readcount_snv.tsv"), emit: brc_files
     script:
         """
-        mkdir ${sample_name}_bamrc_helper
+        mkdir ${sample_meta.sample_name}_bamrc_helper
         bam_readcount_helper.py \
             $vt_vcf \
-            $sample_name \
+            ${sample_meta.sample_name} \
             $reference_fa \
             $sample_bam \
             NOPREFIX \
-            ${sample_name}_bamrc_helper
+            ${sample_meta.sample_name}_bamrc_helper
         """
 
 }
 
 process VT_DECOMPOSE {
+    
     conda "bioconda::vt"
 
-    //publishDir "${params.outdir}/vcf_decompose/", mode: "copy"
-
     input:
-        tuple path(somatic_vcf), path(somatic_vcf_index)
-        tuple val(somatic_name), val(somatic_caller), val(tumor_name), val(normal_name)
+        tuple val(meta), path(somatic_vcf), path(somatic_vcf_index)
 
     output:
-        path("${somatic_name}_vt_decomp.vcf.gz"), emit: vcf
-        tuple val(somatic_name), val(somatic_caller), val(tumor_name), val(normal_name), emit: caller_info
+        tuple val(meta), path("${meta.somatic_name}_vt_decomp.vcf.gz"), emit: vt_vcf
 
     script:
         """
-        vt decompose -s $somatic_vcf -o "${somatic_name}_vt_decomp.vcf.gz"
+        vt decompose -s $somatic_vcf -o "${meta.somatic_name}_vt_decomp.vcf.gz"
         """
 }
 
@@ -466,24 +432,20 @@ process VEP_ANNOTATE {
     
     container "ensemblorg/ensembl-vep:release_115.0"
 
-    //publishDir "${params.outdir}/vep_annotated/", mode: "copy"
-
-    input: 
-        path(somatic_vcf)
-        tuple val(somatic_name), val(somatic_caller), val(tumor_name), val(normal_name)
+    input:
+        tuple val(meta), path(somatic_vcf)
         path reference_fa
         path vep_cache
         path vep_plugins
 
     output:
-        path "${somatic_name}_vep.vcf", emit: vcf
-        tuple val(somatic_name), val(somatic_caller), val(tumor_name), val(normal_name), emit: caller_info
+        tuple val(meta), path("${meta.somatic_name}_vep.vcf"), emit: vep_vcf
 
     script:
         """
         vep \
             --input_file $somatic_vcf  \
-            --output_file "${somatic_name}_vep.vcf" \
+            --output_file "${meta.somatic_name}_vep.vcf" \
             --format vcf --vcf --symbol --terms SO --tsl --biotype \
             --hgvs --fasta $reference_fa  \
             --offline --cache $vep_cache \
@@ -521,10 +483,11 @@ process INDEX_FINAL_VCF {
     publishDir "${params.outdir}/variants", mode: "copy"
 
     input:
-        path(vcf)
+        tuple val(meta), path(vcf)
+        
 
     output:
-        tuple path("${vcf}.gz"), path("${vcf}.gz.tbi")
+        tuple val(meta), path("${vcf}.gz"), path("${vcf}.gz.tbi")
 
     script:
         """
@@ -535,85 +498,120 @@ process INDEX_FINAL_VCF {
 }
 
 
-/*
-process POSTPROCESS_STRELKA {
-
-    publishDir "${params.outdir}/strelka", mode: "copy"
+process ADD_VCF_GT_FIELD {
+    
+    container "griffithlab/vatools:5.2.0"
 
     input:
-        tuple val(somatic_name), val(strelka_caller), val(tumor_sample_id), val(normal_sample_id), path(strelka_results_dir)
-        tuple val(somatic_name), val(manta_caller), val(tumor_sample_id), val(normal_sample_id), path(manta_results_dir)
+        tuple val(somatic_name), val(tumor_meta), val(normal_meta), val(somatic_caller), 
+              path(somatic_vcf), path(somatic_vcf_index)
+         
+    output:
+        tuple val(somatic_name), val(tumor_meta), val(normal_meta), val(somatic_caller),
+              path("${somatic_name}_${somatic_caller}_gt.vcf.gz"),
+              emit: gt_vcf
 
+    script:
+        """
+        vcf-genotype-annotator $somatic_vcf "${tumor_meta.sample_name}" 0/1 -o "${somatic_name}_${somatic_caller}_gt.vcf.gz"
+        
+        #vcf-genotype-annotator "${somatic_name}_${somatic_caller}_gt.vcf.gz" "${normal_meta.sample_name}" 0/0 -o "${somatic_name}_${somatic_caller}_gt.vcf.gz"
+
+        """
 
 }
-*/
+
+process POSTPROCESS_STRELKA {
+    
+    container "biocontainers/bcftools:v1.9-1-deb_cv1"
+
+    publishDir "${params.outdir}/somatic/strelka", mode: "copy"
+
+    input:
+        tuple val(somatic_name), val(tumor_meta), val(normal_meta), val(somatic_caller),
+              path(strelka_snvs), path(strelka_snvs_index), 
+              path(strelka_indels), path(strelka_indels_index)
+
+    output:
+        tuple val(somatic_name), val(tumor_meta), val(normal_meta), val(somatic_caller), 
+              path("${somatic_name}_strelka.vcf.gz"), path("${somatic_name}_strelka.vcf.gz.tbi"), 
+              emit: strelka_vcf
+    
+    script:
+        """
+        bcftools concat --allow-overlaps --remove-duplicates -Oz -o "${somatic_name}_strelka_merged.vcf.gz" --threads $task.cpus $strelka_snvs $strelka_indels
+        bcftools view -s NORMAL,TUMOR "${somatic_name}_strelka_merged.vcf.gz" -Oz -o "${somatic_name}_strelka_merged_order_samples.vcf.gz"
+
+        echo ${normal_meta.sample_name} > new_names.txt
+        echo ${tumor_meta.sample_name} >> new_names.txt
+        
+        bcftools reheader --samples new_names.txt  --output "${somatic_name}_strelka.vcf.gz" "${somatic_name}_strelka_merged_order_samples.vcf.gz"
+        bcftools index -t "${somatic_name}_strelka.vcf.gz"
+        """
+}
 
 
 process STRELKA {
 
-   //container "/c4/home/hwismer/pvac_pipeline/containers/strelka_manta/strelka2-manta_latest.sif"
    container 'quay.io/wtsicgp/strelka2-manta'
 
-   publishDir "${params.outdir}/somatic/", mode: "copy"
-
    input:
-        tuple val(tumor_sample_id), val(tumor_type),  path(tumor_reads), path(tumor_reads_index)
-        tuple val(normal_sample_id), val(normal_type), path(normal_reads), path(tumor_reads_index)
+        tuple val(tumor_meta), path(tumor_bam), path(tumor_bam_index)
+        tuple val(normal_meta), val(normal_bam), path(normal_bam_index)
         val(somatic_name)
         path reference_fa
         path reference_index_dir
 
     output:
-        tuple val(somatic_name), val("Strelka"), val(tumor_sample_id), val(normal_sample_id), path("./strelka/results/"), emit: strelka
-        tuple val(somatic_name), val("Manta"), val(tumor_sample_id), val(normal_sample_id), path("./manta/results/"), emit: manta
+
+        tuple val(somatic_name), val(tumor_meta), val(normal_meta), val("strelka"),
+              path("./strelka/results/variants/somatic.snvs.vcf.gz"), path("./strelka/results/variants/somatic.snvs.vcf.gz.tbi"),
+              path("./strelka/results/variants/somatic.indels.vcf.gz"), path("./strelka/results/variants/somatic.indels.vcf.gz.tbi"),
+              emit: strelka_vcf
 
     script:
         """
         configManta.py \
-            --normalBam $normal_reads \
-            --tumorBam $tumor_reads \
-            --referenceFasta "${reference_index_dir}/${reference_fa}" \
+            --normalBam $normal_bam \
+            --tumorBam $tumor_bam \
+            --referenceFasta "${reference_fa}" \
             --runDir ./manta/ \
             --exome
 
         ./manta/runWorkflow.py -j $task.cpus
 
         configureStrelkaSomaticWorkflow.py \
-            --normalBam $normal_reads \
-            --tumorBam $tumor_reads \
-            --referenceFasta "${reference_index_dir}/${reference_fa}" \
+            --normalBam $normal_bam \
+            --tumorBam $tumor_bam \
+            --referenceFasta "${reference_fa}" \
             --indelCandidates ./manta/results/variants/candidateSmallIndels.vcf.gz \
             --runDir "./strelka" \
             --exome
 
         ./strelka/runWorkflow.py -m local -j $task.cpus
-
+        
         """
 
 }
 
 process POSTPROCESS_MUTECT2_SCATTER {
 
-    //container "/c4/home/hwismer/pvac_pipeline/containers/gatk_4.6.1.0.sif"
+    cache "lenient"
+
     container "broadinstitute/gatk:4.6.1.0"
-    
 
     publishDir "${params.outdir}/somatic/mutect2", mode: "copy"
 
-
     input:
-        tuple val(somatic_name), val(somatic_caller), val(tumor_sample), val(normal_sample)
-        path(vcfs)
-        path(f1r2s)
-        path(stats)
-        tuple val(sample_id), val(sample_type), path (tumor_pileups)
-        tuple val(sample_id), val(sample_type), path (normal_pileups)
+        tuple val(meta), path(vcfs), path(vcf_indices), path(f1r2s), path(stats)
+        tuple val(tumor_meta), path(tumor_bam), path(tumor_bam_index), path(tumor_pileups)
+        tuple val(normal_meta), path(normal_bam), path(normal_bam_index), path(normal_pileups)
+        //tuple path(tumor_pileups), path(normal_pileups)
         path(reference_fa)
         path(reference_index_dir)
 
     output:
-        tuple path("${somatic_name}_mutect_postprocessed.vcf.gz"), path("${somatic_name}_mutect_postprocessed.vcf.gz.tbi"), emit: vcf
-        tuple val(somatic_name), val(somatic_caller), val(tumor_sample), val(normal_sample), emit: caller_info
+        tuple val(meta), path("${meta.somatic_name}_mutect_postproc.vcf.gz"), path("${meta.somatic_name}_mutect_postproc.vcf.gz.tbi"), emit: mutect_vcf
 
     script:
 
@@ -641,27 +639,26 @@ process POSTPROCESS_MUTECT2_SCATTER {
             -matched $normal_pileups \
             -O contamination.table
 
-
         gatk GatherVcfs \
             $vcf_as_input \
-            -O "${somatic_name}_merged.vcf"
+            -O "${meta.somatic_name}_merged.vcf"
 
 
         gatk LearnReadOrientationModel \
             $f1r2_as_input \
-            -O "${somatic_name}_orientmodel.tar.gz"
+            -O "${meta.somatic_name}_orientmodel.tar.gz"
 
         gatk MergeMutectStats \
             $stat_as_input \
-            -O "${somatic_name}_merged.stats"
+            -O "${meta.somatic_name}_merged.stats"
 
         gatk FilterMutectCalls \
-            -R "${reference_index_dir}/${reference_fa}" \
-            -V "${somatic_name}_merged.vcf" \
-            --orientation-bias-artifact-priors "${somatic_name}_orientmodel.tar.gz" \
+            -R $reference_fa \
+            -V "${meta.somatic_name}_merged.vcf" \
+            --orientation-bias-artifact-priors "${meta.somatic_name}_orientmodel.tar.gz" \
             --contamination-table contamination.table \
-            -stats "${somatic_name}_merged.stats" \
-            -O "${somatic_name}_mutect_postprocessed.vcf.gz"
+            -stats "${meta.somatic_name}_merged.stats" \
+            -O "${meta.somatic_name}_mutect_postproc.vcf.gz"
 
         """
 }
@@ -673,18 +670,12 @@ process MUTECT2_SCATTER {
     cpus 2
     memory "16GB"
 
-    //container "/c4/home/hwismer/pvac_pipeline/containers/gatk_4.6.1.0.sif"
     container "broadinstitute/gatk:4.6.1.0"
-    
-
-    // publishDir "${params.outdir}/somatic/mutect2", mode: "copy"
-
 
     input:
-        tuple val(tumor_sample_id), val(tumor_type),  path(tumor_reads), path(tumor_reads_index)
-        tuple val(normal_sample_id), val(normal_type), path(normal_reads), path(normal_reads_index)
-
-        val(somatic_name)
+        tuple val(tumor_meta), path(tumor_bam), path(tumor_bam_index), path(tumor_pileups)
+        tuple val(normal_meta), path(normal_bam), path(normal_bam_index), path(normal_pileups)
+        val somatic_name
         each path(interval_shard)
         path reference_fa
         path reference_index_dir
@@ -694,20 +685,29 @@ process MUTECT2_SCATTER {
         path pon_index_dir
 
     output:
-        tuple val(somatic_name), val("Mutect2"), val(tumor_sample_id), val(normal_sample_id), emit: caller_info
-        path("*.vcf.gz"), emit: vcf
-        path("*vcf.gz.tbi"), emit: vcf_index
-        path("*_mutect_f1r2.tar.gz"), emit: f1r2
-        path("*.stats"), emit: stat
+        tuple val(somatic_meta),
+              path("${somatic_name}_${interval_shard}_mutect.vcf.gz"), path("${somatic_name}_${interval_shard}_mutect.vcf.gz.tbi"), 
+              path("${somatic_name}_${interval_shard}_mutect_f1r2.tar.gz"), path("*.stats"), 
+              emit: mutect_scatter_vcf
+
+        //tuple path(tumor_pileups), path(normal_pileups), emit: tumor_normal_pileups
+
 
     script:
 
+        somatic_meta = [
+            somatic_name: somatic_name,
+            somatic_caller: 'mutect2',
+            tumor_metamap: tumor_meta,
+            normal_metamap: normal_meta
+        ]
+
         """
         gatk Mutect2 \
-            -R "${reference_index_dir}/${reference_fa}" \
-            -I ${tumor_reads} \
-            -I ${normal_reads} \
-            -normal ${normal_sample_id} \
+            -R "${reference_fa}" \
+            -I ${tumor_bam} \
+            -I ${normal_bam} \
+            -normal ${normal_meta.sample_name} \
             --germline-resource "${known_sites}" \
             --panel-of-normals "${pon}" \
             --f1r2-tar-gz "${somatic_name}_${interval_shard}_mutect_f1r2.tar.gz" \
@@ -717,15 +717,11 @@ process MUTECT2_SCATTER {
         """
 }
 
-
 process SPLIT_INTERVALS {
 
     tag "Split intervals for ${params.scatter_count} shards"
     
-    // Use the GATK docker image for consistency
-    //container "/c4/home/hwismer/pvac_pipeline/containers/gatk_4.6.1.0.sif"    
     container "broadinstitute/gatk:4.6.1.0"
-    
 
     input:
         path reference_fa
@@ -739,8 +735,8 @@ process SPLIT_INTERVALS {
     script:
     """
     gatk SplitIntervals \
-        -R $reference_index_dir/$reference_fa \
-        -L ${intervals_file} \
+        -R $reference_fa \
+        -L $intervals_file \
         --scatter-count $scatter_count \
         -O . 
         
@@ -753,205 +749,358 @@ process KALLISTO_QUANT {
     publishDir "${params.outdir}/rnaseq/kallisto/", mode: "copy"
 
     input:
-        tuple val(sample_id), path(fastq_1), path(fastq_2), val(sample_type)
+        tuple val(meta), path(read1), path(read2)
         path kallisto_index
 
     output:
-        tuple val(sample_id), val(sample_type), path("${sample_id}_kallisto")
+        tuple val(meta), path("${meta.sample_name}_kallisto")
 
     script:
         """
-        kallisto quant -i $kallisto_index -o ${sample_id}_kallisto -t ${task.cpus} $fastq_1 $fastq_2  
+        kallisto quant -i $kallisto_index -o ${meta.sample_name}_kallisto -t ${task.cpus} $read1 $read2 
         """
 }
 
 process PREPROCESS_BAM {
     
-    //container "/c4/home/hwismer/pvac_pipeline/containers/gatk_4.6.1.0.sif"
-    
     container "broadinstitute/gatk:4.6.1.0"
 
-    publishDir "${params.outdir}/preprocess_bam/", mode: "copy"
+    publishDir "${params.outdir}/preprocess_bam/${meta.sample_name}_${meta.molecule}", mode: "copy"
 
     input:
-        tuple val(sample_id), val(sample_type), path(reads), path(reads_index)
+        tuple val(meta), path(reads), path(reads_index)
         path reference_fa
-        path reference_index_dir
+        path reference_fa_index
         path known_sites
         path known_sites_index
 
     output:
-        tuple val(sample_id), val(sample_type), path("${sample_id}/${sample_id}_bqsr.bam"), path("${sample_id}/${sample_id}_bqsr.bai"), emit: data
-        tuple val(sample_id), val(sample_type), path ("${sample_id}/${sample_id}_pileups.table"), emit: pileups
-        path("${sample_id}/${sample_id}_recal_table.table"), emit: recal_table
-        path("${sample_id}/${sample_id}_dedup.bam"), emit: dedup_bam
+        tuple val(meta), 
+            path("${meta.sample_name}_${meta.molecule}_bqsr.bam"),
+            path("${meta.sample_name}_${meta.molecule}_bqsr.bai"), 
+        emit: preproc_bams
+        
+        tuple val(meta), 
+            path("${meta.sample_name}_${meta.molecule}_bqsr.bam"),
+            path("${meta.sample_name}_${meta.molecule}_bqsr.bai"),
+            path("${meta.sample_name}_${meta.molecule}_pileups.table"), 
+        emit: preproc_bams_pileups
+        
+        //path("${sample_id}/${sample_id}_recal_table.table"), emit: recal_table
+        //path("${sample_id}/${sample_id}_dedup.bam"), emit: dedup_bam
 
     script:
         """
         gatk MarkDuplicatesSpark \
             -I $reads \
-            -O "${sample_id}/${sample_id}_dedup.bam" \
+            -O "${meta.sample_name}_${meta.molecule}_dedup.bam" \
             --tmp-dir "\${PWD}"
 
         gatk BaseRecalibrator \
-            -I "${sample_id}/${sample_id}_dedup.bam" \
-            -O "${sample_id}/${sample_id}_recal_table.table" \
-            -R "${reference_index_dir}/${reference_fa}" \
-            --known-sites "$known_sites"
+            -I "${meta.sample_name}_${meta.molecule}_dedup.bam" \
+            -O "${meta.sample_name}_${meta.molecule}_recal_table.table" \
+            -R $reference_fa \
+            --known-sites $known_sites
         
         gatk ApplyBQSR \
-            -R $reference_index_dir/$reference_fa \
-            -I "${sample_id}/${sample_id}_dedup.bam" \
-            --bqsr-recal-file "${sample_id}/${sample_id}_recal_table.table" \
-            -O "${sample_id}/${sample_id}_bqsr.bam" \
+            -R $reference_fa \
+            -I "${meta.sample_name}_${meta.molecule}_dedup.bam" \
+            --bqsr-recal-file "${meta.sample_name}_${meta.molecule}_recal_table.table" \
+            -O "${meta.sample_name}_${meta.molecule}_bqsr.bam" \
             --create-output-bam-index
 
         gatk GetPileupSummaries \
-            -I "${sample_id}/${sample_id}_bqsr.bam" \
+            -I "${meta.sample_name}_${meta.molecule}_bqsr.bam" \
             -V "${known_sites}" \
             -L "${known_sites}" \
-            -O "${sample_id}/${sample_id}_pileups.table"
+            -O "${meta.sample_name}_${meta.molecule}_pileups.table"
         """
 }
 
 process BWA_MAP {
 
-    //container "/c4/home/hwismer/pvac_pipeline/containers/custom_ipi_utils.sif"
-
     conda "bioconda::bwa=0.7.19 bioconda::samtools=1.22.1"
 
-    publishDir "${params.outdir}/alignment/bwa", mode: "copy"
+    publishDir "${params.outdir}/alignment/bwa/${meta.sample_name}_${meta.molecule}", mode: "copy"
 
     input:
-        tuple val(sample_id), val(sample_type), path(fastq1), path(fastq2)
+        tuple val(meta), path(fastq1), path(fastq2)
         path reference_fa
         path reference_index_dir
 
     output:
-        tuple val(sample_id), val(sample_type), path("${sample_id}_sorted.bam"), path("${sample_id}_sorted.bam.bai"), emit: data
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_sorted.bam"), path("${meta.sample_name}_${meta.molecule}_sorted.bam.bai"), emit: mapped_bam
     
     script:
     """
-    NEW_RG="@RG\\tID:${sample_id}\\tSM:${sample_id}\\tLB:${sample_id}\\tPL:ILLUMINA"
-    bwa mem -M -t $task.cpus -R \$NEW_RG ${reference_index_dir}/${reference_fa} ${fastq1} ${fastq2} \
-        | samtools sort --threads $task.cpus -o ${sample_id}_sorted.bam
-    samtools index ${sample_id}_sorted.bam
+    NEW_RG="@RG\\tID:${meta.sample_name}\\tSM:${meta.sample_name}\\tLB:${meta.sample_name}\\tPL:ILLUMINA"
+
+    bwa mem -M -t $task.cpus -R \$NEW_RG $reference_fa ${fastq1} ${fastq2} \
+        | samtools sort --threads $task.cpus -o ${meta.sample_name}_${meta.molecule}_sorted.bam
+    samtools index ${meta.sample_name}_${meta.molecule}_sorted.bam
     """
 }
 
 
 process FASTP {
-    
-    //container "/c4/home/hwismer/pvac_pipeline/containers/custom_ipi_utils.sif"
 
     conda "bioconda::fastp=1.0.1"
 
     input:
-        tuple val(sample_id), path(read1), path(read2), val(sample_type)
+        tuple val(meta), path(reads)
 
     output:
-        tuple val(sample_id), val(sample_type), path("${sample_id}_R1_*fastq.gz*"), path("${sample_id}_R2_*fastq.gz*"), emit: fastqs
-        path("${sample_id}_*{html,json}*"), emit: reports
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_R1_*fastq.gz*"), path("${meta.sample_name}_${meta.molecule}_R2_*fastq.gz*"), emit: fastqs
+        path("${meta.sample_name}_*{html,json}*"), emit: reports
     
-    tag "FastP on ${sample_id}"
+    tag "FastP on ${meta.sample_name} w/ ${meta.molecule}"
 
-    publishDir "${params.outdir}/qc/${sample_id}_fastp/", mode: 'copy'
+    publishDir "${params.outdir}/fastp_qc/${meta.sample_name}_${meta.molecule}_fastp/", mode: 'copy'
 
     script:
         """
         fastp --thread $task.cpus \
-              -i $read1 \
-              -I $read2 \
-              -o "${sample_id}_R1_fastp.fastq.gz" \
-              -O "${sample_id}_R2_fastp.fastq.gz" \
-              -R "${sample_id}_fastp_report" \
-              -h "${sample_id}_fastp_report.html" \
-              -j "${sample_id}_fastp_report.json" \
+              -i ${reads[0]} \
+              -I ${reads[1]} \
+              -o "${meta.sample_name}_${meta.molecule}_R1_fastp.fastq.gz" \
+              -O "${meta.sample_name}_${meta.molecule}_R2_fastp.fastq.gz" \
+              -R "${meta.sample_name}_${meta.molecule}_fastp_report" \
+              -h "${meta.sample_name}_${meta.molecule}_fastp_report.html" \
+              -j "${meta.sample_name}_${meta.molecule}_fastp_report.json" \
+
+        """
+}
+
+process OPTITYPE_HLA_CALLS {
+    
+    cpus 1
+    memory "16GB"
+
+    conda "python=3.10 pandas=2.1"
+
+    publishDir "${params.outdir}/HLA/"
+
+    input:
+        tuple val(meta), path(optitype_result_tsv)
+
+    output:
+        tuple val(meta), path("${meta.sample_name}_${meta.sample_type}_${meta.molecule}_hla_pvacinput.csv")
+
+    script:
+        """
+        #!/usr/bin/env python3
+
+        import pandas as pd
+
+        df = pd.read_csv("$optitype_result_tsv", sep = "\t")
+        
+        alleles = []
+        for allele in ["A1", "A2", "B1", "B2", "C1", "C2"]:
+            alleles.append("HLA-" + df[allele].iloc[0])
+        allele_csv = ",".join(alleles)
+
+        with open("${meta.sample_name}_${meta.sample_type}_${meta.molecule}_hla_pvacinput.csv", "w") as f:
+            print(allele_csv, file=f)
+
+        """
+
+}
+process POSTPROCESS_OPTITYPE {
+
+    publishDir "${params.outdir}/HLA/${meta.sample_name}_optitype", mode: "copy"
+
+    input:
+        tuple val(meta), path(optitype_output_dir)
+
+    output:
+        tuple val(meta), path("${meta.sample_name}_${meta.sample_type}_${meta.molecule}_optitype.tsv"), emit: result_tsv
+        tuple val(meta), path("${meta.sample_name}_${meta.sample_type}_${meta.molecule}_optitype_coverage.pdf"), emit: coverage_plot
+
+    script:
+        """
+        RESULT_FILE=\$(find ${optitype_output_dir}/* -name "*_result.tsv" | head -n 1)    
+        mv "\$RESULT_FILE" "${meta.sample_name}_${meta.sample_type}_${meta.molecule}_optitype.tsv"
+        
+        COVERAGE_FILE=\$(find ${optitype_output_dir}/* -name "*_coverage_plot.pdf" | head -n 1)    
+        mv "\$COVERAGE_FILE" "${meta.sample_name}_${meta.sample_type}_${meta.molecule}_optitype_coverage.pdf"
 
         """
 }
 
 
-// Workflow block
+process OPTITYPE {
+    
+    container "fred2/optitype:release-v1.3.1"
+
+    input:
+        tuple val(meta), path(reads)
+
+    output:
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_optitype")
+
+    script:
+
+        def molecule_flag = meta.molecule.toLowerCase()
+        """
+        python /usr/local/bin/OptiType/OptiTypePipeline.py \
+            -i ${reads[0]} ${reads[1]} \
+            --$molecule_flag \
+            --outdir "${meta.sample_name}_${meta.molecule}_optitype"
+        """
+}
+
+process PVACSEQ {
+
+    cpus 1
+    memory "64GB"
+
+    container "griffithlab/pvactools:6.0.1"
+
+    publishDir "${params.outdir}/pvactools/"
+
+    input:
+        tuple val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index)
+        tuple val(phased_meta), path(phased_vcf), path(phased_vcf_index)
+        tuple val(tumor_meta), path(tumor_reads), path(tumor_reads_index)
+        tuple val(normal_meta), path(normal_reads), path(normal_reads_index)
+        tuple val(hla_meta), path(hla_pvac_input)
+    output:
+        path("${somatic_meta.somatic_name}_pvacseq"), emit: pvacseq_dir
+
+    script:
+        """
+        pvacseq run \
+            $somatic_vcf \
+            ${tumor_meta.sample_name} \
+            \$(head $hla_pvac_input -n 1) \
+            all \
+            "${somatic_meta.somatic_name}_pvacseq" \
+            -e1 8,9,10,11 \
+            -e2 12,13,14,15,16,17,18 \
+            --normal-sample-name ${normal_meta.sample_name} \
+            --phased-proximal-variants-vcf $phased_vcf \
+            --iedb-install-directory /opt/iedb \
+            --pass-only \
+            -t 1
+        """
+}
+
 
 workflow {
 
-
     // INPUT PARSING
-
     // Read in input data consiting of:
     // 1) Tumor FastQ WES/WGS Pairs
     // 2) Normal FastQ WES/WGS Pairs
     // 3) Tumor FastQ RNAseq Pairs
 
-    tumor_fastqs = channel.fromFilePairs( params.tumor_fastq_dir, 
-                                           checkIfExists: true,
-                                           flat: true)
-                            .merge(Channel.of("Tumor"))
+    samplemap_inputs = Channel.fromPath(params.sample_sheet)
+        | splitCsv( header: true )
+            | map { row ->
+            meta = [
+                sample_name: row.sample_name,
+                sample_type: row.sample_type,
+                molecule: row.molecule,
+                sequencing_type: row.sequencing_type
+            ]
+                
+            reads = [
+                file(row.fastqr1, checkIfExists: true),
+                file(row.fastqr2, checkIfExists: true)
+            ]
+            [meta, reads]
+        }
+   
+    // Reads in the GATK resource bucket for reference genome hg38
+    
+    all_reference_files = Channel
+                .fromPath("${params.reference_index_dir}*", checkIfExists: true)
+                .collect()
 
-    normal_fastqs = channel.fromFilePairs( params.normal_fastq_dir,
-                                            checkIfExists: true,
-                                            flat: true)
-                                .merge(Channel.of("Normal"))
+    all_reference_files
+        | flatten
+        | branch {
+            fasta: it.name.endsWith('.fa') || it.name.endsWith('.fasta')
+            index_files: true
+        }
+    | set { ref_files }
 
-    tumor_rna_fastqs = channel.fromFilePairs(params.tumor_fastq_rna_dir, 
-                                              checkIfExists: true, 
-                                              flat: true)
-                            .merge(Channel.of("Tumor RNA"))
+    reference_index_files = ref_files.index_files.collect()
+    reference_fa = ref_files.fasta.collect()
+    reference_dict = Channel.fromPath("${params.reference_index_dir}*.dict")
 
+    
 
+    // HLA TYPING
+    hla_optitype = OPTITYPE(samplemap_inputs)
+    hla_optitype_postprocess = POSTPROCESS_OPTITYPE(hla_optitype)
+    if (params.use_clincal_hla_calls) {
+        hla_calls = PARSE_CLINICAL_CALLS() // NOT IMPLEMENTED
+    } else { 
+        hla_calls = OPTITYPE_HLA_CALLS(hla_optitype_postprocess.result_tsv)
+        hla_calls = hla_calls.branch { meta, hla_call ->
+                      normal_dna: meta.sample_type == "Normal" && meta.molecule == "DNA"
+                      other: true
+                    }
+    }
+    
+    
     // Merge all fastq pair channels to input into fastp qc and BWA alignment
-    fastqs_ch = tumor_fastqs.concat(normal_fastqs).concat(tumor_rna_fastqs)
-    fastp = FASTP(fastqs_ch)
-    mapped = BWA_MAP(fastp.fastqs, params.reference_fa, params.reference_index_dir)
-    
-    // Split BWA aligned channel into WES/WGS and RNA channels
-    mapped.data.branch { output ->
-            tumor_normal: output[1] == "Normal" || output[1] == "Tumor"
-            tumor_rna: output[1] == "Tumor RNA"
-    }.set { mapped_branch }
-    tumor_normal_mapped = mapped_branch.tumor_normal
-    tumor_rna = mapped_branch.tumor_rna
 
-    
+    fastp = FASTP(samplemap_inputs)
+
+    bwa_mapped = BWA_MAP(fastp.fastqs, reference_fa, reference_index_files)
+    bwa_mapped.mapped_bam.branch { meta, bam, bam_index ->
+                                 mapped_dna: meta.molecule == "DNA"
+                                 mapped_rna: meta.molecule == "RNA"
+                                 other: true
+                                 }
+                             | set { mapped_dna_rna_branch }
 
     // PREPROCESSING
 
-
-
     // Preprocess WES/WGS samples according to GATK standard (BQSR, pileups etc.)
-    preprc = PREPROCESS_BAM(tumor_normal_mapped,
-                            params.reference_fa, params.reference_index_dir, 
+    preprc = PREPROCESS_BAM(mapped_dna_rna_branch.mapped_dna,
+                            reference_fa, reference_index_files, 
                             params.common_germline, params.common_germline_index)
 
-    // Branch preprocessed data into tumor and normal channels
-    preprc.data.branch { output ->
-            normal: output[1] == "Normal"
-            tumor: output[1] == "Tumor"
-    }.set { tumor_normal }
+   
 
+    preproc_bams_type_branched = preprc.preproc_bams
+                                    | branch {meta, bam, bai ->
+                                        normal: meta.sample_type == "Normal"
+                                        tumor: meta.sample_type == "Tumor"
+    }
     
-    // Branch preprocessed pileup data into tumor and normal channels for mutect later
-    preprc.pileups.branch { output ->
-        normal: output[1] == "Normal"
-        tumor: output[1] == "Tumor"
-    }.set { pileups }
-
+    preproc_bams_pileups_type_branched = preprc.preproc_bams_pileups
+                                            | branch {meta, bam, bai, pileups ->
+                                              normal: meta.sample_type == "Normal"
+                                              tumor: meta.sample_type == "Tumor"
+                                            }
     
-
 
     // TRANSCRIPT ABUNDANCE ESTIMATION
 
     // Run kallisto to get transcript abundance estimates to later annotate VCF with
-    kallisto = KALLISTO_QUANT(tumor_rna_fastqs,
+
+    samples_splitby_molec = fastp.fastqs
+                    | branch {meta, read1, read2 ->
+                                rna: meta.molecule == "RNA"
+                                dna: meta.molecule == "DNA"
+                                other: true
+                             }
+
+    kallisto = KALLISTO_QUANT(samples_splitby_molec.rna,
                               params.kallisto_index)
 
+   
 
     
 
+
     // INTERVAL CREATION FOR SOMATIC CALLERS
 
-    intervals = SPLIT_INTERVALS(params.reference_fa, params.reference_index_dir,
+    intervals = SPLIT_INTERVALS(reference_fa, reference_index_files,
                                 params.intervals_file, params.scatter_count)
 
 
@@ -962,119 +1111,120 @@ workflow {
     // Run HaplotypeCaller with scatter/gather approach and preprocess with CNNScoreVariants and FilterVariantTranches
     // For later use in phasing the somatic VCF with proximal variants
 
-    germline = HAPLOTYPE_CALLER_SCATTER(tumor_normal.tumor,
-                                        intervals.flatten(),
-                                        params.reference_fa, params.reference_index_dir)
+    germline = HAPLOTYPE_CALLER_SCATTER(preproc_bams_type_branched.tumor,
+                intervals.flatten(),
+                reference_fa, reference_index_files)
+        | groupTuple
 
-    germline_postprocess = POSTPROCESS_HAPLOTYPE_SCATTER(germline.sample_info.first(), 
-                                                        germline.vcf.collect(),
-                                                        params.reference_fa,
-                                                        params.reference_index_dir,
+    germline_postprocess = POSTPROCESS_HAPLOTYPE_SCATTER(germline, 
+                                                        reference_fa,
+                                                        reference_index_files,
                                                         params.hapmap,
                                                         params.hapmap_index,
                                                         params.mills,
                                                         params.mills_index)
-
     // Use vt decompose on germline calls
-    vt_germline = VT_DECOMPOSE_GERMLINE(germline_postprocess.germline_sample_info, germline_postprocess.germline_vcf)
-
-
+    vt_germline = VT_DECOMPOSE_GERMLINE(germline_postprocess)
 
 
     // SOMATIC VARIANT CALLING
+
     
     // Run Mutect2 with scatter/gather approach
-    mutect_scattered = MUTECT2_SCATTER(tumor_normal.tumor, tumor_normal.normal, params.somatic_name,
+    mutect_scattered = MUTECT2_SCATTER(preproc_bams_pileups_type_branched.tumor, preproc_bams_pileups_type_branched.normal, 
+                    params.somatic_name,
                     intervals.flatten(),
-                    params.reference_fa, params.reference_index_dir,
+                    reference_fa, reference_index_files,
                     params.known_sites, params.known_sites_index,
                     params.pon, params.pon_index)
 
+    mutect_gathered = mutect_scattered.mutect_scatter_vcf
+                        | groupTuple
+                       
+         
     // Postprocess Mutect2 Output using pileups, stats, etc.
-    mutect_postprocess = POSTPROCESS_MUTECT2_SCATTER(mutect_scattered.caller_info.first(),
-                                                    mutect_scattered.vcf.collect(),
-                                                    mutect_scattered.f1r2.collect(),
-                                                    mutect_scattered.stat.collect(),
-                                                    pileups.tumor,
-                                                    pileups.normal,
-                                                    params.reference_fa,
-                                                    params.reference_index_dir)
-    
+    mutect_postprocess = POSTPROCESS_MUTECT2_SCATTER(mutect_gathered,
+                                                     preproc_bams_pileups_type_branched.tumor, 
+                                                     preproc_bams_pileups_type_branched.normal,
+                                                     reference_fa,
+                                                     reference_index_files)
+
     // Run Strelka2
-    strelka = STRELKA(tumor_normal.tumor, tumor_normal.normal, 
+    strelka = STRELKA(preproc_bams_type_branched.tumor, preproc_bams_type_branched.normal, 
             params.somatic_name,
-            params.reference_fa, params.reference_index_dir)
+            reference_fa, reference_index_files)
 
-
+    strelka_postprocess = POSTPROCESS_STRELKA(strelka)
     
+    gt_vcf = ADD_VCF_GT_FIELD(strelka_postprocess.strelka_vcf)
     
+    //merged_vcfs = MERGE_SOMATIC_CALLS()
 
     // SOMATIC VCF PREPROCESSING
-
-
+    
     //filtered_vcf = FILTER_SOMATIC_NONPASSING(mutect_postprocess.vcf, mutect_postprocess.caller_info)
 
     // Use vt decompose to get simplest/standardized variant representation for vcf compatibility
-    vt = VT_DECOMPOSE(mutect_postprocess.vcf, mutect_postprocess.caller_info)
-    
+    vt = VT_DECOMPOSE(mutect_postprocess.mutect_vcf)
+
     // Annotate VCF with VEP
-    vep = VEP_ANNOTATE(vt.vcf,
-                       vt.caller_info,
+    vep = VEP_ANNOTATE(vt.vt_vcf,
                        params.reference_fa,
                        params.vep_cache,
                        params.vep_plugins)
-
+    
+     
     // Add Read Coverage to VCF
     // Currently only for Tumor RNA as Mutect2 handles the DNA already
-    bamreadcount = BAMREADCOUNT(vep.vcf,
-                                vep.caller_info,
+    bamreadcount = BAMREADCOUNT(vep.vep_vcf,
                                 params.reference_fa,
-                                tumor_rna)
-
-    vcf_annotated_coverage = ANNOTATE_VCF_COVERAGE(vep.vcf, bamreadcount.brc_files, vep.caller_info)
-
-    vcf_annotated_expression = ANNOTATE_VCF_EXPRESSION(vcf_annotated_coverage, kallisto, vep.caller_info)
+                                mapped_dna_rna_branch.mapped_rna)
+    
+    
+    vcf_annotated_coverage = ANNOTATE_VCF_COVERAGE(bamreadcount)
+    
+    vcf_annotated_expression = ANNOTATE_VCF_EXPRESSION(vcf_annotated_coverage, kallisto)
 
     vcf_final = INDEX_FINAL_VCF(vcf_annotated_expression)
     
 
-
-
+    
     // PERFORM VCF PHASING USING GERMLINE CALLS
 
     // Create Tumor-Only VCF From Final Somatic VCF (vcf_final)
-    vcf_phase_select_variants = PHASE_VCF_SELECT_VARIANTS(tumor_normal.tumor,
+    vcf_phase_select_variants = PHASE_VCF_SELECT_VARIANTS(preproc_bams_type_branched.tumor,
                            vcf_final,
-                           params.reference_fa,
-                           params.reference_index_dir)
+                           reference_fa,
+                           reference_index_files)
 
     // Combine Tumor-Only VCF with germline variants
-    vcf_phase_combine = PHASE_VCF_COMBINE_VARIANTS(vcf_phase_select_variants.vcf,
-                                                   vcf_phase_select_variants.vcf_index,
-                                                   vt_germline.vcf,
-                                                   params.reference_fa,
-                                                   params.reference_index_dir)
+    vcf_phase_combine = PHASE_VCF_COMBINE_VARIANTS(vcf_phase_select_variants,
+                                                   vt_germline,
+                                                   reference_fa,
+                                                   reference_index_files)
 
     // Sort combined VCF
-    vcf_phase_sort = PHASE_VCF_SORT_VCF(vcf_phase_combine.combined_vcf, params.reference_dict)
+    vcf_phase_sort = PHASE_VCF_SORT_VCF(vcf_phase_combine, reference_dict)
+    
 
     // Call GATK ReadBackedPhasing (required gatk 3.6.0) to phase VCF
     vcf_phase_rbphase = PHASE_VCF_RBPHASING(vcf_phase_sort.vcf, 
-                                            params.reference_fa, params.reference_index_dir,
-                                            tumor_normal.tumor)
+                                            reference_fa, reference_index_files,
+                                            preproc_bams_type_branched.tumor)
+
     /// VEP Annotation phased vcf
-    vcf_phase_vep = PHASE_VCF_VEP(vcf_phase_rbphase.vcf,
-                                            params.reference_fa, params.vep_cache, params.vep_plugins)        
+    vcf_phase_vep = PHASE_VCF_VEP(vcf_phase_rbphase,
+                                    params.reference_fa, params.vep_cache, params.vep_plugins)        
     
     // Zip and index phased vcf
-    vcf_phased = PHASE_VCF_INDEX(vcf_phase_vep.vcf, vep.caller_info)
-
-        
-        
-    vcf_final.view()
-
-    vcf_phased.view()
-
+    vcf_phased = PHASE_VCF_INDEX(vcf_phase_vep)
+    
+    
+    PVACSEQ = PVACSEQ(vcf_final, 
+                      vcf_phased,
+                      preproc_bams_type_branched.tumor,
+                      preproc_bams_type_branched.normal,
+                      hla_calls.normal_dna)
 
 
 }
