@@ -3,8 +3,8 @@
 
 process {
     executor = "slurm"
-    cpus = 8
-    memory = "64GB"
+    cpus = 6
+    memory = "128GB"
     time = 14.d
     maxForks = 30
     //clusterOptions '--gres=scratch:500G'

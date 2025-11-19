@@ -1,22 +1,15 @@
 {
-    "normal_fastq_dir" : "/krummellab/data1/hwismer/IPIMEL575/IPIMEL575_FASTQ/RAW/IPIMEL575_B1_subs/*_R{1,2}.fastq.gz",
-    "tumor_fastq_dir" : "/krummellab/data1/hwismer/IPIMEL575/IPIMEL575_FASTQ/RAW/IPIMEL575_T3_subs/*_R{1,2}.fastq.gz",
-    "tumor_fastq_rna_dir" : "/krummellab/data1/hwismer/IPIMEL575/IPIMEL575_data/IPIMEL575_M1_UCSF_processed/IPIMEL575_M1_bulk_RNASeq_UCSF/subset/*R{1,2}.fastq.gz",
+    
+    
     "sample_sheet" : "/c4/home/hwismer/pvac_pipeline/CustomDiscovery_Vaccine_Dev_Pipeline/samplesheet.csv",  
+    
+    "somatic_name" : "IPIMEL575_B1_V_T1",
 
-
-    "somatic_name" : "IPIMEL575_B1_V_T3_test",
-    "tumor_name" : "IPIMEL575_T3_Subset",
-    "normal_name" : "IPIMEL575_B1_Subset",
-
-    "clinical_hla_calls" : null,
-    "use_clinical_hla_calls" : false,
+    "clinical_hla_calls" : "/krummellab/data1/hwismer/IPIMEL575/IPIMEL575_hla.txt",
+    "use_clinical_hla_calls" : true,
     
     "reference_fa" : "/c4/home/hwismer/pvac_pipeline/CustomDiscovery_Vaccine_Dev_Pipeline/utilities/ref_genome/Homo_sapiens_assembly38.fasta",
-    
-    
     "reference_index_dir" : "/c4/home/hwismer/pvac_pipeline/CustomDiscovery_Vaccine_Dev_Pipeline/utilities/ref_genome/",
-
     "reference_dict" : "/c4/home/hwismer/pvac_pipeline/CustomDiscovery_Vaccine_Dev_Pipeline/utilities/ref_genome/Homo_sapiens_assembly38.dict", 
 
 
@@ -25,8 +18,8 @@
 
     "scatter_count" : 30,
     "intervals_file" : "/c4/home/hwismer/pvac_pipeline/CustomDiscovery_Vaccine_Dev_Pipeline/utilities/gatk_somatic_hg38/wgs_calling_regions.hg38.interval_list",
-    
-    
+   
+
     "common_germline" : "/c4/home/hwismer/pvac_pipeline/CustomDiscovery_Vaccine_Dev_Pipeline/utilities/gatk_somatic_hg38/small_exac_common_3.hg38.vcf.gz",
     "common_germline_index" : "/c4/home/hwismer/pvac_pipeline/CustomDiscovery_Vaccine_Dev_Pipeline/utilities/gatk_somatic_hg38/small_exac_common_3.hg38.vcf.gz.tbi",
     "known_sites" : "/c4/home/hwismer/pvac_pipeline/CustomDiscovery_Vaccine_Dev_Pipeline/utilities/common_germline/af-only-gnomad.hg38.vcf.gz",
@@ -43,5 +36,5 @@
     "vep_plugins" : "/c4/home/hwismer/0_execs/vep/VEP_plugins/",
 
 
-    "outdir" : "subset_results"
+    "outdir" : "IPIMEL575_results"
 }
