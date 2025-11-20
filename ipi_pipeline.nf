@@ -904,6 +904,7 @@ process BWA_MAP {
 
 process FASTP {
 
+
     conda "bioconda::fastp=1.0.1"
 
     input:
@@ -992,6 +993,10 @@ process OPTITYPE {
     
     container "fred2/optitype:release-v1.3.1"
 
+    cpus 4
+
+    memory "256GB"
+
     input:
         tuple val(meta), path(reads)
 
@@ -1002,9 +1007,23 @@ process OPTITYPE {
 
         def molecule_flag = meta.molecule.toLowerCase()
         """
+        cat << EOF > OptiType.ini
+        [mapping]
+        razers3=/usr/local/bin/razers3
+        threads=${task.cpus}
+        [ilp]
+        solver=cbc
+        threads=${task.cpus}
+        [behavior]
+        deletebam=true
+        unpaired_weight=0
+        use_discordant=false
+        EOF
+        
         python /usr/local/bin/OptiType/OptiTypePipeline.py \
             -i ${reads[0]} ${reads[1]} \
             --$molecule_flag \
+            -c OptiType.ini \
             --outdir "${meta.sample_name}_${meta.molecule}_optitype"
         """
 }
@@ -1070,6 +1089,16 @@ workflow {
             ]
             [meta, reads]
         }
+    
+
+    samples_by_type = samplemap_inputs.branch { meta, reads ->
+            dna_samples: meta.sample_type == "DNA"
+            rna_samples: meta.sample_type == "RNA"
+    }
+
+    samples_by_type.dna_samples.view()
+
+            
    
     // Reads in the GATK resource bucket for reference genome hg38
     
@@ -1092,13 +1121,13 @@ workflow {
     
 
     // HLA TYPING
-    hla_optitype = OPTITYPE(samplemap_inputs)
+    hla_optitype = OPTITYPE(samples_by_type.dna_samples)
     hla_optitype_postprocess = POSTPROCESS_OPTITYPE(hla_optitype)
 
 
-    if (params.use_clincal_hla_calls) {
+    if (params.use_clinical_hla_calls) {
         hla_calls = params.clinical_hla_calls
-        hla_calls = PARSE_CLINICAL_CALLS() // NOT IMPLEMENTED
+        //hla_calls = PARSE_CLINICAL_CALLS() // NOT IMPLEMENTED
     } else { 
         hla_calls = OPTITYPE_HLA_CALLS(hla_optitype_postprocess.result_tsv)
         hla_calls = hla_calls.branch { meta, hla_call ->
@@ -1107,6 +1136,7 @@ workflow {
                       other: true
                         return hla_call
                     }
+        hla_calls = hla_calls.normal_dna
     }
 
     
@@ -1305,7 +1335,7 @@ workflow {
                       vcf_phased,
                       preproc_bams_type_branched.tumor,
                       preproc_bams_type_branched.normal,
-                      hla_calls.normal_dna)
+                      hla_calls)
 
 
 }

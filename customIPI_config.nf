@@ -3,7 +3,7 @@
 
 process {
     executor = "slurm"
-    cpus = 6
+    cpus = 32
     memory = "128GB"
     time = 14.d
     maxForks = 30
@@ -13,7 +13,7 @@ process {
 apptainer {
     enabled = true
     autoMounts= true
-    //runOptions = '--writable-tmpfs -B ${projectDir}/work/:/tmp'
+    runOptions = '--writable-tmpfs -B ${projectDir}/work/:/tmp'
     runOptions = "-B ${projectDir}/work:/scratch"
     //home = '${project_dir}/work'
 }
