@@ -7,5 +7,4 @@
 #SBATCH --time=14-00:00:00
 
 
-export NXF_OFFLINE='true'
 nextflow -C customIPI_config.nf run -offline  ipi_pipeline.nf -params-file params.json -resume -ansi-log true

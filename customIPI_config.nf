@@ -4,9 +4,8 @@
 process {
     executor = "slurm"
     cpus = 32
-    memory = "128GB"
+    memory = "64GB"
     time = 14.d
-    maxForks = 30
     //clusterOptions '--gres=scratch:500G'
 }
 
@@ -16,10 +15,15 @@ apptainer {
     runOptions = '--writable-tmpfs -B ${projectDir}/work/:/tmp'
     runOptions = "-B ${projectDir}/work:/scratch"
     //home = '${project_dir}/work'
+    pullTimeout="30min"
 }
 
 executor {
     name = "slurm"
     queueSize = 30
+}
+
+plugins {
+    id 'nf-google'
 }
 conda.enabled = true
