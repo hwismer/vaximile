@@ -1,4 +1,4 @@
 sample_name,sample_type,molecule,sequencing_type,fastqr1,fastqr2
-IPIMEL575_B1,Normal,DNA,WES,/krummellab/data1/hwismer/IPIMEL575/IPIMEL575_FASTQ/RAW/IPIMEL575_B1_subs/IPIMEL575_B1_subs_R1.fastq.gz,/krummellab/data1/hwismer/IPIMEL575/IPIMEL575_FASTQ/RAW/IPIMEL575_B1_subs/IPIMEL575_B1_subs_R2.fastq.gz
-IPIMEL575_T3,Tumor,DNA,WES,/krummellab/data1/hwismer/IPIMEL575/IPIMEL575_FASTQ/RAW/IPIMEL575_T3_subs/IPIMEL575-T3_FFPE_R1.fastq.gz,/krummellab/data1/hwismer/IPIMEL575/IPIMEL575_FASTQ/RAW/IPIMEL575_T3_subs/IPIMEL575-T3_FFPE_R2.fastq.gz
-IPIMEL575_T3,Tumor,RNA,bulkRNASeq,/krummellab/data1/hwismer/IPIMEL575/IPIMEL575_data/IPIMEL575_M1_UCSF_processed/IPIMEL575_M1_bulk_RNASeq_UCSF/subset/IPIMEL575-T3_FFPE_R1.fastq.gz,/krummellab/data1/hwismer/IPIMEL575/IPIMEL575_data/IPIMEL575_M1_UCSF_processed/IPIMEL575_M1_bulk_RNASeq_UCSF/subset/IPIMEL575-T3_FFPE_R2.fastq.gz
+PATIENT_SampleN,Normal,DNA,WES,/path/fastq1,/path/fastq2
+PATIENT_SampleT,Tumor,DNA,WES,/path/fastq1,/path/fastq2
+PATIENT_SampleT,Tumor,RNA,bulkRNASeq,/path/fastq1,/path/fastq2
