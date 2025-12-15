@@ -1,11 +1,10 @@
 {
+    "sample_sheet" : "./samplesheet.csv",  
     
-    
-    "sample_sheet" : "/c4/home/hwismer/pvac_pipeline/CustomDiscovery_Vaccine_Dev_Pipeline/samplesheet.csv",  
-    "somatic_name" : "IPIMEL575_B1_V_T1",
-    "outdir" : "IPIMEL575_results",
+    "somatic_name" : "IPIPROS047_T1_vs_N1",
+    "outdir" : "IPIPROS047_T1_vs_N1_results",
 
-    "clinical_hla_calls" : "/krummellab/data1/hwismer/IPIMEL575/IPIMEL575_hla.txt",
+    "clinical_hla_calls" : "/c4/home/hwismer/pvac_pipeline/IPIPROS047_pipeline/pros_hla.csv",
     "use_clinical_hla_calls" : true,
 
 
@@ -29,11 +28,17 @@
     "gencode_gtf" : "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.chr_patch_hapl_scaff.annotation.gtf.gz", 
     "kallisto_reference": "https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz",
 
+    "kallisto_index" : "/c4/home/hwismer/pvac_pipeline/indices/kallisto_index.idx",
+    "star_index" : "/c4/home/hwismer/pvac_pipeline/indices/STARGenomeDir/",
+    "bwa_index" : "/c4/home/hwismer/pvac_pipeline/indices/bwa_index/*{.bwt,.sa,.pac,.amb,.ann}",
+
     "scatter_count" : 30,
     "intervals_file" : "gs://genomics-public-data/resources/broad/hg38/v0/wgs_calling_regions.hg38.interval_list",
 
     "vep_cache" : "/c4/home/hwismer/0_execs/vep/vep_data/",
-    "vep_plugins" : "/c4/home/hwismer/0_execs/vep/VEP_plugins/"
+    "vep_plugins" : "/c4/home/hwismer/0_execs/vep/VEP_plugins/",
+
+    "ctat_resource_dir":"/krummellab/data1/hwismer/GRCh38_gencode_v44_CTAT_lib_Oct292023.plug-n-play" 
     
     
 

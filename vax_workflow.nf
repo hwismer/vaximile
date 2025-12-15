@@ -48,26 +48,32 @@ process DEEPSOMATIC {
         """
 }
 
-process VT_DECOMPOSE_GERMLINE {
+process VT_POSTPROCESS_GERMLINE {
+
    
     cpus 2
     memory "8GB"
-    
 
-    conda "bioconda::vt bioconda::tabix=0.2.6"
+    conda "bioconda::vt bioconda::samtools"
 
     publishDir "${params.outdir}/germline/HaplotypeCaller", mode: "copy"
 
     input:
         tuple val(meta), path(germline_vcf), path(germline_vcf_index)
+        path reference_fa
+        path reference_index_files
 
     output:
         tuple val(meta), path("${meta.sample_name}_germline.vcf.gz"), path("${meta.sample_name}_germline.vcf.gz.tbi"), emit: germline_vcf
     script:
         """
-        vt decompose -s $germline_vcf -o "${meta.sample_name}_germline.vcf.gz"
-
-        tabix -p vcf "${meta.sample_name}_germline.vcf.gz"
+        samtools faidx $reference_fa
+        vt normalize $germline_vcf -r $reference_fa -o norm.vcf.gz
+        vt index norm.vcf.gz
+        vt decompose -s norm.vcf.gz -o decomp_norm.vcf.gz
+        vt index decomp_norm.vcf.gz
+        vt uniq decomp_norm.vcf.gz -o "${meta.sample_name}_germline.vcf.gz"
+        vt index "${meta.sample_name}_germline.vcf.gz"
         """
 }
 
@@ -259,6 +265,7 @@ process PHASE_VCF_SELECT_VARIANTS {
 
     cpus 2
     memory "32GB"
+    cache "lenient"
 
 
     container "broadinstitute/gatk:4.6.1.0"
@@ -291,6 +298,7 @@ process POSTPROCESS_HAPLOTYPE_SCATTER {
 
     cpus 4
     memory "32GB"
+    cache "lenient"
 
     container "broadinstitute/gatk:4.3.0.0"
 
@@ -347,8 +355,9 @@ process POSTPROCESS_HAPLOTYPE_SCATTER {
 
 process HAPLOTYPE_CALLER_SCATTER {
     
-    cpus 2
-    memory "16GB"
+    cpus 4
+    memory "24GB"
+    cache "lenient"
 
     container "broadinstitute/gatk:4.3.0.0"
 
@@ -455,6 +464,7 @@ process BAMREADCOUNT {
 
     cpus 4
     memory "32GB"
+    cache "lenient"
 
     container "mgibio/bam_readcount_helper-cwl:1.2.1"
 
@@ -487,6 +497,7 @@ process VT_SOMATIC_POSTPROCESS {
 
     cpus 2
     memory "16GB"
+    cache "lenient"
     
     conda "bioconda::vt bioconda::samtools"
     publishDir "${params.outdir}/somatic/${meta.somatic_caller}/"
@@ -500,12 +511,22 @@ process VT_SOMATIC_POSTPROCESS {
 
     script:
         """
-        vt decompose -s $somatic_vcf -o "${meta.somatic_caller}_decomp.vcf.gz"
-        vt index "${meta.somatic_caller}_decomp.vcf.gz"
-        vt normalize "${meta.somatic_caller}_decomp.vcf.gz" -r $reference_fa -o decomp_norm.vcf.gz
+        samtools faidx $reference_fa
+        
+        vt normalize $somatic_vcf -r $reference_fa -o norm.vcf.gz
+        vt sort norm.vcf.gz -o norm_sorted.vcf.gz
+        vt index norm_sorted.vcf.gz
+        
+        vt decompose -s norm_sorted.vcf.gz -o decomp_norm.vcf.gz
         vt index decomp_norm.vcf.gz
-        vt uniq decomp_norm.vcf.gz -o "${meta.somatic_name}_${meta.somatic_caller}_variants.vcf.gz"
+        
+        vt sort decomp_norm.vcf.gz -o decomp_norm_sort.vcf.gz
+        vt index decomp_norm_sort.vcf.gz
+        vt uniq decomp_norm_sort.vcf.gz -o "${meta.somatic_name}_${meta.somatic_caller}_variants_uniq.vcf.gz"
+        vt index "${meta.somatic_name}_${meta.somatic_caller}_variants_uniq.vcf.gz"
+        vt sort "${meta.somatic_name}_${meta.somatic_caller}_variants_uniq.vcf.gz" -o "${meta.somatic_name}_${meta.somatic_caller}_variants.vcf.gz"
         vt index "${meta.somatic_name}_${meta.somatic_caller}_variants.vcf.gz"
+
         """
 }
 
@@ -514,6 +535,7 @@ process VEP_ANNOTATE {
 
     cpus 8
     memory "32GB"
+    cache "lenient"
 
     
     container "ensemblorg/ensembl-vep:release_115.0"
@@ -573,6 +595,7 @@ process MERGE_SOMATIC_VCFS {
 
     cpus 4
     memory "32GB"
+    cache "lenient"
     
     container "broadinstitute/gatk3:3.6-0"
 
@@ -706,6 +729,7 @@ process STRELKA {
 
    cpus 16
    memory "32GB"
+   cache "lenient"
 
    container 'quay.io/wtsicgp/strelka2-manta'
 
@@ -758,6 +782,7 @@ process POSTPROCESS_MUTECT2_SCATTER {
 
     cpus 4
     memory "32GB"
+    cache "lenient"
 
     container "broadinstitute/gatk:4.6.1.0"
 
@@ -826,8 +851,9 @@ process POSTPROCESS_MUTECT2_SCATTER {
 
 process MUTECT2_SCATTER {
 
-    cpus 2
-    memory "8GB"
+    cpus 4
+    memory "12GB"
+    cache "lenient"
 
     container "broadinstitute/gatk:4.6.1.0"
 
@@ -880,6 +906,7 @@ process SPLIT_INTERVALS {
 
     cpus 2
     memory "8GB"
+    cache "lenient"
 
     tag "Split intervals for ${params.scatter_count} shards"
     
@@ -933,6 +960,7 @@ process KALLISTO_INDEX {
     
     cpus 32
     memory "32GB"
+    cache 'lenient'
     
 
     conda "bioconda::kallisto=0.51.1"
@@ -955,6 +983,7 @@ process PREPROCESS_BAM {
 
     cpus 8
     memory "80GB"
+    cache "lenient"
     
     container "broadinstitute/gatk:4.6.1.0"
 
@@ -1013,8 +1042,8 @@ process PREPROCESS_BAM {
 process BWA_MAP {
 
     cpus 32
-
     memory "64GB"
+    cache "lenient"
 
     conda "bioconda::bwa=0.7.19 bioconda::samtools=1.22.1"
 
@@ -1046,7 +1075,8 @@ process CREATE_BWA_INDEX {
     memory "64GB"
     
     conda "bioconda::bwa=0.7.19 bioconda::samtools=1.22.1"
-
+    
+    cache 'lenient'
 
     input:
         path reference_fa
@@ -1115,9 +1145,9 @@ process STAR_INDEX_BAM {
 
     output:
         tuple val(meta), path("${meta.sample_name}_${meta.molecule}_STAR_sorted.bam"), path("${meta.sample_name}_${meta.molecule}_STAR_sorted.bam.bai"), emit: star_bam
-        path final_log
-        path sj_out
-        path chimeric_out
+        tuple val(meta), path(final_log), emit: final_log
+        tuple val(meta), path(sj_out), emit: sj_out
+        tuple val(meta), path(chimeric_out), emit: chimeric_out
 
     script:
         """
@@ -1131,7 +1161,7 @@ process STAR_INDEX_BAM {
 
 process STAR_ALIGN {
 
-    cpus 64
+    cpus 32
 
     memory "80GB"
 
@@ -1188,6 +1218,7 @@ process CREATE_STAR_INDEX {
 
     cpus 32
     memory "64GB"
+    cache 'lenient'
 
     container "alexdobin/star:2.7.10a_alpha_220506"
 
@@ -1291,7 +1322,7 @@ process HLAHD_HLA_CALLS {
 
         hlahd["Allele 1"] = allele_1_new
         hlahd["Allele 2"] = allele_2_new
-        hlahd = hlahd[hlahd["HLA"].isin(["A","B","C","DRB1","DQA1","DQB1"])]
+        #hlahd = hlahd[hlahd["HLA"].isin(["A","B","C","DRB1","DQA1","DQB1"])]
 
         alleles = set()
         for allele, allele_1,allele_2 in zip(hlahd["HLA"],hlahd["Allele 1"], hlahd["Allele 2"]):
@@ -1417,25 +1448,30 @@ process OPTITYPE {
 
 process HLAHD {
     
-    cpus 24
-
-    memory "64GB"
-
+    cpus 8
+    memory "128GB"
 
     container "griffithlab/hlahd:1.0"
+    containerOptions '--bind $TMPDIR:/tmp'
     
     publishDir "${params.outdir}/HLA/hlahd/${meta.sample_name}_hlahd", mode: "copy"
-
 
     input:
         tuple val(meta), path(fastq1), path(fastq2)
     
     output:
         tuple val(meta), path("./${meta.sample_name}/result/${meta.sample_name}_final.result.txt"), emit: hla_calls
-        //path("./${meta.sample_name}/result/*")
+        path("./${meta.sample_name}/result/")
 
     script:
         """
+
+        echo "\$TMPDIR"
+        #mkdir -p tmp
+        #mkdir -p /tmp/
+
+        #export TMPDIR=/tmp/
+
         /opt/hlahd/bin/hlahd.1.6.1.sh \
             -f /opt/hlahd/freq_data \
             -t $task.cpus \
@@ -1451,12 +1487,14 @@ process HLAHD {
 
 process PVACSEQ {
 
-    cpus 32
-    memory "64GB"
+    cpus 4
+    memory "90GB"
 
-    container "griffithlab/pvactools:6.0.1"
+    container "griffithlab/pvactools:6.0.3"
 
-    publishDir "${params.outdir}/pvactools/"
+    clusterOptions '--gres=scratch:750G'
+
+    publishDir "${params.outdir}/pvactools/", mode: "copy"
 
     input:
         tuple val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index)
@@ -1477,11 +1515,14 @@ process PVACSEQ {
             "${somatic_meta.somatic_name}_pvacseq" \
             -e1 8,9,10,11 \
             -e2 12,13,14,15,16,17,18 \
-            --normal-sample-name ${normal_meta.sample_name} \
             --phased-proximal-variants-vcf $phased_vcf \
+            --normal-sample-name ${normal_meta.sample_name} \
             --iedb-install-directory /opt/iedb \
             --pass-only \
-            -t $task.cpus
+            -t 1
+        
+        #DeepImmuno MHCflurry MHCflurryEL MHCnuggetsI MHCnuggetsII NNalign NetMHC NetMHCIIpan NetMHCIIpanEL NetMHCpan NetMHCpanEL PickPocket SMM SMMPMBEC SMMalign \
+        #--phased-proximal-variants-vcf $phased_vcf \
         """
 }
 
@@ -1516,30 +1557,8 @@ workflow {
     }
 
 
-            
-    /* 
-    // Reads in the GATK resource bucket for reference genome hg38
-    
-    all_reference_files = Channel
-                .fromPath("${params.reference_index_dir}*", checkIfExists: true)
-                .collect()
-
-    all_reference_files
-        | flatten
-        | branch {
-            fasta: it.name.endsWith('.fa') || it.name.endsWith('.fasta')
-            index_files: true
-        }
-    | set { ref_files }
-
-    reference_index_files = ref_files.index_files.collect()
-    reference_fa = ref_files.fasta.collect()
-    reference_dict = Channel.fromPath("${params.reference_index_dir}*.dict")
-    */
-
-
     // PULL REFERENCE FASTA AND REFERENCE FASTA SUPPLEMENTAL FILES
-
+    
     reference_fa = Channel.fromPath(params.reference_fa).first()
     reference_index_files = Channel.fromPath(params.reference_index_dir).collect()
     reference_dict = Channel.fromPath(params.reference_dict).first()
@@ -1555,7 +1574,10 @@ workflow {
     mills_index = Channel.fromPath(params.mills_index).first()
     intervals_file = Channel.fromPath(params.intervals_file).first()
     kallisto_reference = Channel.fromPath(params.kallisto_reference).first()
-    
+    gencode_gtf = Channel.fromPath(file(params.gencode_gtf)).first()
+    ctat_resource_dir = Channel.fromPath(file(params.ctat_resource_dir)).first()
+    bwa_index = Channel.fromPath(params.bwa_index).collect()
+
 
     // RUN FASTP QC ON ALL SAMPLES
 
@@ -1588,9 +1610,9 @@ workflow {
     // ALIGNMENT OF DNA SEQUENCING USING BWA
 
 
-    bwa_index = CREATE_BWA_INDEX(reference_fa, reference_index_files)
+    //bwa_index = CREATE_BWA_INDEX(reference_fa, reference_index_files)
 
-    bwa_mapped = BWA_MAP(fastp_by_molec.dna, reference_fa, reference_index_files, bwa_index.bwa_index)
+    bwa_mapped = BWA_MAP(fastp_by_molec.dna, reference_fa, reference_index_files, bwa_index)
     bwa_mapped.mapped_bam.branch { meta, bam, bam_index ->
                                  mapped_dna: meta.molecule == "DNA"
                                  mapped_rna: meta.molecule == "RNA"
@@ -1601,11 +1623,19 @@ workflow {
 
     // ALIGNMENT OF RNA SEQUENCING USING STAR
     // STAR alignment process includes chimeric reads for directly going from BAM -> Star-Fusion
-    gencode_gtf = Channel.fromPath(file(params.gencode_gtf))
-    star_index = CREATE_STAR_INDEX(reference_fa, reference_index_files, gencode_gtf).star_index
-    star_rna_align = STAR_ALIGN(fastp_by_molec.rna, star_index.collect())
+    //star_index = CREATE_STAR_INDEX(reference_fa, reference_index_files, gencode_gtf).star_index
+    
+    star_rna_align = STAR_ALIGN(fastp_by_molec.rna, params.star_index)
     star_rna = STAR_INDEX_BAM(star_rna_align)
     
+    
+    // FUSION CALLING
+    //star_fusion = STAR_FUSION(star_rna.chimeric_out,
+    //                         ctat_resource_dir)
+    
+    
+
+
 
     // BAM PREPROCESSING OF DNA: GATK BEST PRACTICES
 
@@ -1634,9 +1664,9 @@ workflow {
     // RNA: TRANSCRIPT ABUNDANCE ESTIMATION
     
 
-    kallisto_index = KALLISTO_INDEX(kallisto_reference)
+    //kallisto_index = KALLISTO_INDEX(kallisto_reference)
     kallisto = KALLISTO_QUANT(fastp_by_molec.rna,
-                              kallisto_index)
+                              params.kallisto_index)
 
 
 
@@ -1663,7 +1693,9 @@ workflow {
                                                         mills,
                                                         mills_index)
     // Use vt decompose on germline calls
-    vt_germline = VT_DECOMPOSE_GERMLINE(germline_postprocess)
+    vt_germline = VT_POSTPROCESS_GERMLINE(germline_postprocess,
+                                          reference_fa,
+                                          reference_index_files)
 
 
     //
