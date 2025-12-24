@@ -1,8 +1,3 @@
-// process.scratch = true
-// process.errorStrategy = 'finish'
-
-workDir = '/c4/home/hwismer/nextflow/work/'
-cacheDir = '/c4/home/hwismer/nextflow/cache/'
 
 process {
     executor = "slurm"
@@ -11,24 +6,20 @@ process {
     time = 14.d
     cache = "lenient"
     queue = "freecycle,krummellab,common"
-    //clusterOptions = '--gres=scratch:500G'
+    scratch = true
+    clusterOptions = '--gres=scratch:500G'
 }
 
 apptainer {
     enabled = true
     autoMounts= true
-    runOptions = '--writable-tmpfs'
-    runOptions = '-B $SINGULARITY_TMPDIR:/tmp -B $SINGULARITY_TMPDIR:/scratch'
-    //envWhitelist = ['SINGULARITY_TMPDIR']
-    runOptions = '-B ${workDir}:/tmp/'
-    runOptions = "-B ${workDir}:/scratch"
-    //home = '${project_dir}/work'
+    runOptions = '--writable-tmpfs -B $SINGULARITY_TMPDIR:/tmp -B $SINGULARITY_TMPDIR:/scratch'
     pullTimeout="30min"
 }
 
 executor {
     name = "slurm"
-    queueSize = 30
+    queueSize = 40
     queue = "freecyle,krummellab,common"
 }
 

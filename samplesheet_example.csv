@@ -1,4 +1,7 @@
-sample_name,sample_type,molecule,sequencing_type,fastqr1,fastqr2
-PATIENT_SampleN,Normal,DNA,WES,/path/fastq1,/path/fastq2
-PATIENT_SampleT,Tumor,DNA,WES,/path/fastq1,/path/fastq2
-PATIENT_SampleT,Tumor,RNA,bulkRNASeq,/path/fastq1,/path/fastq2
+somatic_sample,sample_name,sample_type,molecule,sequencing_type,hla,fastqr1,fastqr2
+PATIENT1_Tumor1_vs_Normal1,Tumor1,Tumor,DNA,WES,CALL,fastq1,fastq2
+PATIENT1_Tumor1_vs_Normal1,Normal1,Normal,DNA,WES,CALL,fastq1,fastq2
+PATIENT1_Tumor1_vs_Normal1,Tumor1,Tumor,RNA,bulkRNAseq,CALL,fastq1,fastq2
+PATIENT2_Tumor2_vs_Normal2,Tumor2,Tumor,DNA,WES,/path/to/hlac/calls,fastq1,fastq2
+PATIENT2_Tumor2_vs_Normal2,Normal2,Normal,DNA,WES,/path/to/hla/calls,fastq1,fastq2
+PATIENT2_Tumor2_vs_Normal2,Tumor2,Tumor,RNA,bulkRNAseq,/path/to/hla/calls,fastq1,fastq2

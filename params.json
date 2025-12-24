@@ -1,17 +1,11 @@
 {
     "sample_sheet" : "./samplesheet.csv",  
     
-    "somatic_name" : "IPIPROS047_T1_vs_N1",
-    "outdir" : "IPIPROS047_T1_vs_N1_results",
-
-    "clinical_hla_calls" : "/c4/home/hwismer/pvac_pipeline/IPIPROS047_pipeline/pros_hla.csv",
-    "use_clinical_hla_calls" : true,
-
+    "outdir" : "cIPI_vax_out",
 
     "reference_fa" : "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.fasta",
     "reference_index_dir" : "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38{.fasta.fai,.dict}",
     "reference_dict" : "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dict",
-    
 
     "common_germline" : "gs://gatk-best-practices/somatic-hg38/small_exac_common_3.hg38.vcf.gz",
     "common_germline_index" : "gs://gatk-best-practices/somatic-hg38/small_exac_common_3.hg38.vcf.gz.tbi",
