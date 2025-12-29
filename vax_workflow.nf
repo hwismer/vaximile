@@ -1797,7 +1797,7 @@ process PVACSEQ {
 
     container "griffithlab/pvactools:6.0.3"
 
-    publishDir "${params.outdir}/pvactools/", mode: "copy"
+    publishDir "${params.outdir}/${somatic_meta.somatic_name}/pvactools/", mode: "copy"
 
     input:
         tuple val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index),
