@@ -531,10 +531,13 @@ process ANNOTATE_VCF_COVERAGE {
 
     script:
         """
+
+        echo "${somatic_meta.tumor_metamap.sample_name}"
+        echo "${somatic_meta.tumor_metamap.molecule}"
         vcf-readcount-annotator \
             $vcf \
             $brc_snvs \
-            ${somatic_meta.tumor_metamap.molecule} \
+            RNA \
             -s ${somatic_meta.tumor_metamap.sample_name} \
             -t snv \
             -o "${somatic_meta.somatic_name}_snv_annotated.vcf"
@@ -542,7 +545,7 @@ process ANNOTATE_VCF_COVERAGE {
         vcf-readcount-annotator \
             "${somatic_meta.somatic_name}_snv_annotated.vcf" \
             $brc_indels \
-            ${somatic_meta.tumor_metamap.molecule} \
+            RNA \
             -s ${somatic_meta.tumor_metamap.sample_name} \
             -t indel \
             -o ${somatic_meta.somatic_name}_annotated.vcf
@@ -2060,12 +2063,13 @@ workflow {
         | map { meta, vcf, tbi  -> tuple(meta.somatic_name, [meta, vcf, tbi]) }
         | groupTuple
         
+    somatic_vcfs_vt.view()
 
     merged_vcf = MERGE_SOMATIC_VCFS(somatic_vcfs_vt,
                                       reference_fa,
                                       reference_index_files)
 
-
+    
 
     // PVACtools VCF PREPARATION
     
