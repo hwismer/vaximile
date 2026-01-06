@@ -9,8 +9,17 @@
 
     "common_germline" : "gs://gatk-best-practices/somatic-hg38/small_exac_common_3.hg38.vcf.gz",
     "common_germline_index" : "gs://gatk-best-practices/somatic-hg38/small_exac_common_3.hg38.vcf.gz.tbi",
-    "known_sites" : "gs://gatk-best-practices/somatic-hg38/af-only-gnomad.hg38.vcf.gz",
-    "known_sites_index" : "gs://gatk-best-practices/somatic-hg38/af-only-gnomad.hg38.vcf.gz.tbi",
+    
+    "known_sites_dbsnp":"gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf",
+    "known_sites_dbsnp_index":"gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf.idx",
+    "known_sites_1000g_snps":"gs://gcp-public-data--broad-references/hg38/v0/1000G_phase1.snps.high_confidence.hg38.vcf.gz",
+    "known_sites_1000g_snps_index":"gs://gcp-public-data--broad-references/hg38/v0/1000G_phase1.snps.high_confidence.hg38.vcf.gz.tbi",
+    "known_indels":"gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.known_indels.vcf.gz",
+    "known_indels_index":"gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.known_indels.vcf.gz.tbi",
+
+    "gnomad" : "gs://gatk-best-practices/somatic-hg38/af-only-gnomad.hg38.vcf.gz",
+    "gnomad_index" : "gs://gatk-best-practices/somatic-hg38/af-only-gnomad.hg38.vcf.gz.tbi",
+    
     "pon" : "gs://gatk-best-practices/somatic-hg38/1000g_pon.hg38.vcf.gz",
     "pon_index" : "gs://gatk-best-practices/somatic-hg38/1000g_pon.hg38.vcf.gz.tbi",
     "hapmap" : "gs://genomics-public-data/resources/broad/hg38/v0/hapmap_3.3.hg38.vcf.gz",

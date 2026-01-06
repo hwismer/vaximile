@@ -961,6 +961,9 @@ process POSTPROCESS_MUTECT2_SCATTER {
     cache "lenient"
 
     container "broadinstitute/gatk:4.6.1.0"
+    
+    // publishDir "${params.outdir}/${meta.somatic_name}/variants/${meta.somatic_name}_mutect_postproc.vcf.gz", mode: "copy"
+
 
     input:
         tuple val(somatic_name), val(meta), val(vcfs), path(vcf_indices), path(f1r2s), path(stats), path(tumor_pileups), path(normal_pileups)
@@ -1032,7 +1035,7 @@ process MUTECT2_SCATTER {
     */
 
     cpus 4
-    memory "12GB"
+    memory "16GB"
     cache "lenient"
 
     container "broadinstitute/gatk:4.6.1.0"
@@ -1044,8 +1047,8 @@ process MUTECT2_SCATTER {
         each path(interval_shard)
         path reference_fa
         path reference_index_dir
-        path known_sites
-        path known_sites_dir
+        path germline_resource
+        path germline_resource_index
         path pon
         path pon_index_dir
 
@@ -1072,11 +1075,12 @@ process MUTECT2_SCATTER {
             -I ${tumor_bam} \
             -I ${normal_bam} \
             -normal ${normal_meta.sample_name} \
-            --germline-resource "${known_sites}" \
+            --germline-resource $germline_resource \
             --panel-of-normals "${pon}" \
             --f1r2-tar-gz "${somatic_name}_${interval_shard}_mutect_f1r2.tar.gz" \
             -L $interval_shard \
-            -O "${somatic_name}_${interval_shard}_mutect.vcf.gz"
+            -O "${somatic_name}_${interval_shard}_mutect.vcf.gz" \
+            --native-pair-hmm-threads $task.cpus
 
         """
 }
@@ -1192,6 +1196,8 @@ process PREPROCESS_BAM {
 
     */
 
+
+
     cpus 16
     memory "48GB"
     cache "lenient"
@@ -1204,8 +1210,17 @@ process PREPROCESS_BAM {
         tuple val(meta), path(reads), path(reads_index)
         path reference_fa
         path reference_fa_index
-        path known_sites
-        path known_sites_index
+        path known_sites_dbsnp
+        path known_sites_dbsnp_index
+        path known_sites_1000g_snps
+        path known_sites_1000g_snps_index
+        path known_indels
+        path known_indels_index
+        path mills
+        path mills_index
+        path common_germline
+        path common_germline_index
+
 
     output:
         tuple val(meta), 
@@ -1227,7 +1242,10 @@ process PREPROCESS_BAM {
             -I "${meta.sample_name}_${meta.molecule}_dedup.bam" \
             -O "${meta.sample_name}_${meta.molecule}_recal_table.table" \
             -R $reference_fa \
-            --known-sites $known_sites
+            --known-sites $known_sites_dbsnp \
+            --known-sites $known_sites_1000g_snps \
+            --known-sites $known_indels \
+            --known-sites $mills 
         
         gatk ApplyBQSR \
             -R $reference_fa \
@@ -1238,8 +1256,8 @@ process PREPROCESS_BAM {
 
         gatk GetPileupSummaries \
             -I "${meta.sample_name}_${meta.molecule}_bqsr.bam" \
-            -V "${known_sites}" \
-            -L "${known_sites}" \
+            -V "${common_germline}" \
+            -L "${common_germline}" \
             -O "${meta.sample_name}_${meta.molecule}_pileups.table"
         """
 }
@@ -1830,6 +1848,60 @@ process PVACSEQ {
         """
 }
 
+process PVACSEQ_SELECT_ALGOS {
+
+    /*
+
+    Run PVACseq on a single sample.
+
+    Inputs:
+        *(See PVACseq input preparation documents for more info.)
+        Somatic VCF
+        Phased Germline VCF
+        Tumor Sample Metadata
+        Normal Sample Metadata
+
+    Output:
+        Pvacseq folder containing:
+            Combined neoantigen predictions
+            MHC I neoantigen predictions
+            MHC II neoantigen predictions
+
+    */
+
+    cpus 4
+    memory "90GB"
+
+    container "griffithlab/pvactools:6.0.3"
+
+    publishDir "${params.outdir}/${somatic_meta.somatic_name}/pvactools/", mode: "copy"
+
+    input:
+        tuple val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index),
+            path(phased_vcf), path(phased_vcf_index),
+            path(hla_pvac_input)
+    output:
+        path("${somatic_meta.somatic_name}_pvacseq_select_algos"), emit: pvacseq_dir
+
+    script:
+        """
+        pvacseq run \
+            $somatic_vcf \
+            ${somatic_meta.tumor_metamap.sample_name} \
+            \$(head $hla_pvac_input -n 1) \
+            MHCflurry MHCflurryEL MHCnuggetsI MHCnuggetsII  NetMHCIIpan NetMHCIIpanEL NetMHCpan NetMHCpanEL \
+            "${somatic_meta.somatic_name}_pvacseq_select_algos" \
+            -e1 8,9,10,11 \
+            -e2 12,13,14,15,16,17,18 \
+            --phased-proximal-variants-vcf $phased_vcf \
+            --normal-sample-name ${somatic_meta.normal_metamap.sample_name} \
+            --iedb-install-directory /opt/iedb \
+            --pass-only \
+            -t 1
+        """
+}
+
+
 
 workflow {
     
@@ -1862,22 +1934,37 @@ workflow {
     reference_fa = Channel.fromPath(params.reference_fa).first()
     reference_index_files = Channel.fromPath(params.reference_index_dir).collect()
     reference_dict = Channel.fromPath(params.reference_dict).first()
+    
     common_germline = Channel.fromPath(params.common_germline).first()
     common_germline_index = Channel.fromPath(params.common_germline_index).first()
-    known_sites = Channel.fromPath(params.known_sites).first()
-    known_sites_index = Channel.fromPath(params.known_sites_index).first()
-    pon = Channel.fromPath(params.pon).first()
-    pon_index = Channel.fromPath(params.pon_index).first()
-    hapmap = Channel.fromPath(params.hapmap).first()
-    hapmap_index = Channel.fromPath(params.hapmap_index).first()
+    
+    known_sites_dbsnp = Channel.fromPath(params.known_sites_dbsnp).first()
+    known_sites_dbsnp_index = Channel.fromPath(params.known_sites_dbsnp_index).first()
+
+    known_sites_1000g_snps = Channel.fromPath(params.known_sites_1000g_snps).first()
+    known_sites_1000g_snps_index = Channel.fromPath(params.known_sites_1000g_snps_index).first()
+
+    known_indels = Channel.fromPath(params.known_indels).first()
+    known_indels_index = Channel.fromPath(params.known_indels_index).first()
+    
     mills = Channel.fromPath(params.mills).first()
     mills_index = Channel.fromPath(params.mills_index).first()
+
+    gnomad = Channel.fromPath(params.gnomad).first()
+    gnomad_index = Channel.fromPath(params.gnomad_index).first()
+    
+    pon = Channel.fromPath(params.pon).first()
+    pon_index = Channel.fromPath(params.pon_index).first()
+    
+    hapmap = Channel.fromPath(params.hapmap).first()
+    hapmap_index = Channel.fromPath(params.hapmap_index).first()
+    
     intervals_file = Channel.fromPath(params.intervals_file).first()
+    
     kallisto_reference = Channel.fromPath(params.kallisto_reference).first()
     gencode_gtf = Channel.fromPath(file(params.gencode_gtf)).first()
+    
     ctat_resource_dir = Channel.fromPath(file(params.ctat_resource_dir)).first()
-
-
     
 
     // RUN FASTP QC ON ALL SAMPLES
@@ -1933,10 +2020,14 @@ workflow {
     // BAM PREPROCESSING OF DNA: GATK BEST PRACTICES
 
     preprc = PREPROCESS_BAM(bwa_mapped,
-                            reference_fa, reference_index_files, 
+                            reference_fa, reference_index_files,
+                            known_sites_dbsnp, known_sites_dbsnp_index,
+                            known_sites_1000g_snps, known_sites_1000g_snps_index,
+                            known_indels, known_indels_index,
+                            mills, mills_index,
                             common_germline, common_germline_index)
 
-   
+
     
     // RNA: TRANSCRIPT ABUNDANCE ESTIMATION
     
@@ -2005,7 +2096,6 @@ workflow {
                                                                          normal[0], normal[1], normal[2]]
                                                      }
     
-
     // SOMATIC VARIANT CALLING
 
     // MUTECT2
@@ -2014,13 +2104,12 @@ workflow {
     mutect_scattered = MUTECT2_SCATTER(preproc_bams_by_sample,
                     intervals.flatten(),
                     reference_fa, reference_index_files,
-                    known_sites, known_sites_index,
+                    gnomad, gnomad_index,
                     pon, pon_index) 
    
     mutect_gathered = mutect_scattered 
                         | groupTuple 
                         | map { meta, vcf, vcf_index, f1r2, stats -> tuple(meta.somatic_name, [meta, vcf, vcf_index, f1r2, stats]) }
-
     
     pileups = preprc.preproc_bams_pileups.map { meta, pileups -> tuple(meta.somatic_sample, [meta, pileups]) } 
                                          | groupTuple
@@ -2030,13 +2119,15 @@ workflow {
 
                                              return [somatic_name, tumor[1], normal[1] ]
                                      }
+
+
+
     mutect_scattered_pileups = mutect_gathered
         | join(pileups)
         | map { somatic_name, inner, tumor_pileups, normal_pileups ->
                 def (meta, vcfs, tbis, f1r2s, stats) = inner
                 tuple(somatic_name, meta, vcfs, tbis, f1r2s, stats, tumor_pileups, normal_pileups)
         }
-
 
     
     // Postprocess Mutect2 Output using pileups, stats, etc.
@@ -2063,7 +2154,6 @@ workflow {
         | map { meta, vcf, tbi  -> tuple(meta.somatic_name, [meta, vcf, tbi]) }
         | groupTuple
         
-    somatic_vcfs_vt.view()
 
     merged_vcf = MERGE_SOMATIC_VCFS(somatic_vcfs_vt,
                                       reference_fa,
@@ -2210,7 +2300,7 @@ workflow {
             
 
     PVACSEQ = PVACSEQ(pvac_input)
-
+    PVACSEQ_SELECT = PVACSEQ_SELECT_ALGOS(pvac_input)
 
 
 }
