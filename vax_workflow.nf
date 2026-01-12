@@ -61,7 +61,7 @@ process VT_POSTPROCESS_GERMLINE {
     cpus 2
     memory "8GB"
 
-    conda "bioconda::vt bioconda::samtools"
+    container "staphb/bcftools:1.23"
 
     publishDir "${params.outdir}/${meta.somatic_sample}/germline/HaplotypeCaller", mode: "copy"
 
@@ -71,17 +71,14 @@ process VT_POSTPROCESS_GERMLINE {
         path reference_index_files
 
     output:
-        tuple val(meta), path("${meta.sample_name}_germline.vcf.gz"), path("${meta.sample_name}_germline.vcf.gz.tbi"), emit: germline_vcf
+        tuple val(meta), path("${meta.sample_name}_germline_normalized.vcf.gz"), path("${meta.sample_name}_germline_normalized.vcf.gz.tbi"), emit: germline_vcf
     script:
         """
-        samtools faidx $reference_fa
-        vt normalize $germline_vcf -r $reference_fa -o norm.vcf.gz
-        vt index norm.vcf.gz
-        vt decompose -s norm.vcf.gz -o decomp_norm.vcf.gz
-        vt index decomp_norm.vcf.gz
-        vt uniq decomp_norm.vcf.gz -o "${meta.sample_name}_germline.vcf.gz"
-        vt index "${meta.sample_name}_germline.vcf.gz"
-        """
+        bcftools norm -m -any -f $reference_fa $germline_vcf -Oz -o norm_vcf.vcf.gz
+        bcftools sort norm_vcf.vcf.gz -Oz -o norm_sort.vcf.gz
+        bcftools norm -d exact norm_sort.vcf.gz -Oz -o "${meta.sample_name}_germline_normalized.vcf.gz"
+        bcftools index -t "${meta.sample_name}_germline_normalized.vcf.gz"
+     """
 }
 
 
@@ -603,38 +600,31 @@ process VT_SOMATIC_POSTPROCESS {
 
     */
 
-    cpus 2
+    cpus 4
     memory "16GB"
     cache "lenient"
+    
+    container "staphb/bcftools:1.23"
 
-    conda "bioconda::vt bioconda::samtools"
     publishDir "${params.outdir}/${meta.somatic_name}/somatic/${meta.somatic_caller}/", mode:"copy"
+    
     input:
         tuple val(meta), path(somatic_vcf), path(somatic_vcf_index)
         path(reference_fa)
         path(reference_index_dir)
 
     output:
-        tuple val(meta), path("${meta.somatic_name}_${meta.somatic_caller}_variants.vcf.gz"), path("${meta.somatic_name}_${meta.somatic_caller}_variants.vcf.gz.tbi"), emit: vt_vcf
+        tuple val(meta), 
+            path("${meta.somatic_name}_${meta.somatic_caller}_normalized_variants.vcf.gz"), 
+            path("${meta.somatic_name}_${meta.somatic_caller}_normalized_variants.vcf.gz.tbi"), emit: vt_vcf
 
     script:
-        """
-        samtools faidx $reference_fa
-        
-        vt normalize $somatic_vcf -r $reference_fa -o norm.vcf.gz
-        vt sort norm.vcf.gz -o norm_sorted.vcf.gz
-        vt index norm_sorted.vcf.gz
-        
-        vt decompose -s norm_sorted.vcf.gz -o decomp_norm.vcf.gz
-        vt index decomp_norm.vcf.gz
-        
-        vt sort decomp_norm.vcf.gz -o decomp_norm_sort.vcf.gz
-        vt index decomp_norm_sort.vcf.gz
-        vt uniq decomp_norm_sort.vcf.gz -o "${meta.somatic_name}_${meta.somatic_caller}_variants_uniq.vcf.gz"
-        vt index "${meta.somatic_name}_${meta.somatic_caller}_variants_uniq.vcf.gz"
-        vt sort "${meta.somatic_name}_${meta.somatic_caller}_variants_uniq.vcf.gz" -o "${meta.somatic_name}_${meta.somatic_caller}_variants.vcf.gz"
-        vt index "${meta.somatic_name}_${meta.somatic_caller}_variants.vcf.gz"
 
+        """
+        bcftools norm -m -any -f $reference_fa $somatic_vcf -Oz -o norm_vcf.vcf.gz
+        bcftools sort norm_vcf.vcf.gz -Oz -o norm_sort.vcf.gz
+        bcftools norm -d exact norm_sort.vcf.gz -Oz -o "${meta.somatic_name}_${meta.somatic_caller}_normalized_variants.vcf.gz"
+        bcftools index -t "${meta.somatic_name}_${meta.somatic_caller}_normalized_variants.vcf.gz"
         """
 }
 
@@ -663,22 +653,60 @@ process VEP_ANNOTATE {
         path vep_plugins
 
     output:
-        tuple val(meta), path("${meta.somatic_name}_vep.vcf"), emit: vep_vcf
+        tuple val(meta), path("somatic_vep.vcf"), emit: vep_vcf
 
     script:
         """
         vep \
             --input_file $somatic_vcf  \
-            --output_file "${meta.somatic_name}_vep.vcf" \
+            --output_file somatic_vep.vcf \
+            --everything \
             --format vcf --vcf --symbol --terms SO --tsl --biotype \
             --hgvs --fasta $reference_fa  \
             --offline --cache $vep_cache \
             --plugin Frameshift --plugin Wildtype \
             --pick \
             --dir_plugins $vep_plugins
-            #[--transcript_version]
+        
         """
 }
+
+process VEP_FILTER {
+
+    /*
+
+    Use VEP to annotate a vcf files. Requires path to an installed cache
+    as well as a vep plugin directory. If using PVAC later on, the vep plugins
+    will need to includet those specified by pvac in their docs.
+
+    */
+
+    cpus 2
+    memory "16GB"
+    cache "lenient"
+
+    
+    container "ensemblorg/ensembl-vep:release_115.0"
+
+    input:
+        tuple val(meta), path(vep_vcf)
+        path vep_cache
+        path vep_plugins
+
+    output:
+        tuple val(meta), path("${meta.somatic_name}_vep.vcf"), emit: vep_vcf
+
+    script:
+        """
+
+        filter_vep -i $vep_vcf \
+            -o "${meta.somatic_name}_vep.vcf" \
+            --format vcf \
+            --filter "gnomADe_AF < 0.001 or not gnomADe_AF"
+
+        """
+}
+
 
 
 
@@ -787,16 +815,25 @@ process FILTER_VCF {
     
     container "biocontainers/bcftools:v1.9-1-deb_cv1"
     
+    publishDir "${params.outdir}/${somatic_meta.somatic_name}/somatic/${somatic_meta.somatic_caller}/", mode:"copy"
+
     
     input:
         tuple val(somatic_meta), path(somatic_vcf)
         
     output:
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_variants.vcf.gz"), path("${somatic_meta.somatic_name}_variants.vcf.gz.tbi"), emit: vcf
+        tuple val(somatic_meta), 
+            path("${somatic_meta.somatic_name}_variants.vcf.gz"), 
+            path("${somatic_meta.somatic_name}_variants.vcf.gz.tbi"), emit: filter_vcf
+        
+        tuple val(somatic_meta), 
+            path("${somatic_meta.somatic_name}_variants_unfiltered.vcf.gz"), 
+            path("${somatic_meta.somatic_name}_variants_unfiltered.vcf.gz.tbi"), emit: unfiltered_vcf
         
     script:
         """
-        bcftools index $somatic_vcf
+        cp $somatic_vcf "${somatic_meta.somatic_name}_variants_unfiltered.vcf.gz"
+        bcftools index -t "${somatic_meta.somatic_name}_variants_unfiltered.vcf.gz"
         bcftools view -f PASS -Oz -o "${somatic_meta.somatic_name}_variants.vcf.gz" $somatic_vcf
         bcftools index -t "${somatic_meta.somatic_name}_variants.vcf.gz"
         """
@@ -1265,36 +1302,57 @@ process PREPROCESS_BAM {
 process BWA_MAP {
 
     /*
-        IMPLEMENT BWA 2?
         Map fastq files using BWA. Outputs a sorted BAM file and its index
         Reads groups are created using metadata information and currently are basically just the same name.
 
     */
 
-    cpus 32
-    memory "48GB"
+    cpus 16
+    memory "32GB"
     cache "lenient"
-
-    conda "bioconda::bwa=0.7.19 bioconda::samtools=1.22.1"
-
-    publishDir "${params.outdir}/${meta.somatic_sample}/alignment/bwa/${meta.sample_name}_${meta.molecule}", mode: "copy"
+    
+    container "iarcbioinfo/bwa-mem2-tools:v1.0"
 
     input:
         tuple val(meta), path(fastq1), path(fastq2)
         path reference_fa
         path reference_index_dir
-        path(bwa_index)
+        path bwa_index
+
+    output:
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}.sam")
+    
+    script:
+    """
+    NEW_RG="@RG\\tID:${meta.sample_name}\\tSM:${meta.sample_name}\\tLB:${meta.sample_name}\\tPL:ILLUMINA"
+
+    bwa-mem2 mem -t $task.cpus -R \$NEW_RG $reference_fa ${fastq1} ${fastq2} > "${meta.sample_name}_${meta.molecule}.sam"
+
+    """
+}
+
+process BWA_POSTPROCESS {
+    
+    cpus 32
+    memory "64GB"
+    cache "lenient"
+
+    conda "bioconda::samtools" 
+    
+    publishDir "${params.outdir}/${meta.somatic_sample}/alignment/bwa/${meta.sample_name}_${meta.molecule}", mode: "copy"
+
+    input:
+        tuple val(meta), val(bwa_sam)
 
     output:
         tuple val(meta), path("${meta.sample_name}_${meta.molecule}_sorted.bam"), path("${meta.sample_name}_${meta.molecule}_sorted.bam.bai"), emit: mapped_bam
     
     script:
     """
-    NEW_RG="@RG\\tID:${meta.sample_name}\\tSM:${meta.sample_name}\\tLB:${meta.sample_name}\\tPL:ILLUMINA"
 
-    bwa mem -M -t $task.cpus -R \$NEW_RG $reference_fa ${fastq1} ${fastq2} \
-        | samtools sort --threads $task.cpus -o ${meta.sample_name}_${meta.molecule}_sorted.bam
-    samtools index ${meta.sample_name}_${meta.molecule}_sorted.bam
+    samtools sort --threads $task.cpus $bwa_sam -o "${meta.sample_name}_${meta.molecule}_sorted.bam"
+    samtools index "${meta.sample_name}_${meta.molecule}_sorted.bam"
+
     """
 }
 
@@ -2001,7 +2059,8 @@ workflow {
         bwa_index = CREATE_BWA_INDEX(reference_fa, reference_index_files)
     }
 
-    bwa_mapped = BWA_MAP(fastp_by_molec.dna, reference_fa, reference_index_files, bwa_index)
+    bwa_sam = BWA_MAP(fastp_by_molec.dna, reference_fa, reference_index_files, bwa_index)
+    bwa_mapped = BWA_POSTPROCESS(bwa_sam)
 
 
     // ALIGNMENT OF RNA SEQUENCING USING STAR
@@ -2145,7 +2204,7 @@ workflow {
 
     somatic_vcfs = mutect_postprocess.concat(strelka)
     
-    somatic_filtered_vcfs = FILTER_VCF(somatic_vcfs)
+    somatic_filtered_vcfs = FILTER_VCF(somatic_vcfs).filter_vcf
    
     // POST-PROCESS SOMATIC VCFS
 
@@ -2164,11 +2223,14 @@ workflow {
     // PVACtools VCF PREPARATION
     
     // Annotate VCF with VEP
-    vep = VEP_ANNOTATE(merged_vcf,
+    vep_annot = VEP_ANNOTATE(merged_vcf,
                        reference_fa,
                        params.vep_cache,
                        params.vep_plugins)
-    
+
+    vep = VEP_FILTER(vep_annot, params.vep_cache, params.vep_plugins)
+
+
     
     vep = vep | map { meta, vcf -> tuple(meta.tumor_metamap.sample_name, [meta, vcf]) } | groupTuple
 

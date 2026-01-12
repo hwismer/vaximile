@@ -33,7 +33,7 @@
 
     "kallisto_index" : "/c4/home/hwismer/pvac_pipeline/indices/kallisto_index.idx",
     "star_index" : "/c4/home/hwismer/pvac_pipeline/indices/STARGenomeDir/",
-    "bwa_index" : "/c4/home/hwismer/pvac_pipeline/indices/bwa_index/*{.bwt,.sa,.pac,.amb,.ann}",
+    "bwa_index" : "/c4/home/hwismer/pvac_pipeline/indices/bwa2_index/*{.bwt.2bit.64,.sa,.pac,.amb,.ann,.0123}",
 
     "scatter_count" : 30,
     "intervals_file" : "gs://genomics-public-data/resources/broad/hg38/v0/wgs_calling_regions.hg38.interval_list",
