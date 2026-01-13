@@ -146,11 +146,11 @@ process PHASE_VCF_VEP {
             --format vcf --vcf --symbol --terms SO --tsl --biotype \
             --hgvs --fasta $reference_fa  \
             --offline --cache $vep_cache \
-            --plugin Frameshift --plugin Wildtype \
+            --plugin Frameshift --plugin Wildtype --plugin Downstream \
             --pick \
             --fork ${task.cpus} \
-            --dir_plugins $vep_plugins
-            #[--transcript_version]
+            --dir_plugins $vep_plugins \
+            --transcript_version
     
         """
 
@@ -661,12 +661,14 @@ process VEP_ANNOTATE {
             --input_file $somatic_vcf  \
             --output_file somatic_vep.vcf \
             --everything \
-            --format vcf --vcf --symbol --terms SO --tsl --biotype \
-            --hgvs --fasta $reference_fa  \
-            --offline --cache $vep_cache \
+            --format vcf --vcf --symbol --terms SO --mane_select --canonical --tsl --biotype --hgvs \
+            --fasta $reference_fa  \
+            --offline --cache \
             --plugin Frameshift --plugin Wildtype \
             --pick \
-            --dir_plugins $vep_plugins
+            --dir_plugins $vep_plugins \
+            --dir_cache $vep_cache \
+            --transcript_version
         
         """
 }
@@ -1368,8 +1370,8 @@ process CREATE_BWA_INDEX {
     cpus 16
     memory "32GB"
     
-    conda "bioconda::bwa=0.7.19 bioconda::samtools=1.22.1"
-    
+    container "iarcbioinfo/bwa-mem2-tools:v1.0"
+
     cache 'lenient'
 
     input:
@@ -1377,11 +1379,11 @@ process CREATE_BWA_INDEX {
         path reference_fa_index
 
     output:
-        path "*{.bwt,.sa,.pac,.amb,.ann}", emit:bwa_index
+        path "*{.bwt.2bit.64,.sa,.pac,.amb,.ann,.0123}", emit: bwa_index
 
     script:
         """
-        bwa index $reference_fa
+        bwa-mem2 index $reference_fa
         """
 
 
@@ -1411,7 +1413,9 @@ process STAR_FUSION {
     output:
 
         tuple val(meta), path("./${meta.sample_name}_starfusion/*.fusion_predictions.tsv"), emit: fusion_preds
-        tuple val(meta), path("./{meta.sample_name}_starfusion/*.fusion_predictions.abridged.tsv"), emit: abridged_preds
+        tuple val(meta), path("./${meta.sample_name}_starfusion/*.fusion_predictions.abridged.tsv"), emit: abridged_preds
+        tuple val(meta), path("./${meta.sample_name}_starfusion/*.coding_effect.tsv"), emit: coding_effect
+        tuple val(meta), path("./${meta.sample_name}_starfusion/FusionInspector-validate"), emit: fusion_inspector
 
 
     script:
@@ -1419,6 +1423,9 @@ process STAR_FUSION {
 
         STAR-Fusion --genome_lib_dir $ctat_resource_lib \
              -J $chimeric_out \
+             --examine_coding_effect \
+             --FusionInspector validate \
+             --denovo_reconstruct \
              --output_dir "./${meta.sample_name}_starfusion"
 
 
@@ -1669,7 +1676,7 @@ process HLAHD_HLA_CALLS {
         alleles = list(alleles)
 
         with open("${meta.sample_name}_hla_calls.csv", "w", newline='') as f:
-            writer = csv.writer(f)
+            writer = csv.writer(f,lineterminator='\n')
             writer.writerow(alleles)
 
         """
@@ -1887,6 +1894,7 @@ process PVACSEQ {
 
     script:
         """
+        echo "\$(head $hla_pvac_input -n 1)"
         pvacseq run \
             $somatic_vcf \
             ${somatic_meta.tumor_metamap.sample_name} \
@@ -2075,6 +2083,8 @@ workflow {
     
     star_rna_align = STAR_ALIGN(fastp_by_molec.rna, params.star_index)
     star_rna = STAR_INDEX_BAM(star_rna_align)
+
+    //star_fusion = STAR_FUSION(star_rna_align.chimeric_out, ctat_resource_dir)
 
     // BAM PREPROCESSING OF DNA: GATK BEST PRACTICES
 
