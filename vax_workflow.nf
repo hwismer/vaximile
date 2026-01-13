@@ -1676,7 +1676,7 @@ process HLAHD_HLA_CALLS {
                                                                     
         alleles = list(alleles)
 
-        with open("${meta.sample_name}_hla_calls.csv", "w", newline='') as f:
+        with open("${meta.sample_name}_hla_calls.csv", "w", newline='',encoding='utf-8') as f:
             writer = csv.writer(f,lineterminator='\n')
             writer.writerow(alleles)
 

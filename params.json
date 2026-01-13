@@ -3,17 +3,17 @@
     
     "outdir" : "cIPI_vax_out",
 
-    "reference_fa" : "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.fasta",
-    "reference_index_dir" : "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38{.fasta.fai,.dict}",
-    "reference_dict" : "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dict",
+    "reference_fa" : "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta",
+    "reference_index_dir" : "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38{.fasta.fai,.dict}",
+    "reference_dict" : "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.dict",
 
     "common_germline" : "gs://gatk-best-practices/somatic-hg38/small_exac_common_3.hg38.vcf.gz",
     "common_germline_index" : "gs://gatk-best-practices/somatic-hg38/small_exac_common_3.hg38.vcf.gz.tbi",
-    
-    "known_sites_dbsnp":"gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf",
-    "known_sites_dbsnp_index":"gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf.idx",
-    "known_sites_1000g_snps":"gs://gcp-public-data--broad-references/hg38/v0/1000G_phase1.snps.high_confidence.hg38.vcf.gz",
-    "known_sites_1000g_snps_index":"gs://gcp-public-data--broad-references/hg38/v0/1000G_phase1.snps.high_confidence.hg38.vcf.gz.tbi",
+
+    "known_sites_dbsnp" : "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf",
+    "known_sites_dbsnp_index" : "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf.idx",
+    "known_sites_1000g_snps" : "gs://gcp-public-data--broad-references/hg38/v0/1000G_phase1.snps.high_confidence.hg38.vcf.gz",
+    "known_sites_1000g_snps_index" : "gs://gcp-public-data--broad-references/hg38/v0/1000G_phase1.snps.high_confidence.hg38.vcf.gz.tbi",
     "known_indels":"gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.known_indels.vcf.gz",
     "known_indels_index":"gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.known_indels.vcf.gz.tbi",
 
@@ -22,11 +22,12 @@
     
     "pon" : "gs://gatk-best-practices/somatic-hg38/1000g_pon.hg38.vcf.gz",
     "pon_index" : "gs://gatk-best-practices/somatic-hg38/1000g_pon.hg38.vcf.gz.tbi",
-    "hapmap" : "gs://genomics-public-data/resources/broad/hg38/v0/hapmap_3.3.hg38.vcf.gz",
-    "hapmap_index" : "gs://genomics-public-data/resources/broad/hg38/v0/hapmap_3.3.hg38.vcf.gz.tbi",
-    "mills" :"gs://genomics-public-data/resources/broad/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz",
-    "mills_index" : "gs://genomics-public-data/resources/broad/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz.tbi",
     
+    "hapmap" : "gs://gcp-public-data--broad-references/hg38/v0/hapmap_3.3.hg38.vcf.gz",
+    "hapmap_index" : "gs://gcp-public-data--broad-references/hg38/v0/hapmap_3.3.hg38.vcf.gz.tbi",
+
+    "mills" : "gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz",
+    "mills_index" : "gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz.tbi",
 
     "gencode_gtf" : "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.chr_patch_hapl_scaff.annotation.gtf.gz", 
     "kallisto_reference": "https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz",
@@ -36,12 +37,12 @@
     "bwa_index" : "/c4/home/hwismer/pvac_pipeline/indices/bwa2_index/*{.bwt.2bit.64,.sa,.pac,.amb,.ann,.0123}",
 
     "scatter_count" : 30,
-    "intervals_file" : "gs://genomics-public-data/resources/broad/hg38/v0/wgs_calling_regions.hg38.interval_list",
+    "intervals_file" : "gs://gcp-public-data--broad-references/hg38/v0/exome_calling_regions.v1.1.interval_list",
 
     "vep_cache" : "/c4/home/hwismer/0_execs/vep/vep_data/",
     "vep_plugins" : "/c4/home/hwismer/0_execs/vep/VEP_plugins/",
 
-    "ctat_resource_dir":"/krummellab/data1/hwismer/GRCh38_gencode_v44_CTAT_lib_Oct292023.plug-n-play" 
+    "ctat_resource_dir":"/krummellab/data1/hwismer/resources/ctat/GRCh38_gencode_v44_CTAT_lib_Oct292023.plug-n-play/ctat_genome_lib_build_dir" 
     
     
 
