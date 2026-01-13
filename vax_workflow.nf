@@ -74,7 +74,8 @@ process VT_POSTPROCESS_GERMLINE {
         tuple val(meta), path("${meta.sample_name}_germline_normalized.vcf.gz"), path("${meta.sample_name}_germline_normalized.vcf.gz.tbi"), emit: germline_vcf
     script:
         """
-        bcftools norm -m -any -f $reference_fa $germline_vcf -Oz -o norm_vcf.vcf.gz
+        bcftools view -f PASS $germline_vcf -Oz -o filtered_germline.vcf.gz
+        bcftools norm -m -any -f $reference_fa filtered_germline.vcf.gz -Oz -o norm_vcf.vcf.gz
         bcftools sort norm_vcf.vcf.gz -Oz -o norm_sort.vcf.gz
         bcftools norm -d exact norm_sort.vcf.gz -Oz -o "${meta.sample_name}_germline_normalized.vcf.gz"
         bcftools index -t "${meta.sample_name}_germline_normalized.vcf.gz"
