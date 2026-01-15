@@ -63,7 +63,6 @@ process VT_POSTPROCESS_GERMLINE {
 
     container "staphb/bcftools:1.23"
 
-    publishDir "${params.outdir}/${meta.somatic_sample}/germline/HaplotypeCaller", mode: "copy"
 
     input:
         tuple val(meta), path(germline_vcf), path(germline_vcf_index)
@@ -80,6 +79,81 @@ process VT_POSTPROCESS_GERMLINE {
         bcftools norm -d exact norm_sort.vcf.gz -Oz -o "${meta.sample_name}_germline_normalized.vcf.gz"
         bcftools index -t "${meta.sample_name}_germline_normalized.vcf.gz"
      """
+}
+
+process VEP_ANNOTATE_GERMLINE {
+
+    /*
+
+    Use VEP to annotate a vcf files. Requires path to an installed cache
+    as well as a vep plugin directory. If using PVAC later on, the vep plugins
+    will need to includet those specified by pvac in their docs.
+
+    */
+
+    cpus 8
+    memory "16GB"
+    cache "lenient"
+
+    
+    container "ensemblorg/ensembl-vep:release_115.0"
+
+    input:
+        tuple val(meta), path(germline_vcf), path(germline_vcf_index)
+        path reference_fa
+        path vep_cache
+        path vep_plugins
+
+    output:
+        tuple val(meta), path("germline_vep.vcf"), emit: vep_vcf
+
+    script:
+        """
+        vep \
+            --input_file $germline_vcf  \
+            --output_file germline_vep.vcf \
+            --everything \
+            --format vcf --vcf --symbol --terms SO --mane_select --canonical --tsl --biotype --hgvs \
+            --fasta $reference_fa  \
+            --offline --cache \
+            --plugin Frameshift --plugin Wildtype \
+            --pick \
+            --dir_plugins $vep_plugins \
+            --dir_cache $vep_cache \
+            --transcript_version
+        
+        """
+}
+
+process INDEX_FINAL_VCF_GERMLINE {
+
+    /*
+
+    tabix index a vcf file
+
+    */
+
+    cpus 2
+    memory "8GB"
+
+    container "staphb/bcftools:1.23"
+
+
+    publishDir "${params.outdir}/${meta.somatic_sample}/germline/", mode: "copy"
+
+    input:
+        tuple val(meta), path(germline_vcf)
+        
+
+    output:
+        tuple val(meta), path("${meta.sample_name}_germline_filt_vep.vcf.gz"), path("${meta.sample_name}_germline_filt_vep.vcf.gz.tbi")
+
+    script:
+        """
+        bcftools view $germline_vcf -Oz -o "${meta.sample_name}_germline_filt_vep.vcf.gz"
+        bcftools index -t "${meta.sample_name}_germline_filt_vep.vcf.gz"
+        """
+
 }
 
 
@@ -1400,35 +1474,35 @@ process STAR_FUSION {
 
     */
 
-    cpus 64
-    memory "80GB"
+    cpus 4
+    memory "64GB"
 
     container "trinityctat/starfusion:1.15.0"
 
-    publishDir "${params.outdir}/${meta.somatic_sample}/fusions/star_fusion/", mode: "copy"
+    publishDir "${params.outdir}/${meta.somatic_sample}/fusions/", mode: "copy"
 
     input:
-        tuple val(meta), path(chimeric_out)
+        tuple val(meta), path(chimeric_out), path(fastq1), path(fastq2)
         path ctat_resource_lib
 
     output:
 
-        tuple val(meta), path("./${meta.sample_name}_starfusion/*.fusion_predictions.tsv"), emit: fusion_preds
-        tuple val(meta), path("./${meta.sample_name}_starfusion/*.fusion_predictions.abridged.tsv"), emit: abridged_preds
-        tuple val(meta), path("./${meta.sample_name}_starfusion/*.coding_effect.tsv"), emit: coding_effect
-        tuple val(meta), path("./${meta.sample_name}_starfusion/FusionInspector-validate"), emit: fusion_inspector
+        tuple val(meta), path("${meta.sample_name}_starfusion/*.fusion_predictions.tsv"), emit: fusion_preds
+        tuple val(meta), path("${meta.sample_name}_starfusion/*.fusion_predictions.abridged.tsv"), emit: abridged_preds
+        tuple val(meta), path("${meta.sample_name}_starfusion/*.coding_effect.tsv"), emit: coding_effect
+        tuple val(meta), path("${meta.sample_name}_starfusion/"), emit: all_output
 
 
     script:
         """
-
         STAR-Fusion --genome_lib_dir $ctat_resource_lib \
              -J $chimeric_out \
              --examine_coding_effect \
              --FusionInspector validate \
+             --left_fq $fastq1 \
+             --right_fq $fastq2 \
              --denovo_reconstruct \
              --output_dir "./${meta.sample_name}_starfusion"
-
 
         """
 
@@ -1455,19 +1529,60 @@ process STAR_INDEX_BAM {
         tuple val(meta), path(bam)
         tuple val(meta), path(final_log)
         tuple val(meta), path(sj_out)
-        tuple val(meta), path(chimeric_out)
+        tuple val(meta), path(chimeric_out), path(fastq1), path(fastq2)
 
     output:
         tuple val(meta), path("${meta.sample_name}_${meta.molecule}_STAR_sorted.bam"), path("${meta.sample_name}_${meta.molecule}_STAR_sorted.bam.bai"), emit: star_bam
         tuple val(meta), path(final_log), emit: final_log
         tuple val(meta), path(sj_out), emit: sj_out
-        tuple val(meta), path(chimeric_out), emit: chimeric_out
+        tuple val(meta), path(chimeric_out), path(fastq1), path(fastq2), emit: chimeric_out
 
     script:
         """
         samtools sort --threads $task.cpus  $bam -o "${meta.sample_name}_${meta.molecule}_STAR_sorted.bam"
         samtools index -@ $task.cpus  "${meta.sample_name}_${meta.molecule}_STAR_sorted.bam"
 
+        """
+
+
+}
+
+process ARRIBA_FUSION {
+
+    cpus 8
+
+    memory "48GB"
+
+    conda "bioconda::arriba=2.5.1"
+
+    publishDir "${params.outdir}/${meta.somatic_sample}/fusions/arriba", mode: "copy"
+
+    input:
+        tuple val(meta), path(star_aligned_bam)
+        path reference_fa
+        path reference_fa_index
+        path gtf
+        path arriba_blacklist
+        path arriba_known_fusions
+        path arriba_protein_domains
+
+    output:
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_arriba_fusions.tsv"), emit: arriba_fusions
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_arriba_fusions.discarded.tsv"), emit: discarded_fusions
+
+
+    script:
+
+        """
+
+        arriba -x $star_aligned_bam \
+            -g $gtf \
+            -a $reference_fa \
+            -b $arriba_blacklist \
+            -k $arriba_known_fusions \
+            -p $arriba_protein_domains \
+            -o "${meta.sample_name}_${meta.molecule}_arriba_fusions.tsv" \
+            -O "${meta.sample_name}_${meta.molecule}_arriba_fusions.discarded.tsv"
         """
 
 
@@ -1498,7 +1613,7 @@ process STAR_ALIGN {
         tuple val(meta), path("${meta.sample_name}_${meta.molecule}_Aligned.out.bam"), emit: star_bam 
         tuple val(meta), path("${meta.sample_name}_${meta.molecule}_Log.final.out"), emit:final_log
         tuple val(meta), path("${meta.sample_name}_${meta.molecule}_SJ.out.tab"), emit: sj_out
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_Chimeric.out.junction"), emit: chimeric_out
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_Chimeric.out.junction"),path(fastq1), path(fastq2), emit: chimeric_out
     script:
         """
         STAR \
@@ -1511,8 +1626,9 @@ process STAR_ALIGN {
             --twopassMode Basic \
             --outSAMstrandField intronMotif \
             --outSAMunmapped Within \
-            --chimSegmentMin 12 \
-            --chimJunctionOverhangMin 8 \
+            --chimSegmentMin 10 \
+            --chimJunctionOverhangMin 10 \
+            --outFilterMultimapNmax 50 \
             --chimOutJunctionFormat 1 \
             --alignSJDBoverhangMin 10 \
             --alignMatesGapMax 100000 \
@@ -1520,13 +1636,17 @@ process STAR_ALIGN {
             --alignSJstitchMismatchNmax 5 -1 5 5 \
             --outSAMattrRGline ID:"${meta.sample_name}" SM:"${meta.sample_name}" \
             --chimMultimapScoreRange 3 \
-            --chimScoreJunctionNonGTAG -4 \
-            --chimMultimapNmax 20 \
+            --chimScoreJunctionNonGTAG 0 \
+            --chimScoreSeparation 1 \
+            --chimSegmentReadGapMax 3 \
+            --chimMultimapNmax 50 \
             --chimNonchimScoreDropMin 10 \
-            --peOverlapNbasesMin 12 \
+            --chimOutType Junctions WithinBAM HardClip \
+            --chimScoreDropMax 30 \
+            --peOverlapNbasesMin 10 \
             --peOverlapMMp 0.1 \
             --alignInsertionFlush Right \
-            --alignSplicedMateMapLminOverLmate 0 \
+            --alignSplicedMateMapLminOverLmate 0.5 \
             --alignSplicedMateMapLmin 30 \
             --outFileNamePrefix ./${meta.sample_name}_${meta.molecule}_
 
@@ -1638,49 +1758,49 @@ process HLAHD_HLA_CALLS {
         tuple val(meta), path("${meta.sample_name}_hla_calls.csv")
 
     script:
-        """
-        #!/usr/bin/env python3
+    """
+    #!/usr/bin/env python3
+    
+    import pandas as pd
+    import csv
 
-        import pandas as pd
-        import csv
+    hlahd = pd.read_csv("$hla_result", sep = "\t", names = ["HLA", "Allele 1", "Allele 2"], nrows=21)
+    hlahd = hlahd[(hlahd["Allele 1"] != "Not typed") & (hlahd["Allele 2"] != "Not typed")]
 
-        hlahd = pd.read_csv("$hla_result", sep = "\t", names = ["HLA", "Allele 1", "Allele 2"], nrows=21)
-        hlahd = hlahd[(hlahd["Allele 1"] != "Not typed") & (hlahd["Allele 2"] != "Not typed")]
-
-        allele_2_new = []
-        allele_1_new = []
-        for allele_1, allele_2 in zip(hlahd["Allele 1"], hlahd["Allele 2"]):
-            allele_1_split = allele_1.split(":")
-            allele_1 = allele_1_split[0] + ":" + allele_1_split[1]
-            allele_1_new.append(allele_1)
+    allele_2_new = []
+    allele_1_new = []
+    for allele_1, allele_2 in zip(hlahd["Allele 1"], hlahd["Allele 2"]):
+        allele_1_split = allele_1.split(":")
+        allele_1 = allele_1_split[0] + ":" + allele_1_split[1]
+        allele_1_new.append(allele_1)
                         
-            if allele_2 == "-":
-                allele_2_new.append(allele_1)
+        if allele_2 == "-":
+            allele_2_new.append(allele_1)
+        else:
+            allele_2_split = allele_2.split(":")
+            allele_2 = allele_2_split[0] + ":" + allele_2_split[1]
+            allele_2_new.append(allele_2)
+
+    hlahd["Allele 1"] = allele_1_new
+    hlahd["Allele 2"] = allele_2_new
+    #hlahd = hlahd[hlahd["HLA"].isin(["A","B","C","DRB1","DQA1","DQB1"])]
+
+    alleles = set()
+    for allele, allele_1,allele_2 in zip(hlahd["HLA"],hlahd["Allele 1"], hlahd["Allele 2"]):
+            if allele != "A" and allele != "B" and allele != "C":
+                alleles.add(allele_1.split("-")[1])
+                alleles.add(allele_2.split("-")[1])
             else:
-                allele_2_split = allele_2.split(":")
-                allele_2 = allele_2_split[0] + ":" + allele_2_split[1]
-                allele_2_new.append(allele_2)
-
-        hlahd["Allele 1"] = allele_1_new
-        hlahd["Allele 2"] = allele_2_new
-        #hlahd = hlahd[hlahd["HLA"].isin(["A","B","C","DRB1","DQA1","DQB1"])]
-
-        alleles = set()
-        for allele, allele_1,allele_2 in zip(hlahd["HLA"],hlahd["Allele 1"], hlahd["Allele 2"]):
-                if allele != "A" and allele != "B" and allele != "C":
-                    alleles.add(allele_1.split("-")[1])
-                    alleles.add(allele_2.split("-")[1])
-                else:
-                    alleles.add(allele_1)
-                    alleles.add(allele_2)
+                alleles.add(allele_1)
+                alleles.add(allele_2)
                                                                     
-        alleles = list(alleles)
+    alleles = list(alleles)
 
-        with open("${meta.sample_name}_hla_calls.csv", "w", newline='',encoding='utf-8') as f:
-            writer = csv.writer(f,lineterminator='\n')
-            writer.writerow(alleles)
+    with open("${meta.sample_name}_hla_calls.csv", "w", newline="",encoding="utf-8") as f:
+        writer = csv.writer(f,lineterminator="\\n")
+        writer.writerow(alleles)
 
-        """
+    """
         
 
 }
@@ -1879,7 +1999,7 @@ process PVACSEQ {
 
     */
 
-    cpus 4
+    cpus 8
     memory "90GB"
 
     container "griffithlab/pvactools:6.0.3"
@@ -1895,7 +2015,6 @@ process PVACSEQ {
 
     script:
         """
-        echo "\$(head $hla_pvac_input -n 1)"
         pvacseq run \
             $somatic_vcf \
             ${somatic_meta.tumor_metamap.sample_name} \
@@ -1908,11 +2027,40 @@ process PVACSEQ {
             --normal-sample-name ${somatic_meta.normal_metamap.sample_name} \
             --iedb-install-directory /opt/iedb \
             --pass-only \
-            -t 1
-            
-
-        #DeepImmuno MHCflurry MHCflurryEL MHCnuggetsI MHCnuggetsII NNalign NetMHC NetMHCIIpan NetMHCIIpanEL NetMHCpan NetMHCpanEL PickPocket SMM SMMPMBEC SMMalign \
+            -t $task.cpus
         """
+}
+
+process PVACFUSE {
+    
+    cpus 8
+    memory "90GB"
+
+    container "griffithlab/pvactools:6.0.3"
+
+    publishDir "${params.outdir}/${sample_meta.somatic_sample}/pvactools/", mode: "copy"
+
+    input:
+        tuple val(sample_meta), path(arriba_fusions), path(hla_pvac_input), path(starfusion_calls)
+
+    output:
+        path("${sample_meta.somatic_name}_pvacseq"), emit: pvacseq_dir
+    
+    script:
+        """
+        pvacfuse run \
+            $arriba_fusions \
+            "${sample_meta.somatic_sample}" \
+            \$(head $hla_pvac_input -n 1) \
+            all \
+            "${sample_meta.somatic_sample}_pvacfuse" \
+            --starfusion-file $starfusion_calls \
+            -e1 8,9,10,11 \
+            -e2 12,13,14,15,16,17,18 \
+            --iedb-install-directory /opt/iedb \
+            -t $task.cpus
+        """
+
 }
 
 process PVACSEQ_SELECT_ALGOS {
@@ -1936,7 +2084,7 @@ process PVACSEQ_SELECT_ALGOS {
 
     */
 
-    cpus 4
+    cpus 8
     memory "90GB"
 
     container "griffithlab/pvactools:6.0.3"
@@ -1964,7 +2112,7 @@ process PVACSEQ_SELECT_ALGOS {
             --normal-sample-name ${somatic_meta.normal_metamap.sample_name} \
             --iedb-install-directory /opt/iedb \
             --pass-only \
-            -t 1
+            -t $task.cpus
         """
 }
 
@@ -2032,7 +2180,10 @@ workflow {
     gencode_gtf = Channel.fromPath(file(params.gencode_gtf)).first()
     
     ctat_resource_dir = Channel.fromPath(file(params.ctat_resource_dir)).first()
-    
+   
+    arriba_blacklist = Channel.fromPath(file(params.arriba_blacklist)).first()
+    arriba_known_fusions = Channel.fromPath(file(params.arriba_known_fusions)).first()
+    arriba_protein_domains = Channel.fromPath(file(params.arriba_protein_domains)).first()
 
     // RUN FASTP QC ON ALL SAMPLES
 
@@ -2085,7 +2236,19 @@ workflow {
     star_rna_align = STAR_ALIGN(fastp_by_molec.rna, params.star_index)
     star_rna = STAR_INDEX_BAM(star_rna_align)
 
-    //star_fusion = STAR_FUSION(star_rna_align.chimeric_out, ctat_resource_dir)
+    star_fusion = STAR_FUSION(star_rna_align.chimeric_out, ctat_resource_dir)
+    
+    arriba_fusions = ARRIBA_FUSION(star_rna_align.star_bam,
+                                    reference_fa,
+                                    reference_index_files,
+                                    gencode_gtf,
+                                    arriba_blacklist,
+                                    arriba_known_fusions,
+                                    arriba_protein_domains)
+
+    
+    
+    //PVACFUSE(
 
     // BAM PREPROCESSING OF DNA: GATK BEST PRACTICES
 
@@ -2153,7 +2316,13 @@ workflow {
                                           reference_fa,
                                           reference_index_files)
     
-    
+    vep_germline = VEP_ANNOTATE_GERMLINE(vt_germline,
+                                         reference_fa,
+                                         params.vep_cache,
+                                         params.vep_plugins)
+
+
+    final_germline = INDEX_FINAL_VCF_GERMLINE(vep_germline)
 
     preproc_bams_by_sample = preprc.preproc_bams.map { meta, bam, bai -> tuple(meta.somatic_sample, [meta, bam, bai]) } 
                                                      | groupTuple
@@ -2360,20 +2529,35 @@ workflow {
     final_hla = hla_calls
         | map { meta, hla_calls -> tuple(meta.somatic_sample, [meta, hla_calls]) }
     
-    pvac_input = final_somatic
+    pvacseq_input = final_somatic
         | join(final_phased)
         | join(final_hla)
         | map {id, somatic_tuple, phased_tuple, hla_tuple ->
             def (somatic_meta, somatic_vcf, somatic_vcf_index) = somatic_tuple
             def (phased_meta, phased_vcf, phased_vcf_index) = phased_tuple
-            def (hla_meata, hla_calls) = hla_tuple
+            def (hla_meta, hla_calls) = hla_tuple
             return [somatic_meta, somatic_vcf, somatic_vcf_index, phased_vcf, phased_vcf_index, hla_calls ]
         }
 
             
 
-    PVACSEQ = PVACSEQ(pvac_input)
-    PVACSEQ_SELECT = PVACSEQ_SELECT_ALGOS(pvac_input)
+    PVACSEQ = PVACSEQ(pvacseq_input)
 
+
+    final_fusions = arriba_fusions.arriba_fusions
+        | map { meta, fusion_tsv -> tuple(meta.somatic_sample, [meta, fusion_tsv]) }
+    final_starfusions = star_fusion.fusion_preds
+        | map { meta, star_fusion_pred -> tuple(meta.somatic_sample, [meta, star_fusion_pred]) }
+
+    pvacfuse_input = final_fusions | join(final_hla) | join(final_starfusions)
+        | map { id, arriba_fusion_tuple, hla_tuple, starfusion_tuple ->
+                def (arriba_meta, arriba_fusions) = arriba_fusion_tuple
+                def (hla_meta, hla_calls) = hla_tuple
+                def (starfusion_meta, starfusion_calls) = starfusion_tuple
+                return [ arriba_meta, arriba_fusions, hla_calls, starfusion_calls ]
+        }
+
+
+    PVACFUSE = PVACFUSE(pvacfuse_input)
 
 }

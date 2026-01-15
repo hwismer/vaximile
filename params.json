@@ -42,8 +42,11 @@
     "vep_cache" : "/c4/home/hwismer/0_execs/vep/vep_data/",
     "vep_plugins" : "/c4/home/hwismer/0_execs/vep/VEP_plugins/",
 
-    "ctat_resource_dir":"/krummellab/data1/hwismer/resources/ctat/GRCh38_gencode_v44_CTAT_lib_Oct292023.plug-n-play/ctat_genome_lib_build_dir" 
-    
+    "ctat_resource_dir":"/krummellab/data1/hwismer/resources/ctat/GRCh38_gencode_v44_CTAT_lib_Oct292023.plug-n-play/ctat_genome_lib_build_dir",
+
+    "arriba_blacklist":"/c4/home/hwismer/pvac_pipeline/CustomDiscovery_Vaccine_Dev_Pipeline/utilities/arriba/arriba_v2.5.1/database/blacklist_hg38_GRCh38_v2.5.1.tsv.gz",
+    "arriba_known_fusions":"/c4/home/hwismer/pvac_pipeline/CustomDiscovery_Vaccine_Dev_Pipeline/utilities/arriba/arriba_v2.5.1/database/known_fusions_hg38_GRCh38_v2.5.1.tsv.gz",
+    "arriba_protein_domains":"/c4/home/hwismer/pvac_pipeline/CustomDiscovery_Vaccine_Dev_Pipeline/utilities/arriba/arriba_v2.5.1/database/protein_domains_hg38_GRCh38_v2.5.1.gff3"
     
 
 }
