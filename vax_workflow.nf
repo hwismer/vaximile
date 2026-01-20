@@ -561,7 +561,7 @@ process ANNOTATE_VCF_EXPRESSION {
     publishDir "${params.outdir}/${vcf_meta.somatic_name}/coverage/", mode: "copy"
 
     input:
-        tuple val(vcf_meta), path(vcf), val(kallisto_meta), path(kallisto_dir)
+        tuple val(vcf_meta), path(vcf), val(kallisto_meta), path(tx_abundance), path(gene_abundance)
 
 
     output:
@@ -573,8 +573,18 @@ process ANNOTATE_VCF_EXPRESSION {
         vcf-expression-annotator \
             $vcf \
             -s ${kallisto_meta.sample_name} \
-            "${kallisto_dir}/abundance.tsv" \
+            $tx_abundance \
             kallisto transcript \
+            -o tx.vcf
+
+        vcf-expression-annotator \
+            tx.vcf \
+            $gene_abundance \
+            custom gene \
+            -i ENSEMBLID \
+            -e TPM \
+            -s ${kallisto_meta.sample_name} \
+            --ignore-ensembl-id-version \
             -o "${vcf_meta.somatic_name}_cov_expr_annotated.vcf"
 
         """
@@ -596,27 +606,70 @@ process ANNOTATE_VCF_COVERAGE {
     publishDir "${params.outdir}/${somatic_meta.somatic_name}/coverage/", mode: "copy"
 
     input:
-        tuple val(somatic_meta), path(vcf), path(brc_indels), path(brc_snvs)
+        tuple val(id), val(somatic_meta), path(vcf), path(tumor_bamrc), path(normal_bamrc), path(tumor_rna_bamrc)
 
     output:
         tuple val(somatic_meta), path("${somatic_meta.somatic_name}_annotated.vcf")
 
     script:
+        def tumor_indels = tumor_bamrc[0]
+        def tumor_snvs = tumor_bamrc[1]
+
+        def normal_indels = normal_bamrc[0]
+        def normal_snvs = normal_bamrc[1]
+
+        def tumor_rna_indels = tumor_rna_bamrc[0]
+        def tumor_rna_snvs = tumor_rna_bamrc[1]
+
         """
 
         echo "${somatic_meta.tumor_metamap.sample_name}"
         echo "${somatic_meta.tumor_metamap.molecule}"
+        
         vcf-readcount-annotator \
             $vcf \
-            $brc_snvs \
+            $tumor_indels \
+            DNA \
+            -s ${somatic_meta.tumor_metamap.sample_name} \
+            -t indel \
+            -o vcf1.vcf
+
+        vcf-readcount-annotator \
+            vcf1.vcf \
+            $tumor_snvs \
+            DNA \
+            -s ${somatic_meta.tumor_metamap.sample_name} \
+            -t snv \
+            -o vcf2.vcf
+
+        
+        vcf-readcount-annotator \
+            vcf2.vcf \
+            $normal_snvs \
+            DNA \
+            -s ${somatic_meta.normal_metamap.sample_name} \
+            -t snv \
+            -o vcf3.vcf
+
+        vcf-readcount-annotator \
+            vcf3.vcf \
+            $normal_indels \
+            DNA \
+            -s ${somatic_meta.normal_metamap.sample_name} \
+            -t indel \
+            -o vcf4.vcf
+
+        vcf-readcount-annotator \
+            vcf4.vcf \
+            $tumor_rna_snvs \
             RNA \
             -s ${somatic_meta.tumor_metamap.sample_name} \
             -t snv \
-            -o "${somatic_meta.somatic_name}_snv_annotated.vcf"
+            -o vcf5.vcf
 
         vcf-readcount-annotator \
-            "${somatic_meta.somatic_name}_snv_annotated.vcf" \
-            $brc_indels \
+            vcf5.vcf \
+            $tumor_rna_indels \
             RNA \
             -s ${somatic_meta.tumor_metamap.sample_name} \
             -t indel \
@@ -644,24 +697,25 @@ process BAMREADCOUNT {
     publishDir "${params.outdir}/${vcf_meta.somatic_name}/coverage/", mode: "copy"
 
     input:
-        tuple val(vcf_meta), path(vcf), val(star_meta), path(star_bam), path(star_bai)
+        tuple val(vcf_meta), path(vcf), val(bam_meta), path(bam), path(bai)
         path reference_fa
 
     output:
-        tuple val(vcf_meta), path(vcf),
-            path("${star_meta.sample_name}_bamrc_helper/${star_meta.sample_name}_bam_readcount_indel.tsv"), 
-            path("${star_meta.sample_name}_bamrc_helper/${star_meta.sample_name}_bam_readcount_snv.tsv"), emit: brc_files
+
+        tuple val(vcf_meta), path(vcf), val(bam_meta),
+            path("${bam_meta.sample_name}_${bam_meta.molecule}_bamrc_helper/*indel.tsv"), 
+            path("${bam_meta.sample_name}_${bam_meta.molecule}_bamrc_helper/*snv.tsv"), emit: brc_files
     script:
         
         """
-        mkdir ${star_meta.sample_name}_bamrc_helper
+        mkdir ${bam_meta.sample_name}_${bam_meta.molecule}_bamrc_helper
         bam_readcount_helper.py \
             $vcf \
-            ${star_meta.sample_name} \
+            ${bam_meta.sample_name} \
             $reference_fa \
-            $star_bam \
-            NOPREFIX \
-            ${star_meta.sample_name}_bamrc_helper
+            $bam \
+            ${bam_meta.molecule} \
+            ${bam_meta.sample_name}_${bam_meta.molecule}_bamrc_helper
         """
 
 }
@@ -1236,6 +1290,64 @@ process SPLIT_INTERVALS {
     """
 }
 
+
+process KALLISTO_TXIMPORT {
+
+    cpus 1
+    memory "16GB"
+    
+    conda "conda-forge::r-base=4.4.3 bioconda::bioconductor-tximport=1.34.0 conda-forge::r-readr=2.1.6 conda-forge::r-dplyr=1.1.4 bioconda::bioconductor-rtracklayer=1.66.0"
+
+    publishDir "${params.outdir}/${meta.somatic_sample}/rnaseq/"
+
+    input:
+        tuple val(meta), path(kallisto_abundance)
+        path gtf
+
+    output:
+        tuple val(meta), path("${meta.sample_name}.gene_tpm.tsv")
+
+    script:
+    """
+    #!/usr/bin/env Rscript
+    
+    library(rtracklayer)
+    library(dplyr)
+    library(readr)
+    library(tximport)
+    
+    
+    gtf <- rtracklayer::import("${gtf}", format = "gtf")
+    gtf_df=as.data.frame(gtf)
+    tx2gene <- gtf_df[,c("transcript_id","gene_id", "gene_name")]
+
+    
+    
+    kallisto_tsv <- tximport("${kallisto_abundance}", 
+                         type = "kallisto", abundanceCol = "tpm",
+                         countsFromAbundance = "no",
+                         tx2gene = tx2gene, ignoreAfterBar = T)
+
+
+    gene_tpm <- as.data.frame(kallisto_tsv\$abundance)
+    gene_tpm\$gene_id <- rownames(gene_tpm)
+
+    gene_tpm <- gene_tpm %>%
+      select(gene_id, everything())
+
+    gene_annot <- tx2gene %>%
+        select(gene_id, gene_name) %>%
+            distinct()
+
+    gene_tpm <- left_join(gene_tpm, gene_annot, by = "gene_id")
+    colnames(gene_tpm) <- c("ENSEMBLID", "TPM", "Gene")
+
+    write_tsv(gene_tpm, "${meta.sample_name}.gene_tpm.tsv")
+    
+    """
+
+
+}
 process KALLISTO_QUANT {
 
 
@@ -1245,7 +1357,7 @@ process KALLISTO_QUANT {
 
     */
 
-    cpus 8
+    cpus 16
     memory "32GB"
 
     conda "bioconda::kallisto=0.51.1"
@@ -1257,7 +1369,8 @@ process KALLISTO_QUANT {
         path kallisto_index
 
     output:
-        tuple val(meta), path("${meta.sample_name}_kallisto")
+        tuple val(meta), path("${meta.sample_name}_kallisto/abundance.tsv"), emit: abundance
+        tuple val(meta), path("${meta.sample_name}_kallisto"), emit: kallisto_dir
 
     script:
         """
@@ -2044,7 +2157,7 @@ process PVACFUSE {
         tuple val(sample_meta), path(arriba_fusions), path(hla_pvac_input), path(starfusion_calls)
 
     output:
-        path("${sample_meta.somatic_name}_pvacseq"), emit: pvacseq_dir
+        path("${sample_meta.somatic_sample}_pvacfuse"), emit: pvacfuse_dir
     
     script:
         """
@@ -2062,61 +2175,6 @@ process PVACFUSE {
         """
 
 }
-
-process PVACSEQ_SELECT_ALGOS {
-
-    /*
-
-    Run PVACseq on a single sample.
-
-    Inputs:
-        *(See PVACseq input preparation documents for more info.)
-        Somatic VCF
-        Phased Germline VCF
-        Tumor Sample Metadata
-        Normal Sample Metadata
-
-    Output:
-        Pvacseq folder containing:
-            Combined neoantigen predictions
-            MHC I neoantigen predictions
-            MHC II neoantigen predictions
-
-    */
-
-    cpus 8
-    memory "90GB"
-
-    container "griffithlab/pvactools:6.0.3"
-
-    publishDir "${params.outdir}/${somatic_meta.somatic_name}/pvactools/", mode: "copy"
-
-    input:
-        tuple val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index),
-            path(phased_vcf), path(phased_vcf_index),
-            path(hla_pvac_input)
-    output:
-        path("${somatic_meta.somatic_name}_pvacseq_select_algos"), emit: pvacseq_dir
-
-    script:
-        """
-        pvacseq run \
-            $somatic_vcf \
-            ${somatic_meta.tumor_metamap.sample_name} \
-            \$(head $hla_pvac_input -n 1) \
-            MHCflurry MHCflurryEL MHCnuggetsI MHCnuggetsII  NetMHCIIpan NetMHCIIpanEL NetMHCpan NetMHCpanEL \
-            "${somatic_meta.somatic_name}_pvacseq_select_algos" \
-            -e1 8,9,10,11 \
-            -e2 12,13,14,15,16,17,18 \
-            --phased-proximal-variants-vcf $phased_vcf \
-            --normal-sample-name ${somatic_meta.normal_metamap.sample_name} \
-            --iedb-install-directory /opt/iedb \
-            --pass-only \
-            -t $task.cpus
-        """
-}
-
-
 
 workflow {
     
@@ -2270,8 +2328,13 @@ workflow {
         kallisto_index = KALLISTO_INDEX(kallisto_reference)
 
     }
+
     kallisto = KALLISTO_QUANT(fastp_by_molec.rna,
                               kallisto_index)
+
+    kallisto = kallisto.abundance
+
+    kallisto_gene = KALLISTO_TXIMPORT(kallisto, gencode_gtf)
 
 
 
@@ -2281,8 +2344,6 @@ workflow {
                                 intervals_file, params.scatter_count)
 
 
-    
-    // PROBLEMATIC ?
 
     preproc_bams_type_branched = preprc.preproc_bams
                                    | branch {meta, bam, bai ->
@@ -2410,41 +2471,71 @@ workflow {
 
     vep = VEP_FILTER(vep_annot, params.vep_cache, params.vep_plugins)
 
+    all_bams = preprc.preproc_bams.concat(star_rna.star_bam)
+        | map { meta, bam, bai -> tuple(meta.sample_name, [meta, bam, bai]) }
 
-    
-    vep = vep | map { meta, vcf -> tuple(meta.tumor_metamap.sample_name, [meta, vcf]) } | groupTuple
 
-    star_rna = star_rna.star_bam | map { meta, bam, bai -> tuple(meta.sample_name, [meta, bam, bai]) } | groupTuple
-   
+    vcf_prepared = vep.flatMap { vcf_meta, vcf ->
+        [
+            [ vcf_meta.tumor_metamap,  vcf_meta, vcf ],
+            [ vcf_meta.normal_metamap, vcf_meta, vcf ]
+        ]
+    } 
+    | map { sample_meta, vcf_meta, vcf  ->
+                tuple(sample_meta.sample_name, [vcf_meta, vcf])
+    }
+    | combine(all_bams, by:0)
+    | map { sample_name, vcf_list, bam_list ->
+            def (vcf_meta, vcf) = vcf_list
+            def (bam_meta, bam, bai) = bam_list
+            return [vcf_meta, vcf, bam_meta, bam, bai]
+    }
 
-    vep_star = vep
-        | join(star_rna)
-        | map { id, vcf_info, bam_info ->
-            def (vcf_meta, vcf) = vcf_info[0]
-            def (star_meta, star_bam, star_bai) = bam_info[0]
-            return [vcf_meta, vcf, star_meta, star_bam, star_bai ]
-        }
-    
+
 
     // Add Read Coverage to VCF with Bamreadcount
-    bamreadcount = BAMREADCOUNT(vep_star,
-                                reference_fa)
-    
-    vcf_annotated_coverage = ANNOTATE_VCF_COVERAGE(bamreadcount)
+    bamreadcount = BAMREADCOUNT(vcf_prepared,
+                              reference_fa)
+
+    bamreadcount_by_sample = bamreadcount.map { vcf_meta, vcf, bam_meta, brc_indel, brc_snv ->
+                                                tuple (vcf_meta.somatic_name, [vcf_meta, vcf, bam_meta, brc_indel, brc_snv])
+                                } | groupTuple 
+                                | map { somatic_name, samples  ->
+
+                                    def tumor = samples.find { it[2].sample_type == "Tumor" && it[2].molecule == 'DNA' }
+                                    def normal = samples.find { it[2].sample_type == "Normal" && it[2].molecule == "DNA" }
+                                    def tumor_rna = samples.find { it[2].sample_type == "Tumor" && it[2].molecule == "RNA" }
+
+                                    def vcf_metadata = tumor[0]
+                                    def vcf_file     = tumor[1]
+                                    
+                                    def tumor_files  = [ tumor[3], tumor[4] ]
+                                    def normal_files = [ normal[3], normal[4] ]
+                                    def tumor_rna_files    = [ tumor_rna[3], tumor_rna[4] ]
+                                    
+                                    return tuple(somatic_name, vcf_metadata, vcf_file, tumor_files, normal_files, tumor_rna_files)
+                                }
+
+
+
+    vcf_rna_annotated_coverage = ANNOTATE_VCF_COVERAGE(bamreadcount_by_sample)
 
     
     // Add transcript abundance estimation from kallisto
     
 
-    kallisto = kallisto | map { meta, abundance -> tuple(meta.sample_name, [meta, abundance]) } | groupTuple
-    vcf_annot = vcf_annotated_coverage | map { meta, vcf -> tuple(meta.tumor_metamap.sample_name, [meta, vcf]) } | groupTuple
+    kallisto = kallisto | map { meta, abundance -> tuple(meta.sample_name, [meta, abundance]) }
+    kallisto_gene = kallisto_gene | map { meta, gene_tpm -> tuple (meta.sample_name, [meta, gene_tpm]) }
+    vcf_annot = vcf_rna_annotated_coverage | map { meta, vcf -> tuple(meta.tumor_metamap.sample_name, [meta, vcf]) }
     
     vcf_annotated = vcf_annot
         | join(kallisto)
-        | map { id, vcf_info, kallisto_info ->
-                def (vcf_meta, vcf) = vcf_info[0]
-                def (kallisto_meta, abundance) = kallisto_info[0]
-                return [vcf_meta, vcf, kallisto_meta, abundance ]
+        | join(kallisto_gene)
+        | map { id, vcf_info, kallisto_tx, kallisto_gene ->
+                def (vcf_meta, vcf) = vcf_info
+                def (kallisto_tx_meta, tx_abundance) = kallisto_tx
+                def (kallisto_gene_meta, gene_abundance) = kallisto_gene
+                return [vcf_meta, vcf, kallisto_tx_meta, tx_abundance, gene_abundance ]
         }
 
     vcf_annotated_expression = ANNOTATE_VCF_EXPRESSION(vcf_annotated)
