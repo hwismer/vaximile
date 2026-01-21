@@ -37,7 +37,7 @@
     "bwa_index" : "/c4/home/hwismer/pvac_pipeline/indices/bwa2_index/*{.bwt.2bit.64,.sa,.pac,.amb,.ann,.0123}",
 
     "scatter_count" : 30,
-    "intervals_file" : "gs://gcp-public-data--broad-references/hg38/v0/exome_calling_regions.v1.1.interval_list",
+    "intervals_file" : "gs://gcp-public-data--broad-references/hg38/v0/wgs_calling_regions.hg38.interval_list",
 
     "vep_cache" : "/c4/home/hwismer/0_execs/vep/vep_data/",
     "vep_plugins" : "/c4/home/hwismer/0_execs/vep/VEP_plugins/",

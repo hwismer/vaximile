@@ -7,19 +7,19 @@ process {
     cache = "lenient"
     queue = "freecycle,krummellab,common"
     scratch = true
-    clusterOptions = '--gres=scratch:500G'
+    clusterOptions = '--gres=scratch:750G'
 }
 
 apptainer {
     enabled = true
     autoMounts= true
-    runOptions = '--writable-tmpfs -B $SINGULARITY_TMPDIR:/tmp -B $SINGULARITY_TMPDIR:/scratch'
+    runOptions = '--writable-tmpfs --cleanenv -e --no-home --env PYTHONNOUSERSITE=1 -B $SINGULARITY_TMPDIR:/tmp -B $SINGULARITY_TMPDIR:/scratch'
     pullTimeout="30min"
 }
 
 executor {
     name = "slurm"
-    queueSize = 40
+    queueSize = 50
     queue = "freecyle,krummellab,common"
 }
 
