@@ -1,6 +1,44 @@
 // Default parameter input
 
-params.outdir = "./vax_pipeline_out/"
+params.outdir = "./neoantigen_vax_pipeline_out/"
+params.sample_sheet = null
+
+params.kallisto_index = null
+params.star_index = null
+params.bwa_index = null
+params.vep_cache =  null
+params.vep_plugins = null
+params.ctat_resource_dir = null
+params.arriba_blacklist = null 
+params.arriba_known_fusions = null
+params.arriba_protein_domains = null
+
+params.reference_fa = "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta"
+params.reference_index_dir = "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38{.fasta.fai,.dict}",
+params.reference_dict = "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.dict",
+params.gencode_gtf = "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.chr_patch_hapl_scaff.annotation.gtf.gz",
+params.kallisto_reference =  "https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz",
+params.human_ref_peptides = "https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz"
+
+params.scatter_count = 30,
+params.intervals_file = "gs://gcp-public-data--broad-references/hg38/v0/wgs_calling_regions.hg38.interval_list",
+params.common_germline = "gs://gatk-best-practices/somatic-hg38/small_exac_common_3.hg38.vcf.gz",
+params.common_germline_index = "gs://gatk-best-practices/somatic-hg38/small_exac_common_3.hg38.vcf.gz.tbi",
+params.known_sites_dbsnp = "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf",
+params.known_sites_dbsnp_index = "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf.idx",
+params.known_sites_1000g_snps = "gs://gcp-public-data--broad-references/hg38/v0/1000G_phase1.snps.high_confidence.hg38.vcf.gz",
+params.known_sites_1000g_snps_index = "gs://gcp-public-data--broad-references/hg38/v0/1000G_phase1.snps.high_confidence.hg38.vcf.gz.tbi",
+params.known_indels = "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.known_indels.vcf.gz",
+params.known_indels_index = "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.known_indels.vcf.gz.tbi",
+params.gnomad = "gs://gatk-best-practices/somatic-hg38/af-only-gnomad.hg38.vcf.gz",
+params.gnomad_index = "gs://gatk-best-practices/somatic-hg38/af-only-gnomad.hg38.vcf.gz.tbi",
+params.pon = "gs://gatk-best-practices/somatic-hg38/1000g_pon.hg38.vcf.gz",
+params.pon_index = "gs://gatk-best-practices/somatic-hg38/1000g_pon.hg38.vcf.gz.tbi",
+params.hapmap = "gs://gcp-public-data--broad-references/hg38/v0/hapmap_3.3.hg38.vcf.gz",
+params.hapmap_index = "gs://gcp-public-data--broad-references/hg38/v0/hapmap_3.3.hg38.vcf.gz.tbi",
+params.mills = "gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz",
+params.mills_index = "gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz.tbi",
+
 
 process DEEPSOMATIC {
 
@@ -2112,17 +2150,16 @@ process PVACSEQ {
 
     */
 
-    cpus 8
-    memory "90GB"
+    cpus 12
+    memory "128GB"
 
     container "griffithlab/pvactools:6.0.3"
 
     publishDir "${params.outdir}/${somatic_meta.somatic_name}/pvactools/", mode: "copy"
 
     input:
-        tuple val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index),
-            path(phased_vcf), path(phased_vcf_index),
-            path(hla_pvac_input)
+        tuple val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index),path(phased_vcf), path(phased_vcf_index), path(hla_pvac_input)
+        path(human_ref_peptides)
     output:
         path("${somatic_meta.somatic_name}_pvacseq"), emit: pvacseq_dir
 
@@ -2140,14 +2177,19 @@ process PVACSEQ {
             --normal-sample-name ${somatic_meta.normal_metamap.sample_name} \
             --iedb-install-directory /opt/iedb \
             --pass-only \
+            --run-reference-proteome-similarity \
+            --peptide-fasta $human_ref_peptides \
+            -m2 percentile \
+            -m median \
+            -a sample_name \
             -t $task.cpus
         """
 }
 
 process PVACFUSE {
     
-    cpus 8
-    memory "90GB"
+    cpus 12
+    memory "128GB"
 
     container "griffithlab/pvactools:6.0.3"
 
@@ -2155,6 +2197,7 @@ process PVACFUSE {
 
     input:
         tuple val(sample_meta), path(arriba_fusions), path(hla_pvac_input), path(starfusion_calls)
+        path human_ref_peptides
 
     output:
         path("${sample_meta.somatic_sample}_pvacfuse"), emit: pvacfuse_dir
@@ -2171,10 +2214,15 @@ process PVACFUSE {
             -e1 8,9,10,11 \
             -e2 12,13,14,15,16,17,18 \
             --iedb-install-directory /opt/iedb \
+            --run-reference-proteome-similarity \
+            --peptide-fasta $human_ref_peptides \
+            -m median \
+            -m2 percentile \
             -t $task.cpus
         """
 
 }
+
 
 workflow {
     
@@ -2243,6 +2291,8 @@ workflow {
     arriba_known_fusions = Channel.fromPath(file(params.arriba_known_fusions)).first()
     arriba_protein_domains = Channel.fromPath(file(params.arriba_protein_domains)).first()
 
+    human_ref_peptides = Channel.fromPath(file(params.human_ref_peptides)).first()
+    
     // RUN FASTP QC ON ALL SAMPLES
 
     fastp = FASTP(samplemap_inputs)
@@ -2632,7 +2682,7 @@ workflow {
 
             
 
-    PVACSEQ = PVACSEQ(pvacseq_input)
+    PVACSEQ = PVACSEQ(pvacseq_input, human_ref_peptides)
 
 
     final_fusions = arriba_fusions.arriba_fusions
@@ -2649,6 +2699,6 @@ workflow {
         }
 
 
-    PVACFUSE = PVACFUSE(pvacfuse_input)
+    PVACFUSE = PVACFUSE(pvacfuse_input, human_ref_peptides)
 
 }
