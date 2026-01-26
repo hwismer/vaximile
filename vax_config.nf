@@ -5,7 +5,6 @@ process {
     memory = "64GB"
     time = 14.d
     cache = "lenient"
-    queue = "freecycle,krummellab,common"
     scratch = true
     clusterOptions = '--gres=scratch:750G'
 }
@@ -20,7 +19,6 @@ apptainer {
 executor {
     name = "slurm"
     queueSize = 50
-    queue = "freecyle,krummellab,common"
 }
 
 plugins {
