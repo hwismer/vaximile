@@ -1365,7 +1365,7 @@ process KALLISTO_TXIMPORT {
     
     conda "conda-forge::r-base=4.4.3 bioconda::bioconductor-tximport=1.34.0 conda-forge::r-readr=2.1.6 conda-forge::r-dplyr=1.1.4 bioconda::bioconductor-rtracklayer=1.66.0"
 
-    publishDir "${params.outdir}/${meta.somatic_sample}/rnaseq/"
+    publishDir "${params.outdir}/${meta.somatic_sample}/rnaseq/", mode: "copy"
 
     input:
         tuple val(meta), path(kallisto_abundance)
