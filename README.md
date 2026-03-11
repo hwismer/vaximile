@@ -18,12 +18,15 @@
   
   ### Optional
   #### BWA2 Index
+    Prebuilt index files compatible with bwa2 for the chosen reference genome. If not supplied, an index will automatically be created.
   #### STAR Index
+    Prebuilt index files compatible with STAR 2.7.10 for the chosen reference genome. If not supplied, an index will automatically be created.
   #### Kallisto Index
+    Prebuilt index files compatible with kallisto for the chosen reference genome. If not supplied, an index will automatically be created.
   
 
 ## Install
-
+'Simply clone the repo'
 
 ## Running
 
