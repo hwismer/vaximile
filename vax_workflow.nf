@@ -2279,7 +2279,8 @@ workflow {
             return [meta, reads]
         }
     
-
+    
+    // ****************************************************************
     // PULL REFERENCE FASTA AND REFERENCE FASTA SUPPLEMENTAL FILES
     
     reference_fa = Channel.fromPath(params.reference_fa).first()
@@ -2322,7 +2323,9 @@ workflow {
     arriba_protein_domains = Channel.fromPath(file(params.arriba_protein_domains)).first()
 
     human_ref_peptides = Channel.fromPath(file(params.human_ref_peptides)).first()
-    
+   
+
+    // ****************************************************************
     // RUN FASTP QC ON ALL SAMPLES
 
     fastp = FASTP(samplemap_inputs)
@@ -2331,8 +2334,7 @@ workflow {
                                         rna: meta.molecule == "RNA"
                                         }
 
-    
-
+    // ****************************************************************
     // HLA TYPING: RUN OPTITYPE AND HLA-HD
 
     hla_optitype = OPTITYPE(fastp_by_molec.dna)
@@ -2347,9 +2349,9 @@ workflow {
                                     }.filter { meta, hla_call ->
                                                meta.sample_type == "Normal"
                                         }
-
-
-    // ALIGNMENT OF DNA SEQUENCING USING BWA
+    
+    // ****************************************************************
+    // ALIGNMENT AND PREPROCESSING OF DNA
 
     if (params.bwa_index) {
         bwa_index = Channel.fromPath(params.bwa_index).collect()
@@ -2360,9 +2362,38 @@ workflow {
     bwa_sam = BWA_MAP(fastp_by_molec.dna, reference_fa, reference_index_files, bwa_index)
     bwa_mapped = BWA_POSTPROCESS(bwa_sam)
 
+    
+    // BAM PREPROCESSING OF DNA: GATK BEST PRACTICES
 
+    preprc = PREPROCESS_BAM(bwa_mapped,
+                            reference_fa, reference_index_files,
+                            known_sites_dbsnp, known_sites_dbsnp_index,
+                            known_sites_1000g_snps, known_sites_1000g_snps_index,
+                            known_indels, known_indels_index,
+                            mills, mills_index,
+                            common_germline, common_germline_index)
+
+
+    preproc_bams_type_branched = preprc.preproc_bams
+                                   | branch {meta, bam, bai ->
+                                        normal: meta.sample_type == "Normal"
+                                        tumor: meta.sample_type == "Tumor"
+                                        }
+    
+    preproc_bams_by_sample = preprc.preproc_bams.map { meta, bam, bai -> tuple(meta.somatic_sample, [meta, bam, bai]) } 
+                                                     | groupTuple
+                                                     | map { somatic_id, samples ->
+                                                                def tumor  = samples.find { it[0].sample_type == 'Tumor' }
+                                                                def normal = samples.find { it[0].sample_type == 'Normal' }
+                                                                                     
+                                                                return [ somatic_id, 
+                                                                         tumor[0], tumor[1], tumor[2],
+                                                                         normal[0], normal[1], normal[2]]
+                                                     }
+    
+
+    // ****************************************************************
     // ALIGNMENT OF RNA SEQUENCING USING STAR
-    // STAR alignment process includes chimeric reads for directly going from BAM -> Star-Fusion
     
     if (params.star_index) {
         star_index = Channel.fromPath(params.star_index)
@@ -2373,6 +2404,9 @@ workflow {
     
     star_rna_align = STAR_ALIGN(fastp_by_molec.rna, params.star_index)
     star_rna = STAR_INDEX_BAM(star_rna_align)
+
+    // ****************************************************************
+    // Transcript-fusion detection using STAR_FUSION and ARRIBA
 
     star_fusion = STAR_FUSION(star_rna_align.chimeric_out, ctat_resource_dir)
     
@@ -2385,21 +2419,8 @@ workflow {
                                     arriba_protein_domains)
 
     
-    
-    //PVACFUSE(
+    // ****************************************************************
 
-    // BAM PREPROCESSING OF DNA: GATK BEST PRACTICES
-
-    preprc = PREPROCESS_BAM(bwa_mapped,
-                            reference_fa, reference_index_files,
-                            known_sites_dbsnp, known_sites_dbsnp_index,
-                            known_sites_1000g_snps, known_sites_1000g_snps_index,
-                            known_indels, known_indels_index,
-                            mills, mills_index,
-                            common_germline, common_germline_index)
-
-
-    
     // RNA: TRANSCRIPT ABUNDANCE ESTIMATION
     
     if (params.kallisto_index) {
@@ -2416,26 +2437,17 @@ workflow {
 
     kallisto_gene = KALLISTO_TXIMPORT(kallisto, gencode_gtf)
 
-
-
-    // INTERVAL CREATION FOR SOMATIC CALLERS
-
-    intervals = SPLIT_INTERVALS(reference_fa, reference_index_files,
-                                intervals_file, params.scatter_count)
-
-
-
-    preproc_bams_type_branched = preprc.preproc_bams
-                                   | branch {meta, bam, bai ->
-                                        normal: meta.sample_type == "Normal"
-                                        tumor: meta.sample_type == "Tumor"
-    }
     
-    //preproc_bams_pileups_type_branched = preprc.preproc_bams_pileups
-    //                                        | branch {meta, bam, bai, pileups ->
-    //                                            normal: meta.sample_type == "Normal"
-    //                                            tumor: meta.sample_type == "Tumor"
-    //                                        }
+    // ****************************************************************
+
+
+    
+
+    
+   
+    
+    // ****************************************************************
+
     // GERMLINE VARIANT CALLING
 
     // Run HaplotypeCaller with scatter/gather approach and preprocess with CNNScoreVariants and FilterVariantTranches
@@ -2465,21 +2477,17 @@ workflow {
 
     final_germline = INDEX_FINAL_VCF_GERMLINE(vep_germline)
 
-    preproc_bams_by_sample = preprc.preproc_bams.map { meta, bam, bai -> tuple(meta.somatic_sample, [meta, bam, bai]) } 
-                                                     | groupTuple
-                                                     | map { somatic_id, samples ->
-                                                                def tumor  = samples.find { it[0].sample_type == 'Tumor' }
-                                                                def normal = samples.find { it[0].sample_type == 'Normal' }
-                                                                                     
-                                                                return [ somatic_id, 
-                                                                         tumor[0], tumor[1], tumor[2],
-                                                                         normal[0], normal[1], normal[2]]
-                                                     }
     
+    // ****************************************************************
     // SOMATIC VARIANT CALLING
+    
+
+    // INTERVAL CREATION FOR SOMATIC CALLERS
+    intervals = SPLIT_INTERVALS(reference_fa, reference_index_files,
+                                intervals_file, params.scatter_count)
+
 
     // MUTECT2
-    // Run Mutect2 with scatter/gather approach
    
     mutect_scattered = MUTECT2_SCATTER(preproc_bams_by_sample,
                     intervals.flatten(),
@@ -2499,8 +2507,6 @@ workflow {
 
                                              return [somatic_name, tumor[1], normal[1] ]
                                      }
-
-
 
     mutect_scattered_pileups = mutect_gathered
         | join(pileups)
@@ -2527,6 +2533,9 @@ workflow {
     
     somatic_filtered_vcfs = FILTER_VCF(somatic_vcfs).filter_vcf
    
+    
+
+    // ****************************************************************
     // POST-PROCESS SOMATIC VCFS
 
     // Variant Decomposition & Normalization
@@ -2540,7 +2549,7 @@ workflow {
                                       reference_index_files)
 
     
-
+    // ****************************************************************
     // PVACtools VCF PREPARATION
     
     // Annotate VCF with VEP
@@ -2551,6 +2560,8 @@ workflow {
 
     vep = VEP_FILTER(vep_annot, params.vep_cache, params.vep_plugins)
 
+
+    // Put all bams together (DNA + RNA) for input into bamreadcount
     all_bams = preprc.preproc_bams.concat(star_rna.star_bam)
         | map { meta, bam, bai -> tuple(meta.sample_name, [meta, bam, bai]) }
 
@@ -2599,7 +2610,7 @@ workflow {
 
 
     vcf_rna_annotated_coverage = ANNOTATE_VCF_COVERAGE(bamreadcount_by_sample)
-
+    
     
     // Add transcript abundance estimation from kallisto
     
@@ -2641,10 +2652,7 @@ workflow {
                 def (germline_meta, germline_vcf, germline_vcf_index) = germline_vcf_tuple[0]
                 return [somatic_meta, somatic_vcf, somatic_vcf_index, germline_meta, germline_vcf, germline_vcf_index ]
         }
-
     
-
-
 
     // PERFORM VCF PHASING USING GERMLINE CALLS
 
@@ -2712,6 +2720,9 @@ workflow {
         }
 
             
+    
+    // ****************************************************************
+    // RUN PVACTOOLS SUITE (PVACSEQ + PVACFUSE)
 
     PVACSEQ = PVACSEQ(pvacseq_input, human_ref_peptides)
 
