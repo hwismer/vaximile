@@ -40,24 +40,69 @@ params.mills = "gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_g
 params.mills_index = "gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz.tbi"
 
 
+
 include { FASTP } from "./modules/qc.nf"
 include { CREATE_STAR_INDEX; STAR_ALIGN; STAR_INDEX_BAM; CREATE_BWA_INDEX; BWA_MAP; BWA_POSTPROCESS; PREPROCESS_BAM } from "./modules/alignment.nf"
 include { STAR_FUSION; ARRIBA_FUSION } from "./modules/fusion_calling.nf"
 include { VT_POSTPROCESS_GERMLINE; VEP_ANNOTATE_GERMLINE; INDEX_FINAL_VCF_GERMLINE; POSTPROCESS_HAPLOTYPE_SCATTER; HAPLOTYPE_CALLER_SCATTER } from "./modules/germline.nf"
-include { HLAHD_HLA_CALLS; OPTITYPE_HLA_CALLS; POSTPROCESS_OPTITYPE; OPTITYPE; HLAHD } from "./modules/hla_typing.nf"
+include { HLAHD_HLA_CALLS; OPTITYPE_HLA_CALLS; POSTPROCESS_OPTITYPE; OPTITYPE; HLAHD; HLA_COMBINE_FASTQS } from "./modules/hla_typing.nf"
 include { PVACSEQ; PVACFUSE } from "./modules/pvactools.nf"
 include { BAMREADCOUNT; VEP_ANNOTATE; ANNOTATE_VCF_COVERAGE; ANNOTATE_VCF_EXPRESSION; PHASE_VCF_SELECT_VARIANTS; 
     PHASE_VCF_COMBINE_VARIANTS; PHASE_VCF_SORT_VCF; PHASE_VCF_RENAME; PHASE_VCF_RBPHASING; PHASE_VCF_VEP; PHASE_VCF_INDEX } from "./modules/pvactools_vcf_prep.nf"
 include { KALLISTO_INDEX; KALLISTO_QUANT; KALLISTO_TXIMPORT } from "./modules/rnaseq.nf"
 include { DEEPSOMATIC; STRELKA; POSTPROCESS_STRELKA; MUTECT2_SCATTER; POSTPROCESS_MUTECT2_SCATTER; SPLIT_INTERVALS } from "./modules/somatic_calling.nf"
 include { INDEX_FINAL_VCF; VCF_TO_TABLE; MERGE_SOMATIC_VCFS; FILTER_VCF; ADD_VCF_GT_FIELD; VEP_FILTER; VT_SOMATIC_POSTPROCESS } from "./modules/somatic_postprocess.nf"
+    
+include { DNA_QC_WORKFLOW; RNA_QC_WORKFLOW } from "./workflows/qc_workflow.nf"
 
 workflow {
     
     // INPUT PARSING
     // READ IN SAMPLE DATA FROM SAMPLESHEET
 
+    dna_inputs = Channel.fromPath(params.dna_sample_sheet)
+        | splitCsv( header: true )
+            | map { row ->
 
+                meta = [
+                    somatic_name: row.somatic_name,
+                    sample_name: row.sample_name,
+                    sample_type: row.sample_type,
+                    sequencing_type: row.sequencing_type,
+                    molecule: "DNA"
+                ]
+
+                reads = [
+                    file(row.fastqr1, checkIfExists:true),
+                    file(row.fastqr2, checkIfExists:true)
+                ]
+
+                return [meta, reads]
+            }
+
+    rna_inputs = Channel.fromPath(params.rna_sample_sheet)
+        | splitCsv ( header: true )
+            | map { row ->
+                meta = [
+                    somatic_name: row.somatic_name,
+                    sample_name: row.sample_name,
+                    sample_type: row.sample_type,
+                    strand: row.strand,
+                    molecule: "RNA"
+                ]
+                
+                reads = [
+                    file(row.fastqr1, checkIfExists: true),
+                    file(row.fastqr2, checkIfExists: true)
+                ]
+
+                return [meta, reads]
+
+            }
+
+    
+    // OLD BLOCK
+    /*
     samplemap_inputs = Channel.fromPath(params.sample_sheet)
         | splitCsv( header: true )
             | map { row ->
@@ -76,6 +121,7 @@ workflow {
                 ]
             return [meta, reads]
         }
+    */
     
     
     // ****************************************************************
@@ -125,7 +171,11 @@ workflow {
 
     // ****************************************************************
     // RUN FASTP QC ON ALL SAMPLES
+    
+    dna_fastp = DNA_QC_WORKFLOW(dna_inputs)
+    rna_fastp = RNA_QC_WORKFLOW(rna_inputs)
 
+    /*
     fastp = FASTP(samplemap_inputs)
     fastp_by_molec = fastp.fastqs.branch{meta, fastq1, fastq2 -> 
         dna: meta.molecule == "DNA"
@@ -137,6 +187,9 @@ workflow {
 
     hla_optitype = OPTITYPE(fastp_by_molec.dna)
     hla_hlahd = HLAHD(fastp_by_molec.dna)
+                            
+
+
     hla_optitype_postprocess = POSTPROCESS_OPTITYPE(hla_optitype)
 
     hla_calls_hlahd = HLAHD_HLA_CALLS(hla_hlahd.hla_calls)
@@ -538,5 +591,8 @@ workflow {
 
 
     PVACFUSE = PVACFUSE(pvacfuse_input, human_ref_peptides)
+
+    */
+
 
 }

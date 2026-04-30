@@ -6,7 +6,8 @@ process {
     time = 14.d
     cache = "lenient"
     scratch = true
-    clusterOptions = '--gres=scratch:750G'
+    clusterOptions = '--gres=scratch:500G'
+    //errorStrategy = 'ignore'
 }
 
 apptainer {

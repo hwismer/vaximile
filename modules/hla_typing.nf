@@ -1,3 +1,30 @@
+
+process HLA_COMBINE_FASTQS {
+
+    cpus 1
+    memory "8GB"
+
+    input:
+        tuple val(sample1_meta), path(sample1_fastq1), path(sample1_fastq2)
+        tuple val(sample2_meta), path(sample2_fastq1), path(sample2_fastq2)
+
+    output:
+        tuple val(sample1_meta),
+            path("merged_${sample1_meta.sample_name}_${sample2_meta.sample_name}_R1.fastq.gz"),
+            path("merged_${sample1_meta.sample_name}_${sample2_meta.sample_name}_R1.fastq.gz")
+
+
+    script:
+    """
+    cat $sample1_fastq1 $sample2_fastq1 > "merged_${sample1_meta.sample_name}_${sample2_meta.sample_name}_R1.fastq.gz"
+    cat $sample1_fastq2 $sample2_fastq2 > "merged_${sample1_meta.sample_name}_${sample2_meta.sample_name}_R2.fastq.gz"
+
+    """
+
+
+}
+
+
 process HLAHD_HLA_CALLS {
 
     /*
@@ -22,45 +49,27 @@ process HLAHD_HLA_CALLS {
     script:
     """
     #!/usr/bin/env python3
-    
+
     import pandas as pd
     import csv
+    
+    typed_alleles = []
+    class_i_skips = ["HLA-E","HLA-F","HLA-G","HLA-H","HLA-J","HLA-K","HLA-L","HLA-V"]
 
-    hlahd = pd.read_csv("$hla_result", sep = "\t", names = ["HLA", "Allele 1", "Allele 2"], nrows=21)
-    hlahd = hlahd[(hlahd["Allele 1"] != "Not typed") & (hlahd["Allele 2"] != "Not typed")]
-
-    allele_2_new = []
-    allele_1_new = []
-    for allele_1, allele_2 in zip(hlahd["Allele 1"], hlahd["Allele 2"]):
-        allele_1_split = allele_1.split(":")
-        allele_1 = allele_1_split[0] + ":" + allele_1_split[1]
-        allele_1_new.append(allele_1)
-                        
-        if allele_2 == "-":
-            allele_2_new.append(allele_1)
-        else:
-            allele_2_split = allele_2.split(":")
-            allele_2 = allele_2_split[0] + ":" + allele_2_split[1]
-            allele_2_new.append(allele_2)
-
-    hlahd["Allele 1"] = allele_1_new
-    hlahd["Allele 2"] = allele_2_new
-    #hlahd = hlahd[hlahd["HLA"].isin(["A","B","C","DRB1","DQA1","DQB1"])]
-
-    alleles = set()
-    for allele, allele_1,allele_2 in zip(hlahd["HLA"],hlahd["Allele 1"], hlahd["Allele 2"]):
-            if allele != "A" and allele != "B" and allele != "C":
-                alleles.add(allele_1.split("-")[1])
-                alleles.add(allele_2.split("-")[1])
-            else:
-                alleles.add(allele_1)
-                alleles.add(allele_2)
-                                                                    
-    alleles = list(alleles)
+    for line in open("${hla_result}", "r"):
+        split_allele_line = line.strip().split("\t")
+        for whole_allele in split_allele_line[1:]:
+            if whole_allele != "-" and whole_allele != "Not typed":
+                hla = whole_allele.split("*")[0]
+                if hla not in class_i_skips:
+                    hla_type = whole_allele.split("*")[1]
+                    hla_type_pvac_res = hla_type[:5]
+                    final_allele = hla + "*" + hla_type_pvac_res
+                    typed_alleles.append(final_allele)
 
     with open("${meta.sample_name}_hla_calls.csv", "w", newline="",encoding="utf-8") as f:
         writer = csv.writer(f,lineterminator="\\n")
-        writer.writerow(alleles)
+        writer.writerow(typed_alleles)
 
     """
         

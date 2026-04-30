@@ -1,0 +1,3 @@
+somatic_name,sample_name,sample_type,strand,fastqr1,fastqr2
+IPIMEL576_M4_vs_B1,IPIMEL576_M4,Tumor,INFER,/krummellab/data1/hwismer/IPIMEL576/IPIMEL576_M4_rna/IPIMEL576_M4_rna_R1.fastq.gz,/krummellab/data1/hwismer/IPIMEL576/IPIMEL576_M4_rna/IPIMEL576_M4_rna_R2.fastq.gz
+IPIMEL577_M4_vs_N5,IPIMEL577_M4,Tumor,INFER,/c4/home/hwismer/IPIMEL577_data/IPIMEL577_M4_rna/IPIMEL577_M4_rna_R1.fastq.gz,/c4/home/hwismer/IPIMEL577_data/IPIMEL577_M4_rna/IPIMEL577_M4_rna_R2.fastq.gz

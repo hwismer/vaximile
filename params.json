@@ -1,5 +1,6 @@
 {
-    "sample_sheet" : "./samplesheet.csv",  
+    "dna_sample_sheet" : "./inputs/dna_samplesheet.csv",
+    "rna_sample_sheet" : "./inputs/rna_samplesheet.csv",
     
     "outdir" : "cIPI_vax_out",
 
@@ -32,9 +33,9 @@
     "gencode_gtf" : "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.chr_patch_hapl_scaff.annotation.gtf.gz", 
     "kallisto_reference": "https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz",
 
-    "kallisto_index" : "/c4/home/hwismer/pvac_pipeline/indices/kallisto_index.idx",
-    "star_index" : "/c4/home/hwismer/pvac_pipeline/indices/STARGenomeDir/",
-    "bwa_index" : "/c4/home/hwismer/pvac_pipeline/indices/bwa2_index/*{.bwt.2bit.64,.sa,.pac,.amb,.ann,.0123}",
+    "kallisto_index" : "/krummellab/data1/hwismer/resources/references/Homo_sapiens/reference_indices/kallisto_index.idx",
+    "star_index" : "/krummellab/data1/hwismer/resources/references/Homo_sapiens/reference_indices/STARGenomeDir/",
+    "bwa_index" : "/krummellab/data1/hwismer/resources/references/Homo_sapiens/reference_indices/bwa2_index/*{.bwt.2bit.64,.sa,.pac,.amb,.ann,.0123}",
 
     "scatter_count" : 30,
     "intervals_file" : "gs://gcp-public-data--broad-references/hg38/v0/wgs_calling_regions.hg38.interval_list",
@@ -44,9 +45,9 @@
 
     "ctat_resource_dir":"/krummellab/data1/hwismer/resources/ctat/GRCh38_gencode_v44_CTAT_lib_Oct292023.plug-n-play/ctat_genome_lib_build_dir",
 
-    "arriba_blacklist":"/c4/home/hwismer/pvac_pipeline/CustomDiscovery_Vaccine_Dev_Pipeline/utilities/arriba/arriba_v2.5.1/database/blacklist_hg38_GRCh38_v2.5.1.tsv.gz",
-    "arriba_known_fusions":"/c4/home/hwismer/pvac_pipeline/CustomDiscovery_Vaccine_Dev_Pipeline/utilities/arriba/arriba_v2.5.1/database/known_fusions_hg38_GRCh38_v2.5.1.tsv.gz",
-    "arriba_protein_domains":"/c4/home/hwismer/pvac_pipeline/CustomDiscovery_Vaccine_Dev_Pipeline/utilities/arriba/arriba_v2.5.1/database/protein_domains_hg38_GRCh38_v2.5.1.gff3"
+    "arriba_blacklist":"/krummellab/data1/hwismer/resources/arriba_v2.5.1/database/blacklist_hg38_GRCh38_v2.5.1.tsv.gz",
+    "arriba_known_fusions":"/krummellab/data1/hwismer/resources/arriba_v2.5.1/database/known_fusions_hg38_GRCh38_v2.5.1.tsv.gz",
+    "arriba_protein_domains":"/krummellab/data1/hwismer/resources/arriba_v2.5.1/database/protein_domains_hg38_GRCh38_v2.5.1.gff3"
     
 
 }
