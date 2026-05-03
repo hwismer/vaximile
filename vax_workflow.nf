@@ -1,7 +1,8 @@
 // Default parameter input
 
 params.outdir = "./neoantigen_vax_pipeline_out/"
-params.sample_sheet = null
+params.dna_sample_sheet =  null
+params.rna_sample_sheet =  null
 
 params.kallisto_index = null
 params.star_index = null
@@ -40,23 +41,32 @@ params.mills = "gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_g
 params.mills_index = "gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz.tbi"
 
 
-
-include { FASTP } from "./modules/qc.nf"
-include { CREATE_STAR_INDEX; STAR_ALIGN; STAR_INDEX_BAM; CREATE_BWA_INDEX; BWA_MAP; BWA_POSTPROCESS; PREPROCESS_BAM } from "./modules/alignment.nf"
-include { STAR_FUSION; ARRIBA_FUSION } from "./modules/fusion_calling.nf"
-include { VT_POSTPROCESS_GERMLINE; VEP_ANNOTATE_GERMLINE; INDEX_FINAL_VCF_GERMLINE; POSTPROCESS_HAPLOTYPE_SCATTER; HAPLOTYPE_CALLER_SCATTER } from "./modules/germline.nf"
-include { HLAHD_HLA_CALLS; OPTITYPE_HLA_CALLS; POSTPROCESS_OPTITYPE; OPTITYPE; HLAHD; HLA_COMBINE_FASTQS } from "./modules/hla_typing.nf"
-include { PVACSEQ; PVACFUSE } from "./modules/pvactools.nf"
-include { BAMREADCOUNT; VEP_ANNOTATE; ANNOTATE_VCF_COVERAGE; ANNOTATE_VCF_EXPRESSION; PHASE_VCF_SELECT_VARIANTS; 
-    PHASE_VCF_COMBINE_VARIANTS; PHASE_VCF_SORT_VCF; PHASE_VCF_RENAME; PHASE_VCF_RBPHASING; PHASE_VCF_VEP; PHASE_VCF_INDEX } from "./modules/pvactools_vcf_prep.nf"
-include { KALLISTO_INDEX; KALLISTO_QUANT; KALLISTO_TXIMPORT } from "./modules/rnaseq.nf"
-include { DEEPSOMATIC; STRELKA; POSTPROCESS_STRELKA; MUTECT2_SCATTER; POSTPROCESS_MUTECT2_SCATTER; SPLIT_INTERVALS } from "./modules/somatic_calling.nf"
-include { INDEX_FINAL_VCF; VCF_TO_TABLE; MERGE_SOMATIC_VCFS; FILTER_VCF; ADD_VCF_GT_FIELD; VEP_FILTER; VT_SOMATIC_POSTPROCESS } from "./modules/somatic_postprocess.nf"
+include { SPLIT_INTERVALS; SPLIT_INTERVALS_PADDED; COMBINE_FASTQS } from "./modules/utilities.nf"
+//include { FASTP } from "./modules/qc.nf"
+//include { CREATE_STAR_INDEX; STAR_ALIGN; STAR_INDEX_BAM; CREATE_BWA_INDEX; BWA_MAP; PREPROCESS_BAM } from "./modules/alignment.nf"
+//include { STAR_FUSION; ARRIBA_FUSION } from "./modules/fusion_calling.nf"
+//include { VT_POSTPROCESS_GERMLINE; VEP_ANNOTATE_GERMLINE; INDEX_FINAL_VCF_GERMLINE; POSTPROCESS_HAPLOTYPE_SCATTER; HAPLOTYPE_CALLER_SCATTER } from "./modules/germline.nf"
+//include { HLAHD_HLA_CALLS; OPTITYPE_HLA_CALLS; POSTPROCESS_OPTITYPE; OPTITYPE; HLAHD; HLA_COMBINE_FASTQS } from "./modules/hla_typing.nf"
+//include { PVACSEQ; PVACFUSE } from "./modules/pvactools.nf"
+//include { BAMREADCOUNT; VEP_ANNOTATE; ANNOTATE_VCF_COVERAGE; ANNOTATE_VCF_EXPRESSION; PHASE_VCF_SELECT_VARIANTS; 
+//    PHASE_VCF_COMBINE_VARIANTS; PHASE_VCF_SORT_VCF; PHASE_VCF_RENAME; PHASE_VCF_RBPHASING; PHASE_VCF_VEP; PHASE_VCF_INDEX } from "./modules/pvactools_vcf_prep.nf"
+//include { KALLISTO_INDEX; KALLISTO_QUANT; KALLISTO_TXIMPORT } from "./modules/rnaseq.nf"
+//include { DEEPSOMATIC; STRELKA; POSTPROCESS_STRELKA; MUTECT2_SCATTER; POSTPROCESS_MUTECT2_SCATTER; SPLIT_INTERVALS } from "./modules/somatic_calling.nf"
+//include { INDEX_FINAL_VCF; VCF_TO_TABLE; MERGE_SOMATIC_VCFS; FILTER_VCF; ADD_VCF_GT_FIELD; VEP_FILTER; VT_SOMATIC_POSTPROCESS } from "./modules/somatic_postprocess.nf"
     
 include { DNA_QC_WORKFLOW; RNA_QC_WORKFLOW } from "./workflows/qc_workflow.nf"
+include { DNA_ALIGNMENT_WORKFLOW } from "./workflows/alignment_workflow.nf"
+include { HLA_TYPING_WORKFLOW } from "./workflows/hla_typing_workflow.nf"
+
+def make_vcf_channel(vcf_param) {
+    return vcf_param
+        ? Channel.value(tuple(file(vcf_param), file("${vcf_param}.tbi")))
+        : Channel.empty()
+}
 
 workflow {
-    
+   
+    main:
     // INPUT PARSING
     // READ IN SAMPLE DATA FROM SAMPLESHEET
 
@@ -64,7 +74,7 @@ workflow {
         | splitCsv( header: true )
             | map { row ->
 
-                meta = [
+                def meta = [
                     somatic_name: row.somatic_name,
                     sample_name: row.sample_name,
                     sample_type: row.sample_type,
@@ -72,7 +82,7 @@ workflow {
                     molecule: "DNA"
                 ]
 
-                reads = [
+                def reads = [
                     file(row.fastqr1, checkIfExists:true),
                     file(row.fastqr2, checkIfExists:true)
                 ]
@@ -80,10 +90,11 @@ workflow {
                 return [meta, reads]
             }
 
+
     rna_inputs = Channel.fromPath(params.rna_sample_sheet)
         | splitCsv ( header: true )
             | map { row ->
-                meta = [
+                def meta = [
                     somatic_name: row.somatic_name,
                     sample_name: row.sample_name,
                     sample_type: row.sample_type,
@@ -91,7 +102,7 @@ workflow {
                     molecule: "RNA"
                 ]
                 
-                reads = [
+                def reads = [
                     file(row.fastqr1, checkIfExists: true),
                     file(row.fastqr2, checkIfExists: true)
                 ]
@@ -99,6 +110,7 @@ workflow {
                 return [meta, reads]
 
             }
+
 
     
     // OLD BLOCK
@@ -127,12 +139,31 @@ workflow {
     // ****************************************************************
     // PULL REFERENCE FASTA AND REFERENCE FASTA SUPPLEMENTAL FILES
     
-    reference_fa = Channel.fromPath(params.reference_fa).first()
-    reference_index_files = Channel.fromPath(params.reference_index_dir).collect()
-    reference_dict = Channel.fromPath(params.reference_dict).first()
+    //reference_fa = Channel.fromPath(params.reference_fa).first()
+    //reference_index_files = Channel.fromPath(params.reference_index_dir).collect()
+    //reference_dict = Channel.fromPath(params.reference_dict).first()
     
-    common_germline = Channel.fromPath(params.common_germline).first()
-    common_germline_index = Channel.fromPath(params.common_germline_index).first()
+    reference_fa = Channel.fromPath(params.reference_fa)
+    reference_fai = Channel.fromPath("${params.reference_fa}.fai")
+    reference_dict = Channel.fromPath(params.reference_fa.replace(".fasta",".dict"))
+
+    // Combine them into a tuple channel if needed together
+    reference_genome = reference_fa.combine(reference_fai).combine(reference_dict).first()
+
+
+    common_germline = make_vcf_channel(params.common_germline)
+    known_sites_dbsnp = make_vcf_channel(params.known_sites_dbsnp)
+    known_sites_1000g_snps = make_vcf_channel(params.known_sites_1000g_snps)
+    known_indels = make_vcf_channel(params.known_indels)
+    mills = make_vcf_channel(params.mills)
+    gnomad = make_vcf_channel(params.gnomad)
+    pon = make_vcf_channel(params.pon)
+    hapmap = make_vcf_channel(params.hapmap)
+
+    
+    /*
+    //common_germline = Channel.fromPath(params.common_germline).first()
+    //common_germline_index = Channel.fromPath(params.common_germline_index).first()
     
     known_sites_dbsnp = Channel.fromPath(params.known_sites_dbsnp).first()
     known_sites_dbsnp_index = Channel.fromPath(params.known_sites_dbsnp_index).first()
@@ -154,6 +185,7 @@ workflow {
     
     hapmap = Channel.fromPath(params.hapmap).first()
     hapmap_index = Channel.fromPath(params.hapmap_index).first()
+    */
     
     intervals_file = Channel.fromPath(params.intervals_file).first()
     
@@ -167,21 +199,74 @@ workflow {
     arriba_protein_domains = Channel.fromPath(file(params.arriba_protein_domains)).first()
 
     human_ref_peptides = Channel.fromPath(file(params.human_ref_peptides)).first()
-   
+    
+    //bwa_index = Channel.fromPath(params.bwa_index).collect()
+    bwa_index = params.bwa_index
+
 
     // ****************************************************************
     // RUN FASTP QC ON ALL SAMPLES
     
     dna_fastp = DNA_QC_WORKFLOW(dna_inputs)
     rna_fastp = RNA_QC_WORKFLOW(rna_inputs)
+    
+    
+    // Split Into
 
-    /*
-    fastp = FASTP(samplemap_inputs)
-    fastp_by_molec = fastp.fastqs.branch{meta, fastq1, fastq2 -> 
-        dna: meta.molecule == "DNA"
-        rna: meta.molecule == "RNA"
+    num_intervals = params.scatter_count
+    intervals_padded = SPLIT_INTERVALS_PADDED(reference_genome, intervals_file, num_intervals)
+        .flatten()
+        .map { file -> tuple(file.baseName, file) }
+    
+    intervals = SPLIT_INTERVALS(reference_genome, intervals_file, num_intervals)
+        .flatten()
+        .map { file -> tuple(file.baseName, file) }
+
+
+    preproc_bam_workflow = DNA_ALIGNMENT_WORKFLOW(
+        dna_fastp.fastp_fastqs,
+        reference_genome,
+        bwa_index,
+        known_sites_dbsnp,
+        known_sites_1000g_snps,
+        known_indels,
+        mills,
+        common_germline,
+        intervals,
+        num_intervals
+    )
+
+    preproc_bams = preproc_bam_workflow.preproc_bams
+    markdup_bams = preproc_bam_workflow.markdup_bams
+    base_recal = preproc_bam_workflow.base_recal
+
+    
+    sample_grouped_fastqs = dna_fastp.fastp_fastqs
+        .map {meta, fastq1, fastq2 ->
+            def new_meta = [
+                somatic_name: meta.somatic_name,
+                sample_name: meta.somatic_name,
+                sample_type: "Tumor_Normal",
+                sequencing_type: meta.sequencing_type,
+                molecule: meta.molecule
+            ]
+            tuple(new_meta, fastq1, fastq2)
+        }
+        .groupTuple()
+        .map { meta, fastqs_r1, fastqs_r2 ->
+            tuple(meta, fastqs_r1.sort(), fastqs_r2.sort())
         }
 
+    combined_fastqs = COMBINE_FASTQS(sample_grouped_fastqs)
+
+    hla_fastq_input = dna_fastp.fastp_fastqs.mix(combined_fastqs)
+
+   
+    hla_workflow = HLA_TYPING_WORKFLOW(
+        hla_fastq_input
+    )
+
+    /*
     // ****************************************************************
     // HLA TYPING: RUN OPTITYPE AND HLA-HD
 
@@ -594,5 +679,13 @@ workflow {
 
     */
 
+    publish:
+        dna_fastp_fastqs = dna_fastp.fastp_fastqs
+}
+
+output {
+    dna_fastp_fastqs{
+        path { meta, fastq1, fastq2 -> "${params.outdir}/${meta.somatic_name}/qc/fastp/${meta.sample_name}" }
+    }
 
 }

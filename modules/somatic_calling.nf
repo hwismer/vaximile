@@ -114,6 +114,7 @@ process STRELKA {
                                  val(normal_meta), path(normal_bam), path(normal_bam_index)
         path reference_fa
         path reference_index_dir
+        path intervals
 
     output:
 
@@ -293,39 +294,3 @@ process MUTECT2_SCATTER {
         """
 }
 
-process SPLIT_INTERVALS {
-
-    /*
-
-        Given a file of genomic intervals, split into scatter_count number of shards.
-
-    */
-
-    cpus 2
-    memory "8GB"
-    cache "lenient"
-
-    tag "Split intervals for ${params.scatter_count} shards"
-
-    container "broadinstitute/gatk:4.6.1.0"
-
-    input:
-        path reference_fa
-        path reference_index_dir
-        path intervals_file
-        val scatter_count
-
-    output:
-        path "*-scattered.interval_list", emit: interval_shards
-
-    script:
-    """
-    gatk SplitIntervals \
-        -R $reference_fa \
-        -L $intervals_file \
-        --scatter-count $scatter_count \
-        --interval-padding 100 \
-        -O .
-
-    """
-}

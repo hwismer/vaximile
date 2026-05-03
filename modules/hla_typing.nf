@@ -1,23 +1,95 @@
 
-process HLA_COMBINE_FASTQS {
+process HLA_CALLS_PVAC {
 
     cpus 1
-    memory "8GB"
+    memory "4GB"
+
+    conda "python=3.10 pandas=2.1"
 
     input:
-        tuple val(sample1_meta), path(sample1_fastq1), path(sample1_fastq2)
-        tuple val(sample2_meta), path(sample2_fastq1), path(sample2_fastq2)
+        tuple val(meta), path(optitype_result), path(optitype_pdf), path(hlahd_result)
 
     output:
-        tuple val(sample1_meta),
-            path("merged_${sample1_meta.sample_name}_${sample2_meta.sample_name}_R1.fastq.gz"),
-            path("merged_${sample1_meta.sample_name}_${sample2_meta.sample_name}_R1.fastq.gz")
-
+		tuple val(meta), path("${meta.sample_name}_hla_calls.csv")
 
     script:
     """
-    cat $sample1_fastq1 $sample2_fastq1 > "merged_${sample1_meta.sample_name}_${sample2_meta.sample_name}_R1.fastq.gz"
-    cat $sample1_fastq2 $sample2_fastq2 > "merged_${sample1_meta.sample_name}_${sample2_meta.sample_name}_R2.fastq.gz"
+    #!/usr/bin/env python3
+    
+    import pandas as pd
+    import csv
+    
+    class_i = {"A":{}, "B":{}, "C":{}}
+    class_ii = {"DRB1":{}, "DQA1":{}, "DQB1":{}, "DPA1":{}, "DPB1":{}}
+    
+    opti = pd.read_csv("${optitype_result}", sep = "\\t")
+    
+    # Optitype Parsing
+    for col in ["A1", "A2", "B1", "B2", "C1", "C2"]:
+        short_allele = opti[col][0]
+        for allele in class_i:
+            if short_allele.startswith(allele):
+                long_allele = "HLA-" + short_allele
+                if long_allele in class_i[allele]:
+                    class_i[allele][long_allele] += 1
+                else:
+                    class_i[allele][long_allele] = 1
+                    
+    with open("${hlahd_result}") as f:
+        for line in f:
+            line = line.rstrip("\\n")
+            line = line.split("\\t")[:3]
+
+            allele = line[0]
+            type1 = line[1]
+            type2 = line[2]
+            
+            if type1 != "Not typed":
+                type1 = type1.split("*")[0] + "*" + type1.split("*")[1][:5]
+                if type2 == "-":
+                    type2 = type1
+                else:
+                    type2 = type2.split("*")[0] + "*" + type2.split("*")[1][:5]
+                    
+                if allele in class_i:
+                    if type1 in class_i[allele]:
+                        class_i[allele][type1] += 1
+                    else:
+                        class_i[allele][type1] = 1
+                        
+                    if type2 in class_i[allele]:
+                        class_i[allele][type2] += 1
+                    else:
+                        class_i[allele][type2] = 1
+                
+                elif allele in class_ii:
+                    if type1 in class_ii[allele]:
+                        class_ii[allele][type1] += 1
+                    else:
+                        class_ii[allele][type1] = 1
+                        
+                    if type2 in class_ii[allele]:
+                        class_ii[allele][type2] += 1
+                    else:
+                        class_ii[allele][type2] = 1
+                        
+    alleles = []
+    
+    for allele in class_i:
+        top2 = sorted(class_i[allele].items(), key=lambda x: x[1], reverse=True)[:2]
+        allele_set = {k for k, v in top2}
+        for a in allele_set:
+            alleles.append(a)
+            
+    for allele in class_ii:
+        top2 = sorted(class_ii[allele].items(), key=lambda x: x[1], reverse=True)[:2]
+        allele_set = {k for k, v in top2}
+        for a in allele_set:
+            alleles.append(a)
+            
+    with open("${meta.sample_name}_hla_calls.csv", "w", newline="",encoding="utf-8") as f:
+        writer = csv.writer(f,lineterminator="\\n")
+        writer.writerow(alleles)
 
     """
 
@@ -118,37 +190,6 @@ process OPTITYPE_HLA_CALLS {
         """
 
 }
-process POSTPROCESS_OPTITYPE {
-
-    /*
-
-    Parse optitype output folder to get just the tsv and pdf output
-
-    */
-
-    cpus 1
-    memory "4GB"
-
-    publishDir "${params.outdir}/${meta.somatic_sample}/HLA/optitype/${meta.sample_name}_optitype", mode: "copy"
-
-    input:
-        tuple val(meta), path(optitype_output_dir)
-
-    output:
-        tuple val(meta), path("${meta.sample_name}_${meta.sample_type}_${meta.molecule}_optitype.tsv"), emit: result_tsv
-        tuple val(meta), path("${meta.sample_name}_${meta.sample_type}_${meta.molecule}_optitype_coverage.pdf"), emit: coverage_plot
-
-    script:
-        """
-        RESULT_FILE=\$(find ${optitype_output_dir}/* -name "*_result.tsv" | head -n 1)    
-        mv "\$RESULT_FILE" "${meta.sample_name}_${meta.sample_type}_${meta.molecule}_optitype.tsv"
-        
-        COVERAGE_FILE=\$(find ${optitype_output_dir}/* -name "*_coverage_plot.pdf" | head -n 1)    
-        mv "\$COVERAGE_FILE" "${meta.sample_name}_${meta.sample_type}_${meta.molecule}_optitype_coverage.pdf"
-
-        """
-}
-
 
 process OPTITYPE {
 
@@ -159,17 +200,17 @@ process OPTITYPE {
 
     */
     
-    container "fred2/optitype:release-v1.3.1"
+    container "fred2/optitype:latest"
+    cpus 16
 
-    cpus 8
-
-    memory "150GB"
+    memory "128GB"
 
     input:
         tuple val(meta), path(fastq1), path(fastq2)
 
     output:
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_optitype")
+        tuple val(meta), path("optitype_out/*_result.tsv"), path("optitype_out/*_coverage_plot.pdf")
+
 
     script:
 
@@ -188,11 +229,18 @@ process OPTITYPE {
         use_discordant=false
         EOF
         
+        which python
+        which OptiTypePipeline.py
+        
+        pwd
+        ls -lh
+
         python /usr/local/bin/OptiType/OptiTypePipeline.py \
             -i $fastq1 $fastq2 \
             --$molecule_flag \
             -c OptiType.ini \
-            --outdir "${meta.sample_name}_${meta.molecule}_optitype"
+            --prefix "${meta.sample_name}_${meta.molecule}" \
+            --outdir optitype_out
         """
 }
 
@@ -210,29 +258,24 @@ process HLAHD {
 
     */
     
-    cpus 6
-    memory "24GB"
+    cpus 16
+    memory "32GB"
 
     container "griffithlab/hlahd:1.0"
     
-    publishDir "${params.outdir}/${meta.somatic_sample}/HLA/hlahd/${meta.sample_name}_hlahd", mode: "copy"
+    //publishDir "${params.outdir}/${meta.somatic_sample}/HLA/hlahd/${meta.sample_name}_hlahd", mode: "copy"
 
     input:
         tuple val(meta), path(fastq1), path(fastq2)
     
     output:
-        tuple val(meta), path("./${meta.sample_name}/result/${meta.sample_name}_final.result.txt"), emit: hla_calls
-        path("./${meta.sample_name}/result/")
+        tuple val(meta), path("./${meta.sample_name}/result/${meta.sample_name}_final.result.txt"), emit: final_hla_calls
+        tuple val(meta), path("./${meta.sample_name}/result/"), emit: result_dir
 
     script:
         """
         ulimit -n 1024
-        echo "\$TMPDIR"
-        #mkdir -p tmp
-        #mkdir -p /tmp/
-
-        #export TMPDIR=/tmp/
-
+        
         gzip -dc $fastq1 > fastq_r1.fastq
         gzip -dc $fastq2 > fastq_r2.fastq
 
@@ -245,6 +288,5 @@ process HLAHD {
             "${meta.sample_name}" \
             ./
         """
-
 
 }
