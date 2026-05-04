@@ -1,3 +1,157 @@
+process STAR_ALIGN {
+
+    /*
+
+    Align RNA reads with STAR. Parameters included from star-fusion to be able to use the output of this process
+    in a downstream star-fusion or arriba process without having to re-map.
+
+    */
+
+    cpus 32
+
+    memory "80GB"
+
+    container "alexdobin/star:2.7.10a_alpha_220506"
+
+    tag "Aligning ${meta.sample_name} with STAR"
+
+    publishDir "${params.outdir}/alignment/star_raw/${meta.sample_name}_${meta.molecule}", mode: "copy"
+
+    input:
+        tuple val(meta), path(fastq1), path(fastq2)
+        path(star_index_dir)
+        path(gtf)
+
+    output:
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_Aligned.out.bam"), emit: star_bam
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_ReadsPerGene.out.tab"), emit: gene_quant
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_Log.final.out"), emit:final_log
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_SJ.out.tab"), emit: sj_out
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_Chimeric.out.junction"),path(fastq1), path(fastq2), emit: chimeric_out
+        tuple val(meta), path("*"), emit: tutto
+    script:
+        """
+
+        gzip -d -c $gtf > gencode.gtf
+
+        STAR \
+            --runThreadN $task.cpus \
+            --genomeDir $star_index_dir \
+            --readFilesIn $fastq1 $fastq2 \
+            --readFilesCommand zcat \
+            --outSAMtype BAM Unsorted \
+            --outReadsUnmapped None \
+            --twopassMode Basic \
+            --outSAMstrandField intronMotif \
+            --outSAMunmapped Within \
+            --chimSegmentMin 10 \
+            --chimJunctionOverhangMin 10 \
+            --outFilterMultimapNmax 50 \
+            --chimOutJunctionFormat 1 \
+            --alignSJDBoverhangMin 10 \
+            --alignMatesGapMax 100000 \
+            --alignIntronMax 100000 \
+            --alignSJstitchMismatchNmax 5 -1 5 5 \
+            --outSAMattrRGline ID:"${meta.sample_name}" SM:"${meta.sample_name}" \
+            --chimMultimapScoreRange 3 \
+            --chimScoreJunctionNonGTAG 0 \
+            --chimScoreSeparation 1 \
+            --chimSegmentReadGapMax 3 \
+            --chimMultimapNmax 50 \
+            --chimNonchimScoreDropMin 10 \
+            --chimOutType Junctions WithinBAM HardClip \
+            --chimScoreDropMax 30 \
+            --peOverlapNbasesMin 10 \
+            --peOverlapMMp 0.1 \
+            --alignInsertionFlush Right \
+            --alignSplicedMateMapLminOverLmate 0.5 \
+            --alignSplicedMateMapLmin 30 \
+            --outFileNamePrefix ./${meta.sample_name}_${meta.molecule}_ \
+            --quantMode GeneCounts \
+            --sjdbGTFfile gencode.gtf
+
+        """
+
+}
+
+
+process CREATE_STAR_INDEX {
+
+    /*
+    
+    Use a reference fasta and gtf to create a star index for star 2.7.10
+
+    */
+
+    cpus 32
+    memory "64GB"
+    cache 'lenient'
+
+    container "alexdobin/star:2.7.10a_alpha_220506"
+
+    tag "Creating STAR index with ${reference_fa} and ${gtf}"
+
+    publishDir "./resources/${reference_fa}_${gtf}_STARGenomeDir", mode: "copy"
+
+    input:
+        tuple path(reference_fa), path(reference_index), path(reference_dict)
+        path(gtf)
+
+    output:
+        path("./${reference_fa}_${gtf}_STARGenomeDir"), emit: star_index
+
+    script:
+        """
+        gzip -d -c $gtf > gencode.gtf
+
+        STAR \
+            --runThreadN $task.cpus \
+            --runMode genomeGenerate \
+            --genomeDir "./${reference_fa}_${gtf}_STARGenomeDir" \
+            --genomeFastaFiles $reference_fa \
+            --sjdbGTFfile gencode.gtf
+
+        """
+
+
+}
+
+process STAR_INDEX_BAM {
+
+    /*
+
+        Index the BAM file from a star process.
+
+    */
+
+    cpus 8
+    memory "32GB"
+
+    container "biocontainers/samtools:v1.9-4-deb_cv1"
+
+    publishDir "${params.outdir}/${meta.somatic_sample}/alignment/star/${meta.sample_name}_${meta.molecule}", mode: "copy"
+
+    input:
+        tuple val(meta), path(bam)
+        tuple val(meta), path(final_log)
+        tuple val(meta), path(sj_out)
+        tuple val(meta), path(chimeric_out), path(fastq1), path(fastq2)
+
+    output:
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_STAR_sorted.bam"), path("${meta.sample_name}_${meta.molecule}_STAR_sorted.bam.bai"), emit: star_bam
+        tuple val(meta), path(final_log), emit: final_log
+        tuple val(meta), path(sj_out), emit: sj_out
+        tuple val(meta), path(chimeric_out), path(fastq1), path(fastq2), emit: chimeric_out
+
+    script:
+        """
+        samtools sort --threads $task.cpus  $bam -o "${meta.sample_name}_${meta.molecule}_STAR_sorted.bam"
+        samtools index -@ $task.cpus  "${meta.sample_name}_${meta.molecule}_STAR_sorted.bam"
+
+        """
+
+}
+
 process KALLISTO_TXIMPORT {
 
     cpus 1
@@ -7,12 +161,14 @@ process KALLISTO_TXIMPORT {
 
     publishDir "${params.outdir}/${meta.somatic_sample}/rnaseq/", mode: "copy"
 
+    tag "Getting gene abundance for ${meta.sample_name}"
+
     input:
         tuple val(meta), path(kallisto_abundance)
         path gtf
 
     output:
-        tuple val(meta), path("${meta.sample_name}.gene_tpm.tsv")
+        tuple val(meta), path("${meta.sample_name}.gene_tpm.tsv"), emit: gene_abundance
 
     script:
     """
@@ -55,6 +211,8 @@ process KALLISTO_TXIMPORT {
 
 
 }
+
+
 process KALLISTO_QUANT {
 
 
@@ -71,6 +229,8 @@ process KALLISTO_QUANT {
 
     publishDir "${params.outdir}/${meta.somatic_sample}/rnaseq/kallisto/", mode: "copy"
 
+    tag "Kallisto quant on ${meta.sample_name}"
+
     input:
         tuple val(meta), path(read1), path(read2)
         path kallisto_index
@@ -78,15 +238,16 @@ process KALLISTO_QUANT {
     output:
         tuple val(meta), path("${meta.sample_name}_kallisto/abundance.tsv"), emit: abundance
         tuple val(meta), path("${meta.sample_name}_kallisto"), emit: kallisto_dir
+        tuple val(meta), path("*"), emit: tutto
 
     script:
         """
-        kallisto quant -i $kallisto_index -o ${meta.sample_name}_kallisto -t ${task.cpus} $read1 $read2 
+        kallisto quant -i $kallisto_index -o ${meta.sample_name}_kallisto -t ${task.cpus} $read1 $read2 > "${meta.sample_name}_kallist_stdout.out" 
         """
 }
 
 
-process KALLISTO_INDEX {
+process CREATE_KALLISTO_INDEX {
 
     /*
 
@@ -98,21 +259,129 @@ process KALLISTO_INDEX {
     memory "32GB"
     cache 'lenient'
     
+    publishDir "./resources/${transcriptome_fa}_kallisto_index.idx", mode: "copy"
 
     conda "bioconda::kallisto=0.51.1"
 
+    tag "Creating kallisto index on ${transcriptome_fa}"
+
     input:
-        path(kallisto_reference)
+        path(transcriptome_fa)
 
     output:
-        path("kallisto_index.idx")
+        path("${transcriptome_fa}_kallisto_index.idx")
 
     script:
         """
-        kallisto index -i kallisto_index.idx $kallisto_reference
-
+        kallisto index -i "${transcriptome_fa}_kallisto_index.idx" $transcriptome_fa
         """
 
 }
 
+process CREATE_SALMON_INDEX {
 
+    cpus 16
+    memory "32GB"
+    
+    publishDir "./resources/${transcripts_fa}_salmon_index", mode: "copy"
+
+    conda "bioconda::salmon=1.11.4"
+
+    tag "Creating salmon index on ${transcripts_fa}"
+
+    input:
+        path(transcripts_fa)
+
+    output:
+        path("${transcripts_fa}_salmon_index")
+
+    script:
+    """
+    salmon index \
+        -t $transcripts_fa \
+        -i "${transcripts_fa}_salmon_index" \
+        -k 31
+    """
+
+
+}
+process SALMON_QUANT {
+
+    cpus 16
+    memory "32GB"
+
+    conda "bioconda::salmon=1.11.4"
+
+    publishDir "./test/salmon"
+
+    tag "Running salmon quant on ${meta.sample_name}"
+
+    input:
+        tuple val(meta), path(fastq1), path(fastq2)
+        path(salmon_index)
+
+    output:
+        tuple val(meta), path("${meta.sample_name}_salmon_quant"), emit: quant
+        tuple val(meta), path("*"), emit: tutto
+
+    script:
+    """
+    salmon quant \
+        -i $salmon_index \
+        --libType A \
+        -1 $fastq1 \
+        -2 $fastq2 \
+        --validateMappings \
+        -p $task.cpus \
+        -o "${meta.sample_name}_salmon_quant"
+    """
+
+}
+
+process GET_RNA_STRANDEDNESS {
+
+    cpus 1
+    memory "4GB"
+
+    publishDir "./test/"
+    
+    conda "python=3.10 pandas=2.1"
+
+    tag "Predicting RNA strandedness on ${meta.sample_name}"
+    
+    input:
+        tuple val(meta), path(salmon_quant)
+
+    output:
+        tuple val(meta), path("${meta.sample_name}_strandedness.txt"), emit: strand_txt
+    
+    script:
+    """
+    #!/usr/bin/env python3
+
+    import json
+    import sys
+    
+    with open("${salmon_quant}/lib_format_counts.json", "r") as f:
+        data = json.load(f)
+
+    expected_format = data.get("expected_format")
+    print(expected_format)
+    if expected_format[1] == "U":
+        strandedness = "XS"
+    elif expected_format[1] == "S":
+        if expected_format[2] == "R":
+            strandedness = "RF"
+        elif expected_format[2] == "F":
+            strandedness = "FR"
+    else:
+        print("Unable to parse strandedness. Check salmon output")
+        sys.exit(1)
+        
+    with open("${meta.sample_name}_strandedness.txt", "w") as f:
+        f.write(strandedness + "\\n")
+
+    """
+
+
+}

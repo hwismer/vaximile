@@ -7,7 +7,7 @@ process {
     cache = "lenient"
     scratch = true
     clusterOptions = '--gres=scratch:500G'
-    //errorStrategy = 'ignore'
+    errorStrategy = 'ignore'
 }
 
 apptainer {
@@ -25,4 +25,9 @@ executor {
 plugins {
     id 'nf-google'
 }
+google {
+    enabled = true
+}
 conda.enabled = true
+
+outputDir = 'results'

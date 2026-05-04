@@ -6,11 +6,13 @@ process HLA_CALLS_PVAC {
 
     conda "python=3.10 pandas=2.1"
 
+    tag "HLA consensus calls for ${meta.sample_name}"
+
     input:
         tuple val(meta), path(optitype_result), path(optitype_pdf), path(hlahd_result)
 
     output:
-		tuple val(meta), path("${meta.sample_name}_hla_calls.csv")
+		tuple val(meta), path("${meta.sample_name}_hla_calls.csv"), emit: pvac_calls
 
     script:
     """
@@ -97,100 +99,6 @@ process HLA_CALLS_PVAC {
 }
 
 
-process HLAHD_HLA_CALLS {
-
-    /*
-
-    Parse the hla-hd final_result file to a .csv compatible with pvac (all hla alleles on single line)
-
-    */
-
-    cpus 1
-    memory "2GB"
-
-    conda "python=3.10 pandas=2.1"
-
-    publishDir "${params.outdir}/${meta.somatic_sample}/HLA/pvac_input", mode:"copy"
-
-    input:
-        tuple val(meta), path(hla_result)
-
-    output:
-        tuple val(meta), path("${meta.sample_name}_hla_calls.csv")
-
-    script:
-    """
-    #!/usr/bin/env python3
-
-    import pandas as pd
-    import csv
-    
-    typed_alleles = []
-    class_i_skips = ["HLA-E","HLA-F","HLA-G","HLA-H","HLA-J","HLA-K","HLA-L","HLA-V"]
-
-    for line in open("${hla_result}", "r"):
-        split_allele_line = line.strip().split("\t")
-        for whole_allele in split_allele_line[1:]:
-            if whole_allele != "-" and whole_allele != "Not typed":
-                hla = whole_allele.split("*")[0]
-                if hla not in class_i_skips:
-                    hla_type = whole_allele.split("*")[1]
-                    hla_type_pvac_res = hla_type[:5]
-                    final_allele = hla + "*" + hla_type_pvac_res
-                    typed_alleles.append(final_allele)
-
-    with open("${meta.sample_name}_hla_calls.csv", "w", newline="",encoding="utf-8") as f:
-        writer = csv.writer(f,lineterminator="\\n")
-        writer.writerow(typed_alleles)
-
-    """
-        
-
-}
-
-
-
-process OPTITYPE_HLA_CALLS {
-
-    /*
-
-        Use the optitype tsv file to create pvac-compatible .csv (all hla alleles listed on single line)
-
-    */
-    
-    cpus 1
-    memory "4GB"
-
-    conda "python=3.10 pandas=2.1"
-
-    publishDir "${params.outdir}/${meta.somatic_sample}/HLA/", mode: "copy"
-
-    input:
-        tuple val(meta), path(optitype_result_tsv)
-
-    output:
-        tuple val(meta), path("${meta.sample_name}_${meta.sample_type}_${meta.molecule}_hla_pvacinput.csv")
-
-    script:
-        """
-        #!/usr/bin/env python3
-
-        import pandas as pd
-
-        df = pd.read_csv("$optitype_result_tsv", sep = "\t")
-        
-        alleles = []
-        for allele in ["A1", "A2", "B1", "B2", "C1", "C2"]:
-            alleles.append("HLA-" + df[allele].iloc[0])
-        allele_csv = ",".join(alleles)
-
-        with open("${meta.sample_name}_${meta.sample_type}_${meta.molecule}_hla_pvacinput.csv", "w") as f:
-            print(allele_csv, file=f)
-
-        """
-
-}
-
 process OPTITYPE {
 
     /*
@@ -205,12 +113,13 @@ process OPTITYPE {
 
     memory "128GB"
 
+    tag "Optitype calls for ${meta.sample_name}"
+
     input:
         tuple val(meta), path(fastq1), path(fastq2)
 
     output:
-        tuple val(meta), path("optitype_out/*_result.tsv"), path("optitype_out/*_coverage_plot.pdf")
-
+        tuple val(meta), path("optitype_out/*_result.tsv"), path("optitype_out/*_coverage_plot.pdf"), emit: hla_calls
 
     script:
 
@@ -262,9 +171,9 @@ process HLAHD {
     memory "32GB"
 
     container "griffithlab/hlahd:1.0"
-    
-    //publishDir "${params.outdir}/${meta.somatic_sample}/HLA/hlahd/${meta.sample_name}_hlahd", mode: "copy"
 
+    tag "HLA-HD on ${meta.sample_name}"
+    
     input:
         tuple val(meta), path(fastq1), path(fastq2)
     

@@ -1,11 +1,11 @@
 // Default parameter input
 
 params.outdir = "./neoantigen_vax_pipeline_out/"
-params.dna_sample_sheet =  null
-params.rna_sample_sheet =  null
+params.samplesheet =  null
 
 params.kallisto_index = null
 params.star_index = null
+params.salmon_index = null
 params.bwa_index = null
 params.vep_cache =  null
 params.vep_plugins = null
@@ -15,10 +15,9 @@ params.arriba_known_fusions = null
 params.arriba_protein_domains = null
 
 params.reference_fa = "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta"
-params.reference_index_dir = "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38{.fasta.fai,.dict}"
-params.reference_dict = "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.dict"
-params.gencode_gtf = "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.chr_patch_hapl_scaff.annotation.gtf.gz"
-params.kallisto_reference =  "https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz"
+
+params.gtf = "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.basic.annotation.gtf.gz"
+params.transcriptome_reference =  "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.pc_transcripts.fa.gz"
 params.human_ref_peptides = "https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz"
 
 params.scatter_count = 30
@@ -40,8 +39,10 @@ params.hapmap_index = "gs://gcp-public-data--broad-references/hg38/v0/hapmap_3.3
 params.mills = "gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz"
 params.mills_index = "gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz.tbi"
 
+params.interval_padding = 100
 
-include { SPLIT_INTERVALS; SPLIT_INTERVALS_PADDED; COMBINE_FASTQS } from "./modules/utilities.nf"
+
+include { SPLIT_INTERVALS; COMBINE_FASTQS } from "./modules/utilities.nf"
 //include { FASTP } from "./modules/qc.nf"
 //include { CREATE_STAR_INDEX; STAR_ALIGN; STAR_INDEX_BAM; CREATE_BWA_INDEX; BWA_MAP; PREPROCESS_BAM } from "./modules/alignment.nf"
 //include { STAR_FUSION; ARRIBA_FUSION } from "./modules/fusion_calling.nf"
@@ -55,8 +56,9 @@ include { SPLIT_INTERVALS; SPLIT_INTERVALS_PADDED; COMBINE_FASTQS } from "./modu
 //include { INDEX_FINAL_VCF; VCF_TO_TABLE; MERGE_SOMATIC_VCFS; FILTER_VCF; ADD_VCF_GT_FIELD; VEP_FILTER; VT_SOMATIC_POSTPROCESS } from "./modules/somatic_postprocess.nf"
     
 include { DNA_QC_WORKFLOW; RNA_QC_WORKFLOW } from "./workflows/qc_workflow.nf"
-include { DNA_ALIGNMENT_WORKFLOW } from "./workflows/alignment_workflow.nf"
+include { DNA_ALIGN_AND_PREPROC } from "./workflows/align_and_preprocess_workflow.nf"
 include { HLA_TYPING_WORKFLOW } from "./workflows/hla_typing_workflow.nf"
+include { RNASEQ_WORKFLOW } from "./workflows/rnaseq_workflow.nf"
 
 def make_vcf_channel(vcf_param) {
     return vcf_param
@@ -70,83 +72,43 @@ workflow {
     // INPUT PARSING
     // READ IN SAMPLE DATA FROM SAMPLESHEET
 
-    dna_inputs = Channel.fromPath(params.dna_sample_sheet)
-        | splitCsv( header: true )
-            | map { row ->
-
-                def meta = [
-                    somatic_name: row.somatic_name,
-                    sample_name: row.sample_name,
-                    sample_type: row.sample_type,
-                    sequencing_type: row.sequencing_type,
-                    molecule: "DNA"
-                ]
-
-                def reads = [
-                    file(row.fastqr1, checkIfExists:true),
-                    file(row.fastqr2, checkIfExists:true)
-                ]
-
-                return [meta, reads]
-            }
-
-
-    rna_inputs = Channel.fromPath(params.rna_sample_sheet)
+    samplesheet_inputs = Channel.fromPath(params.samplesheet)
         | splitCsv ( header: true )
             | map { row ->
+                def molecule = (row.sequencing_type.toLowerCase() == 'rna') ? 'RNA' :
+                    (row.sequencing_type.toLowerCase() in ['exome', 'genome']) ? 'DNA' :
+                    null
+
                 def meta = [
                     somatic_name: row.somatic_name,
                     sample_name: row.sample_name,
                     sample_type: row.sample_type,
-                    strand: row.strand,
-                    molecule: "RNA"
+                    sequencing_type: row.sequencing_type,
+                    molecule: molecule
                 ]
-                
+
                 def reads = [
                     file(row.fastqr1, checkIfExists: true),
                     file(row.fastqr2, checkIfExists: true)
+
                 ]
 
                 return [meta, reads]
-
             }
 
-
-    
-    // OLD BLOCK
-    /*
-    samplemap_inputs = Channel.fromPath(params.sample_sheet)
-        | splitCsv( header: true )
-            | map { row ->
-                meta = [
-                    somatic_sample: row.somatic_sample,
-                    sample_name: row.sample_name,
-                    sample_type: row.sample_type,
-                    molecule: row.molecule,
-                    sequencing_type: row.sequencing_type,
-                    hla: row.hla
-                ]
-                
-                reads = [
-                    file(row.fastqr1, checkIfExists: true),
-                    file(row.fastqr2, checkIfExists: true)
-                ]
-            return [meta, reads]
+    samples_branched = samplesheet_inputs.branch { meta, reads ->
+        dna: meta.molecule == "DNA"
+        rna: meta.molecule == "RNA"
         }
-    */
-    
+
+    dna_inputs = samples_branched.dna
+    rna_inputs = samples_branched.rna
     
     // ****************************************************************
-    // PULL REFERENCE FASTA AND REFERENCE FASTA SUPPLEMENTAL FILES
-    
-    //reference_fa = Channel.fromPath(params.reference_fa).first()
-    //reference_index_files = Channel.fromPath(params.reference_index_dir).collect()
-    //reference_dict = Channel.fromPath(params.reference_dict).first()
     
     reference_fa = Channel.fromPath(params.reference_fa)
     reference_fai = Channel.fromPath("${params.reference_fa}.fai")
     reference_dict = Channel.fromPath(params.reference_fa.replace(".fasta",".dict"))
-
     // Combine them into a tuple channel if needed together
     reference_genome = reference_fa.combine(reference_fai).combine(reference_dict).first()
 
@@ -161,36 +123,10 @@ workflow {
     hapmap = make_vcf_channel(params.hapmap)
 
     
-    /*
-    //common_germline = Channel.fromPath(params.common_germline).first()
-    //common_germline_index = Channel.fromPath(params.common_germline_index).first()
-    
-    known_sites_dbsnp = Channel.fromPath(params.known_sites_dbsnp).first()
-    known_sites_dbsnp_index = Channel.fromPath(params.known_sites_dbsnp_index).first()
-
-    known_sites_1000g_snps = Channel.fromPath(params.known_sites_1000g_snps).first()
-    known_sites_1000g_snps_index = Channel.fromPath(params.known_sites_1000g_snps_index).first()
-
-    known_indels = Channel.fromPath(params.known_indels).first()
-    known_indels_index = Channel.fromPath(params.known_indels_index).first()
-    
-    mills = Channel.fromPath(params.mills).first()
-    mills_index = Channel.fromPath(params.mills_index).first()
-
-    gnomad = Channel.fromPath(params.gnomad).first()
-    gnomad_index = Channel.fromPath(params.gnomad_index).first()
-    
-    pon = Channel.fromPath(params.pon).first()
-    pon_index = Channel.fromPath(params.pon_index).first()
-    
-    hapmap = Channel.fromPath(params.hapmap).first()
-    hapmap_index = Channel.fromPath(params.hapmap_index).first()
-    */
-    
     intervals_file = Channel.fromPath(params.intervals_file).first()
     
-    kallisto_reference = Channel.fromPath(params.kallisto_reference).first()
-    gencode_gtf = Channel.fromPath(file(params.gencode_gtf)).first()
+    transcriptome_reference = Channel.fromPath(params.transcriptome_reference).first()
+    gtf = Channel.fromPath(file(params.gtf)).first()
     
     ctat_resource_dir = Channel.fromPath(file(params.ctat_resource_dir)).first()
    
@@ -214,16 +150,27 @@ workflow {
     // Split Into
 
     num_intervals = params.scatter_count
-    intervals_padded = SPLIT_INTERVALS_PADDED(reference_genome, intervals_file, num_intervals)
+    padding = Channel.of(0,params.interval_padding)
+
+    intervals_all = SPLIT_INTERVALS(reference_genome, intervals_file, num_intervals, padding)
+        .branch{padding, intervals ->
+            no_padding: padding == 0
+            padding: padding != 0
+        }
+        .set { branched_intervals }
+
+    intervals_padded = branched_intervals.padding
+        .map{padding, intervals -> intervals}
+        .flatten()
+        .map { file -> tuple(file.baseName, file) }
+
+    intervals_no_padding = branched_intervals.no_padding
+        .map{padding, intervals -> intervals}
         .flatten()
         .map { file -> tuple(file.baseName, file) }
     
-    intervals = SPLIT_INTERVALS(reference_genome, intervals_file, num_intervals)
-        .flatten()
-        .map { file -> tuple(file.baseName, file) }
 
-
-    preproc_bam_workflow = DNA_ALIGNMENT_WORKFLOW(
+    preproc_bam_workflow = DNA_ALIGN_AND_PREPROC(
         dna_fastp.fastp_fastqs,
         reference_genome,
         bwa_index,
@@ -232,13 +179,9 @@ workflow {
         known_indels,
         mills,
         common_germline,
-        intervals,
+        intervals_no_padding,
         num_intervals
     )
-
-    preproc_bams = preproc_bam_workflow.preproc_bams
-    markdup_bams = preproc_bam_workflow.markdup_bams
-    base_recal = preproc_bam_workflow.base_recal
 
     
     sample_grouped_fastqs = dna_fastp.fastp_fastqs
@@ -258,57 +201,27 @@ workflow {
         }
 
     combined_fastqs = COMBINE_FASTQS(sample_grouped_fastqs)
-
     hla_fastq_input = dna_fastp.fastp_fastqs.mix(combined_fastqs)
 
-   
     hla_workflow = HLA_TYPING_WORKFLOW(
         hla_fastq_input
     )
 
+
+    rna = RNASEQ_WORKFLOW(
+        rna_fastp.fastp_fastqs,
+        reference_genome,
+        gtf,
+        params.star_index,
+        params.kallisto_index,
+        params.salmon_index,
+        transcriptome_reference
+    )
+
+
+
+
     /*
-    // ****************************************************************
-    // HLA TYPING: RUN OPTITYPE AND HLA-HD
-
-    hla_optitype = OPTITYPE(fastp_by_molec.dna)
-    hla_hlahd = HLAHD(fastp_by_molec.dna)
-                            
-
-
-    hla_optitype_postprocess = POSTPROCESS_OPTITYPE(hla_optitype)
-
-    hla_calls_hlahd = HLAHD_HLA_CALLS(hla_hlahd.hla_calls)
-    
-    hla_calls = hla_calls_hlahd.map { meta, hla_call ->
-                                      def hla_value = meta.hla != "CALL" ? meta.hla : hla_call
-                                      return [meta,hla_value]
-                                    }.filter { meta, hla_call ->
-                                               meta.sample_type == "Normal"
-                                        }
-    
-    // ****************************************************************
-    // ALIGNMENT AND PREPROCESSING OF DNA
-
-    if (params.bwa_index) {
-        bwa_index = Channel.fromPath(params.bwa_index).collect()
-    } else {
-        bwa_index = CREATE_BWA_INDEX(reference_fa, reference_index_files)
-    }
-
-    bwa_sam = BWA_MAP(fastp_by_molec.dna, reference_fa, reference_index_files, bwa_index)
-    bwa_mapped = BWA_POSTPROCESS(bwa_sam)
-
-    
-    // BAM PREPROCESSING OF DNA: GATK BEST PRACTICES
-
-    preprc = PREPROCESS_BAM(bwa_mapped,
-                            reference_fa, reference_index_files,
-                            known_sites_dbsnp, known_sites_dbsnp_index,
-                            known_sites_1000g_snps, known_sites_1000g_snps_index,
-                            known_indels, known_indels_index,
-                            mills, mills_index,
-                            common_germline, common_germline_index)
-
 
     preproc_bams_type_branched = preprc.preproc_bams
                                    | branch {meta, bam, bai ->
