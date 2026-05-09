@@ -15,8 +15,6 @@ process STAR_ALIGN {
 
     tag "Aligning ${meta.sample_name} with STAR"
 
-    publishDir "${params.outdir}/alignment/star_raw/${meta.sample_name}_${meta.molecule}", mode: "copy"
-
     input:
         tuple val(meta), path(fastq1), path(fastq2)
         path(star_index_dir)
@@ -27,7 +25,7 @@ process STAR_ALIGN {
         tuple val(meta), path("${meta.sample_name}_${meta.molecule}_ReadsPerGene.out.tab"), emit: gene_quant
         tuple val(meta), path("${meta.sample_name}_${meta.molecule}_Log.final.out"), emit:final_log
         tuple val(meta), path("${meta.sample_name}_${meta.molecule}_SJ.out.tab"), emit: sj_out
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_Chimeric.out.junction"),path(fastq1), path(fastq2), emit: chimeric_out
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_Chimeric.out.junction"), path(fastq1), path(fastq2), emit: chimeric_out
         tuple val(meta), path("*"), emit: tutto
     script:
         """
@@ -83,7 +81,7 @@ process CREATE_STAR_INDEX {
 
     */
 
-    cpus 32
+    cpus 16
     memory "64GB"
     cache 'lenient'
 
@@ -91,32 +89,32 @@ process CREATE_STAR_INDEX {
 
     tag "Creating STAR index with ${reference_fa} and ${gtf}"
 
-    publishDir "./resources/${reference_fa}_${gtf}_STARGenomeDir", mode: "copy"
+    publishDir "./resources/star/${reference_fa}_${gtf}_STAR", mode: "copy"
 
     input:
         tuple path(reference_fa), path(reference_index), path(reference_dict)
         path(gtf)
 
     output:
-        path("./${reference_fa}_${gtf}_STARGenomeDir"), emit: star_index
+        path("STARGenomeDir"), type: "dir", emit: star_index
 
     script:
         """
-        gzip -d -c $gtf > gencode.gtf
+        gzip -d -c $gtf > gtf.gtf
 
         STAR \
             --runThreadN $task.cpus \
             --runMode genomeGenerate \
-            --genomeDir "./${reference_fa}_${gtf}_STARGenomeDir" \
+            --genomeDir STARGenomeDir \
             --genomeFastaFiles $reference_fa \
-            --sjdbGTFfile gencode.gtf
+            --sjdbGTFfile gtf.gtf
 
         """
 
 
 }
 
-process STAR_INDEX_BAM {
+process STAR_SORT_INDEX_BAM {
 
     /*
 
@@ -129,25 +127,16 @@ process STAR_INDEX_BAM {
 
     container "biocontainers/samtools:v1.9-4-deb_cv1"
 
-    publishDir "${params.outdir}/${meta.somatic_sample}/alignment/star/${meta.sample_name}_${meta.molecule}", mode: "copy"
-
     input:
         tuple val(meta), path(bam)
-        tuple val(meta), path(final_log)
-        tuple val(meta), path(sj_out)
-        tuple val(meta), path(chimeric_out), path(fastq1), path(fastq2)
 
     output:
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_STAR_sorted.bam"), path("${meta.sample_name}_${meta.molecule}_STAR_sorted.bam.bai"), emit: star_bam
-        tuple val(meta), path(final_log), emit: final_log
-        tuple val(meta), path(sj_out), emit: sj_out
-        tuple val(meta), path(chimeric_out), path(fastq1), path(fastq2), emit: chimeric_out
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_STAR_sorted.bam"), path("${meta.sample_name}_${meta.molecule}_STAR_sorted.bam.bai"), emit: bam
 
     script:
         """
         samtools sort --threads $task.cpus  $bam -o "${meta.sample_name}_${meta.molecule}_STAR_sorted.bam"
         samtools index -@ $task.cpus  "${meta.sample_name}_${meta.molecule}_STAR_sorted.bam"
-
         """
 
 }
@@ -158,8 +147,6 @@ process KALLISTO_TXIMPORT {
     memory "16GB"
     
     conda "conda-forge::r-base=4.4.3 bioconda::bioconductor-tximport=1.34.0 conda-forge::r-readr=2.1.6 conda-forge::r-dplyr=1.1.4 bioconda::bioconductor-rtracklayer=1.66.0"
-
-    publishDir "${params.outdir}/${meta.somatic_sample}/rnaseq/", mode: "copy"
 
     tag "Getting gene abundance for ${meta.sample_name}"
 
@@ -226,8 +213,8 @@ process KALLISTO_QUANT {
     memory "32GB"
 
     conda "bioconda::kallisto=0.51.1"
-
-    publishDir "${params.outdir}/${meta.somatic_sample}/rnaseq/kallisto/", mode: "copy"
+    
+    publishDir "./quant/"
 
     tag "Kallisto quant on ${meta.sample_name}"
 
@@ -259,7 +246,7 @@ process CREATE_KALLISTO_INDEX {
     memory "32GB"
     cache 'lenient'
     
-    publishDir "./resources/${transcriptome_fa}_kallisto_index.idx", mode: "copy"
+    publishDir "./resources/kallisto", mode: "copy"
 
     conda "bioconda::kallisto=0.51.1"
 
@@ -283,9 +270,9 @@ process CREATE_SALMON_INDEX {
     cpus 16
     memory "32GB"
     
-    publishDir "./resources/${transcripts_fa}_salmon_index", mode: "copy"
-
     conda "bioconda::salmon=1.11.4"
+    
+    publishDir "./resources/salmon/", mode: "copy"
 
     tag "Creating salmon index on ${transcripts_fa}"
 
@@ -311,8 +298,6 @@ process SALMON_QUANT {
     memory "32GB"
 
     conda "bioconda::salmon=1.11.4"
-
-    publishDir "./test/salmon"
 
     tag "Running salmon quant on ${meta.sample_name}"
 
@@ -343,8 +328,6 @@ process GET_RNA_STRANDEDNESS {
     cpus 1
     memory "4GB"
 
-    publishDir "./test/"
-    
     conda "python=3.10 pandas=2.1"
 
     tag "Predicting RNA strandedness on ${meta.sample_name}"

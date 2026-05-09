@@ -18,7 +18,6 @@ process STAR_FUSION {
         path ctat_resource_lib
 
     output:
-
         tuple val(meta), path("${meta.sample_name}_starfusion/*.fusion_predictions.tsv"), emit: fusion_preds
         tuple val(meta), path("${meta.sample_name}_starfusion/*.fusion_predictions.abridged.tsv"), emit: abridged_preds
         tuple val(meta), path("${meta.sample_name}_starfusion/*.coding_effect.tsv"), emit: coding_effect
@@ -38,39 +37,31 @@ process STAR_FUSION {
 
         """
 
-
-
 }
 
 
 process ARRIBA_FUSION {
 
-    cpus 8
-
-    memory "48GB"
+    cpus 4
+    memory "32GB"
 
     conda "bioconda::arriba=2.5.1"
 
     publishDir "${params.outdir}/${meta.somatic_sample}/fusions/arriba", mode: "copy"
 
     input:
-        tuple val(meta), path(star_aligned_bam)
-        path reference_fa
-        path reference_fa_index
+        tuple val(meta), path(star_bam), path(star_bam_index)
+        tuple path(reference_fa), path(reference_index), path(reference_dict)
         path gtf
-        path arriba_blacklist
-        path arriba_known_fusions
-        path arriba_protein_domains
+        tuple path(arriba_blacklist), path(arriba_known_fusions), path(arriba_protein_domains)
 
     output:
         tuple val(meta), path("${meta.sample_name}_${meta.molecule}_arriba_fusions.tsv"), emit: arriba_fusions
         tuple val(meta), path("${meta.sample_name}_${meta.molecule}_arriba_fusions.discarded.tsv"), emit: discarded_fusions
 
-
     script:
-
         """
-        arriba -x $star_aligned_bam \
+        arriba -x $star_bam \
             -g $gtf \
             -a $reference_fa \
             -b $arriba_blacklist \

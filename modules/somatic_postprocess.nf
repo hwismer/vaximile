@@ -44,7 +44,6 @@ process VCF_TO_TABLE {
 
     script:
         """
-
         gatk VariantsToTable \
             -V $vcf \
             -F CHROM -F POS -F ID -F REF -F ALT -F QUAL -F AC -F AF -F set -F FILTER -F CSQ \
@@ -62,58 +61,37 @@ process MERGE_SOMATIC_VCFS {
     /*
 
     Use the deprecated CombineVariants from GATK 3.6.0 to combine vcf files. 
-    
-    Currently just from mutect + strelka, but I should probably change this to
-    take in a dynamic number of vcf files.
 
     */
 
     cpus 4
-    memory "32GB"
-    cache "lenient"
+    memory "16GB"
     
     container "broadinstitute/gatk3:3.6-0"
 
-    publishDir "${params.outdir}/${merged_meta.somatic_name}/somatic/", mode: "copy"
+    //publishDir "${params.outdir}/${merged_meta.somatic_name}/somatic/", mode: "copy"
 
     input:
-        tuple val(somatic_name), val(call_sets) 
-        path(reference_fa)
-        path(reference_index_dir)
+        tuple val(somatic_meta), 
+            val(vcf1_caller), path(vcf1), path(vcf1_index), 
+            val(vcf2_caller), path(vcf2), path(vcf2_index)
+        tuple path(reference_fa), path(reference_index), path(reference_dict)
     
     output:
-        tuple val(merged_meta), path("${merged_meta.somatic_name}_variants.vcf.gz")
+        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_variants.vcf.gz")
 
 
     script:
-
-        def call1 = call_sets[0]
-        def call2 = call_sets[1]
-
-        def vcf1_meta = call1[0]
-        def vcf1  = call1[1]
-        def tbi1  = call1[2]
-
-        def vcf2_meta = call2[0]
-        def vcf2  = call2[1]
-        def tbi2  = call2[2]
-
-        merged_meta = [
-            somatic_name: vcf1_meta.somatic_name,
-            somatic_caller: 'mutect_strelka',
-            tumor_metamap: vcf1_meta.tumor_metamap,
-            normal_metamap: vcf1_meta.normal_metamap
-        ]
 
         """
         java -Xmx16g -jar /usr/GenomeAnalysisTK.jar \
             -T CombineVariants \
             -R $reference_fa \
             -genotypeMergeOptions PRIORITIZE \
-            --rod_priority_list mutect,strelka \
-            -V:${vcf1_meta.somatic_caller} $vcf1 \
-            -V:${vcf2_meta.somatic_caller} $vcf2 \
-            -o "${merged_meta.somatic_name}_variants.vcf.gz"
+            --rod_priority_list $vcf1_caller,$vcf2_caller \
+            -V:$vcf1_caller $vcf1 \
+            -V:$vcf2_caller $vcf2 \
+            -o "${somatic_meta.somatic_name}_variants.vcf.gz"
 
         """
     
@@ -132,27 +110,20 @@ process FILTER_VCF {
     
     container "biocontainers/bcftools:v1.9-1-deb_cv1"
     
-    publishDir "${params.outdir}/${somatic_meta.somatic_name}/somatic/${somatic_meta.somatic_caller}/", mode:"copy"
+    //publishDir "${params.outdir}/${somatic_meta.somatic_name}/somatic/${somatic_meta.somatic_caller}/", mode:"copy"
 
     
     input:
-        tuple val(somatic_meta), path(somatic_vcf)
+        tuple val(somatic_meta), val(caller), path(somatic_vcf), path(tbi)
         
     output:
-        tuple val(somatic_meta), 
-            path("${somatic_meta.somatic_name}_variants.vcf.gz"), 
-            path("${somatic_meta.somatic_name}_variants.vcf.gz.tbi"), emit: filter_vcf
+        tuple val(somatic_meta), val(caller), path("${somatic_meta.somatic_name}_${caller}_filtered_variants.vcf.gz"), path("${somatic_meta.somatic_name}_${caller}_filtered_variants.vcf.gz.tbi"), emit: filtered_vcf
         
-        tuple val(somatic_meta), 
-            path("${somatic_meta.somatic_name}_variants_unfiltered.vcf.gz"), 
-            path("${somatic_meta.somatic_name}_variants_unfiltered.vcf.gz.tbi"), emit: unfiltered_vcf
         
     script:
         """
-        cp $somatic_vcf "${somatic_meta.somatic_name}_variants_unfiltered.vcf.gz"
-        bcftools index -t "${somatic_meta.somatic_name}_variants_unfiltered.vcf.gz"
-        bcftools view -f PASS -Oz -o "${somatic_meta.somatic_name}_variants.vcf.gz" $somatic_vcf
-        bcftools index -t "${somatic_meta.somatic_name}_variants.vcf.gz"
+        bcftools view -f PASS -Oz -o "${somatic_meta.somatic_name}_${caller}_filtered_variants.vcf.gz" $somatic_vcf
+        bcftools index -t "${somatic_meta.somatic_name}_${caller}_filtered_variants.vcf.gz"
         """
         
 
@@ -177,17 +148,16 @@ process ADD_VCF_GT_FIELD {
         tuple val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index)
          
     output:
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_${somatic_meta.somatic_caller}_gt.vcf.gz"), emit: gt_vcf
+        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_gt.vcf"), path("${somatic_meta.somatic_name}_gt.vcf.tbi"),emit: vcf
 
     script:
         """
+        cp $somatic_vcf_index ${somatic_meta.somatic_name}_gt.vcf.tbi
         vcf-genotype-annotator $somatic_vcf \
-            "${somatic_meta.tumor_metamap.sample_name}" \
+            "${somatic_meta.tumor_meta.sample_name}" \
             0/1 \
-            -o "${somatic_meta.somatic_name}_${somatic_meta.somatic_caller}_gt.vcf.gz"
-
+            -o "${somatic_meta.somatic_name}_gt.vcf"
         """
-
 }
 
 process VEP_FILTER {
@@ -226,7 +196,7 @@ process VEP_FILTER {
         """
 }
 
-process VT_SOMATIC_POSTPROCESS {
+process POSTPROCESS_VCF {
 
     /*
 
@@ -241,24 +211,22 @@ process VT_SOMATIC_POSTPROCESS {
 
     container "staphb/bcftools:1.23"
 
-    publishDir "${params.outdir}/${meta.somatic_name}/somatic/${meta.somatic_caller}/", mode:"copy"
+    //publishDir "${params.outdir}/${meta.somatic_name}/somatic/${meta.somatic_caller}/", mode:"copy"
 
     input:
-        tuple val(meta), path(somatic_vcf), path(somatic_vcf_index)
-        path(reference_fa)
-        path(reference_index_dir)
+        tuple val(meta), val(caller), path(somatic_vcf), path(somatic_vcf_index)
+        tuple path(reference_fa), path(reference_index_dir), path(reference_dict)
 
     output:
-        tuple val(meta),
-            path("${meta.somatic_name}_${meta.somatic_caller}_normalized_variants.vcf.gz"),
-            path("${meta.somatic_name}_${meta.somatic_caller}_normalized_variants.vcf.gz.tbi"), emit: vt_vcf
+        tuple val(meta), val(caller),
+            path("${meta.somatic_name}_${caller}_variants.vcf.gz"),
+            path("${meta.somatic_name}_${caller}_variants.vcf.gz.tbi"), emit: vt_vcf
 
     script:
 
         """
-        bcftools norm -m -any -f $reference_fa $somatic_vcf -Oz -o norm_vcf.vcf.gz
-        bcftools sort norm_vcf.vcf.gz -Oz -o norm_sort.vcf.gz
-        bcftools norm -d exact norm_sort.vcf.gz -Oz -o "${meta.somatic_name}_${meta.somatic_caller}_normalized_variants.vcf.gz"
-        bcftools index -t "${meta.somatic_name}_${meta.somatic_caller}_normalized_variants.vcf.gz"
+        bcftools norm -m -any -d exact -f $reference_fa $somatic_vcf -Oz -o norm_vcf.vcf.gz
+        bcftools sort norm_vcf.vcf.gz -Oz -o "${meta.somatic_name}_${caller}_variants.vcf.gz"
+        bcftools index -t "${meta.somatic_name}_${caller}_variants.vcf.gz"
         """
 }

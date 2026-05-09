@@ -38,12 +38,14 @@ process CREATE_BWA_INDEX {
         Create a bwa-mem2 index for bwa mem mapping.
     */
 
-    cpus 16
-    memory "32GB"
+    cpus 24
+    memory "100GB"
     
     container "iarcbioinfo/bwa-mem2-tools:v1.0"
 
     tag "Creating BWA index for $reference_fa"
+
+    publishDir "./resources/bwa/bwa_mem2_index_${reference_fa}"
 
     cache 'lenient'
 
@@ -62,7 +64,7 @@ process CREATE_BWA_INDEX {
 
 process MARK_DUPLICATES_SPARK {
 
-    cpus 32
+    cpus 16
     memory "64GB"
     container "broadinstitute/gatk:4.6.1.0"
 
@@ -208,7 +210,7 @@ process APPLY_BQSR_GATHER {
 
 process GET_PILEUP_SUMMARIES {
     
-    cpus 8
+    cpus 4
     memory "24GB"
     container "broadinstitute/gatk:4.6.1.0"
 

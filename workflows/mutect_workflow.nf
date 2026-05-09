@@ -1,0 +1,45 @@
+include { MUTECT2_SCATTER; 
+    MUTECT2_GATHER_SELECT_VARIANTS; 
+    MUTECT2_GATHER_VCFS; 
+    MUTECT2_CALCULATE_CONTAMINATION; 
+    MUTECT2_LEARN_READ_ORIENTATION; 
+    MUTECT2_MERGE_STATS;
+    MUTECT2_FILTER_MUTECT_CALLS } from "../modules/mutect.nf"
+
+workflow MUTECT2 {
+
+    take:
+        somatic_pairs // (somatic metamap, tumor_bam, tumor_bai, normal_bam, normal_bai)
+        somatic_pileups // (somatic metamap , tumor pileups, normal pileups)
+        intervals // (shard name, interval_shard)
+        num_intervals // int
+        interval_padding
+        reference_genome // (fasta, fasta.fai, dict)
+        gnomad // (vcf, tbi)
+        pon // (vcf, tbi)
+
+    main:
+        
+        somatic_pair_interval = somatic_pairs.combine(intervals)
+        mutect2_scatter = MUTECT2_SCATTER(somatic_pair_interval, reference_genome, gnomad, pon, interval_padding)
+
+        mutect_vcfs = mutect2_scatter.vcf
+        mutect_f1r2s = mutect2_scatter.f1r2
+        mutect_stats = mutect2_scatter.stats
+
+        select_variants = MUTECT2_GATHER_SELECT_VARIANTS(mutect_vcfs)
+        select_variants_grouped = select_variants.groupTuple(size: num_intervals)
+        gather_vcfs = MUTECT2_GATHER_VCFS(select_variants_grouped)
+
+        contamination = MUTECT2_CALCULATE_CONTAMINATION(somatic_pileups)
+        read_orientation = MUTECT2_LEARN_READ_ORIENTATION(mutect_f1r2s.groupTuple(size: num_intervals))
+        stats = MUTECT2_MERGE_STATS(mutect_stats.groupTuple(size: num_intervals))
+
+        mutect2_filtering_input = gather_vcfs.join(read_orientation).join(stats).join(contamination)
+        filtered_calls = MUTECT2_FILTER_MUTECT_CALLS(mutect2_filtering_input, reference_genome)
+
+    emit:
+        mutect2_vcf = filtered_calls.filtered_vcf
+
+}
+

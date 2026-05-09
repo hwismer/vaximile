@@ -8,19 +8,15 @@ params.star_index = null
 params.salmon_index = null
 params.bwa_index = null
 params.vep_cache =  null
-params.vep_plugins = null
-params.ctat_resource_dir = null
-params.arriba_blacklist = null 
-params.arriba_known_fusions = null
-params.arriba_protein_domains = null
+
+params.interval_padding = 100
+params.scatter_count = 30
 
 params.reference_fa = "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta"
-
-params.gtf = "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.basic.annotation.gtf.gz"
-params.transcriptome_reference =  "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.pc_transcripts.fa.gz"
+params.gtf = "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.annotation.gtf.gz"
+params.transcriptome_reference = "https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz"
 params.human_ref_peptides = "https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz"
 
-params.scatter_count = 30
 params.intervals_file = "gs://gcp-public-data--broad-references/hg38/v0/wgs_calling_regions.hg38.interval_list"
 params.common_germline = "gs://gatk-best-practices/somatic-hg38/small_exac_common_3.hg38.vcf.gz"
 params.common_germline_index = "gs://gatk-best-practices/somatic-hg38/small_exac_common_3.hg38.vcf.gz.tbi"
@@ -39,44 +35,69 @@ params.hapmap_index = "gs://gcp-public-data--broad-references/hg38/v0/hapmap_3.3
 params.mills = "gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz"
 params.mills_index = "gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz.tbi"
 
-params.interval_padding = 100
 
-
+// Helper processes included in the main workflow
 include { SPLIT_INTERVALS; COMBINE_FASTQS } from "./modules/utilities.nf"
-//include { FASTP } from "./modules/qc.nf"
-//include { CREATE_STAR_INDEX; STAR_ALIGN; STAR_INDEX_BAM; CREATE_BWA_INDEX; BWA_MAP; PREPROCESS_BAM } from "./modules/alignment.nf"
-//include { STAR_FUSION; ARRIBA_FUSION } from "./modules/fusion_calling.nf"
-//include { VT_POSTPROCESS_GERMLINE; VEP_ANNOTATE_GERMLINE; INDEX_FINAL_VCF_GERMLINE; POSTPROCESS_HAPLOTYPE_SCATTER; HAPLOTYPE_CALLER_SCATTER } from "./modules/germline.nf"
-//include { HLAHD_HLA_CALLS; OPTITYPE_HLA_CALLS; POSTPROCESS_OPTITYPE; OPTITYPE; HLAHD; HLA_COMBINE_FASTQS } from "./modules/hla_typing.nf"
-//include { PVACSEQ; PVACFUSE } from "./modules/pvactools.nf"
-//include { BAMREADCOUNT; VEP_ANNOTATE; ANNOTATE_VCF_COVERAGE; ANNOTATE_VCF_EXPRESSION; PHASE_VCF_SELECT_VARIANTS; 
-//    PHASE_VCF_COMBINE_VARIANTS; PHASE_VCF_SORT_VCF; PHASE_VCF_RENAME; PHASE_VCF_RBPHASING; PHASE_VCF_VEP; PHASE_VCF_INDEX } from "./modules/pvactools_vcf_prep.nf"
-//include { KALLISTO_INDEX; KALLISTO_QUANT; KALLISTO_TXIMPORT } from "./modules/rnaseq.nf"
-//include { DEEPSOMATIC; STRELKA; POSTPROCESS_STRELKA; MUTECT2_SCATTER; POSTPROCESS_MUTECT2_SCATTER; SPLIT_INTERVALS } from "./modules/somatic_calling.nf"
-//include { INDEX_FINAL_VCF; VCF_TO_TABLE; MERGE_SOMATIC_VCFS; FILTER_VCF; ADD_VCF_GT_FIELD; VEP_FILTER; VT_SOMATIC_POSTPROCESS } from "./modules/somatic_postprocess.nf"
-    
+include { PULL_VEP_PVAC_PLUGINS; PULL_CTAT_RESOURCE_BUNDLE; PULL_ARRIBA_RESOURCES } from "./modules/utilities.nf"
+
+// Subworkflows 
 include { DNA_QC_WORKFLOW; RNA_QC_WORKFLOW } from "./workflows/qc_workflow.nf"
 include { DNA_ALIGN_AND_PREPROC } from "./workflows/align_and_preprocess_workflow.nf"
 include { HLA_TYPING_WORKFLOW } from "./workflows/hla_typing_workflow.nf"
 include { RNASEQ_WORKFLOW } from "./workflows/rnaseq_workflow.nf"
+include { MUTECT2 } from "./workflows/mutect_workflow.nf"
+include { STRELKA_WORKFLOW } from "./workflows/strelka_workflow.nf"
+include { HAPLOTYPE_CALLER } from "./workflows/germline_workflow.nf"
+include { FUSION_CALLING } from  "./workflows/fusion_calling_workflow.nf"
+include { PVAC_INPUT_PREP_WORKFLOW } from "./workflows/pvac_vcf_preparation.nf"
 
+
+// Make a (vcf, vcf index) channel automatically given a vcf path. Tbi must also exist
 def make_vcf_channel(vcf_param) {
     return vcf_param
         ? Channel.value(tuple(file(vcf_param), file("${vcf_param}.tbi")))
         : Channel.empty()
 }
 
+
+
 workflow {
    
     main:
-    // INPUT PARSING
-    // READ IN SAMPLE DATA FROM SAMPLESHEET
+    
+    
+    // Parse Parameters
+    // ****************************************************************
+    reference_fa = Channel.fromPath(params.reference_fa)
+    reference_fai = Channel.fromPath("${params.reference_fa}.fai")
+    reference_dict = Channel.fromPath(params.reference_fa.replace(".fasta",".dict"))
+    reference_genome = reference_fa.combine(reference_fai).combine(reference_dict).first()
+    common_germline = make_vcf_channel(params.common_germline)
+    known_sites_dbsnp = make_vcf_channel(params.known_sites_dbsnp)
+    known_sites_1000g_snps = make_vcf_channel(params.known_sites_1000g_snps)
+    known_indels = make_vcf_channel(params.known_indels)
+    mills = make_vcf_channel(params.mills)
+    gnomad = make_vcf_channel(params.gnomad)
+    pon = make_vcf_channel(params.pon)
+    hapmap = make_vcf_channel(params.hapmap)
+    intervals_file = Channel.fromPath(params.intervals_file).first()
+    transcriptome_reference = Channel.fromPath(params.transcriptome_reference).first()
+    gtf = Channel.fromPath(file(params.gtf)).first()
+    human_ref_peptides = Channel.fromPath(file(params.human_ref_peptides)).first()
+    bwa_index = params.bwa_index
+    vep_plugins = PULL_VEP_PVAC_PLUGINS().plugins
+    ctat_bundle = PULL_CTAT_RESOURCE_BUNDLE().ctat_resource_dir
+    arriba_resources = PULL_ARRIBA_RESOURCES().resources
 
+
+    // READ IN SAMPLE DATA FROM SAMPLESHEET
+    // ****************************************************************
     samplesheet_inputs = Channel.fromPath(params.samplesheet)
         | splitCsv ( header: true )
             | map { row ->
+
                 def molecule = (row.sequencing_type.toLowerCase() == 'rna') ? 'RNA' :
-                    (row.sequencing_type.toLowerCase() in ['exome', 'genome']) ? 'DNA' :
+                    (row.sequencing_type.toLowerCase() in ['exome', 'genome', "exome_FFPE", "genome_FFPE"]) ? 'DNA' :
                     null
 
                 def meta = [
@@ -96,79 +117,33 @@ workflow {
                 return [meta, reads]
             }
 
+    // Split DNA and RNA sequencing samples
     samples_branched = samplesheet_inputs.branch { meta, reads ->
         dna: meta.molecule == "DNA"
         rna: meta.molecule == "RNA"
         }
-
     dna_inputs = samples_branched.dna
     rna_inputs = samples_branched.rna
     
-    // ****************************************************************
     
-    reference_fa = Channel.fromPath(params.reference_fa)
-    reference_fai = Channel.fromPath("${params.reference_fa}.fai")
-    reference_dict = Channel.fromPath(params.reference_fa.replace(".fasta",".dict"))
-    // Combine them into a tuple channel if needed together
-    reference_genome = reference_fa.combine(reference_fai).combine(reference_dict).first()
-
-
-    common_germline = make_vcf_channel(params.common_germline)
-    known_sites_dbsnp = make_vcf_channel(params.known_sites_dbsnp)
-    known_sites_1000g_snps = make_vcf_channel(params.known_sites_1000g_snps)
-    known_indels = make_vcf_channel(params.known_indels)
-    mills = make_vcf_channel(params.mills)
-    gnomad = make_vcf_channel(params.gnomad)
-    pon = make_vcf_channel(params.pon)
-    hapmap = make_vcf_channel(params.hapmap)
-
     
-    intervals_file = Channel.fromPath(params.intervals_file).first()
-    
-    transcriptome_reference = Channel.fromPath(params.transcriptome_reference).first()
-    gtf = Channel.fromPath(file(params.gtf)).first()
-    
-    ctat_resource_dir = Channel.fromPath(file(params.ctat_resource_dir)).first()
-   
-    arriba_blacklist = Channel.fromPath(file(params.arriba_blacklist)).first()
-    arriba_known_fusions = Channel.fromPath(file(params.arriba_known_fusions)).first()
-    arriba_protein_domains = Channel.fromPath(file(params.arriba_protein_domains)).first()
-
-    human_ref_peptides = Channel.fromPath(file(params.human_ref_peptides)).first()
-    
-    //bwa_index = Channel.fromPath(params.bwa_index).collect()
-    bwa_index = params.bwa_index
-
-
-    // ****************************************************************
     // RUN FASTP QC ON ALL SAMPLES
+    // ****************************************************************
     
     dna_fastp = DNA_QC_WORKFLOW(dna_inputs)
     rna_fastp = RNA_QC_WORKFLOW(rna_inputs)
     
     
-    // Split Into
+    // SPLIT CAPTURE INTERVALS
+    // ****************************************************************
 
     num_intervals = params.scatter_count
-    padding = Channel.of(0,params.interval_padding)
-
-    intervals_all = SPLIT_INTERVALS(reference_genome, intervals_file, num_intervals, padding)
-        .branch{padding, intervals ->
-            no_padding: padding == 0
-            padding: padding != 0
-        }
-        .set { branched_intervals }
-
-    intervals_padded = branched_intervals.padding
-        .map{padding, intervals -> intervals}
-        .flatten()
-        .map { file -> tuple(file.baseName, file) }
-
-    intervals_no_padding = branched_intervals.no_padding
-        .map{padding, intervals -> intervals}
+    intervals = SPLIT_INTERVALS(reference_genome, intervals_file, num_intervals, 0)
         .flatten()
         .map { file -> tuple(file.baseName, file) }
     
+    // DO WGS/WES ALIGNMENT AND GATK BEST PRACTICES PREPROCESSING
+    // ****************************************************************
 
     preproc_bam_workflow = DNA_ALIGN_AND_PREPROC(
         dna_fastp.fastp_fastqs,
@@ -179,11 +154,22 @@ workflow {
         known_indels,
         mills,
         common_germline,
-        intervals_no_padding,
+        intervals,
         num_intervals
     )
 
+
+    preproc_bams = preproc_bam_workflow.preproc_bams // GATK best practices preprocess bams ie BQSR (meta, bam, bai)
+    markdup_bams = preproc_bam_workflow.markdup_bams // Bam with duplicates marked but no further processing (meta, bam, bai)
+    base_recal = preproc_bam_workflow.base_recal // Base recalibration tables from GATK (meta, recal_table)
+    pileup_summaries = preproc_bam_workflow.pileup_summaries // Pileup summaries from GATK (meta, pileup summary)
+        
     
+    // HLA TYPING
+    // ****************************************************************
+    
+    // Combine dna fastqs from the same somatic sample ie Tumor + Normal
+    // Currently only works with two samples
     sample_grouped_fastqs = dna_fastp.fastp_fastqs
         .map {meta, fastq1, fastq2 ->
             def new_meta = [
@@ -199,15 +185,15 @@ workflow {
         .map { meta, fastqs_r1, fastqs_r2 ->
             tuple(meta, fastqs_r1.sort(), fastqs_r2.sort())
         }
-
     combined_fastqs = COMBINE_FASTQS(sample_grouped_fastqs)
+
     hla_fastq_input = dna_fastp.fastp_fastqs.mix(combined_fastqs)
-
-    hla_workflow = HLA_TYPING_WORKFLOW(
-        hla_fastq_input
-    )
+    hla_workflow = HLA_TYPING_WORKFLOW(hla_fastq_input)
 
 
+    
+    // RNASEQ PROCESSING
+    // ****************************************************************
     rna = RNASEQ_WORKFLOW(
         rna_fastp.fastp_fastqs,
         reference_genome,
@@ -218,335 +204,149 @@ workflow {
         transcriptome_reference
     )
 
+    star_bam = rna.star_bam // RNAseq BAM from STAR (meta, bam, bai)
+    kallisto_tx = rna.kallisto_tx // (meta, kallisto abundance)
+    kallisto_gene = rna.kallisto_gene // (meta, kallisto gene abundance)
+    salmon_tx = rna.salmon_tx // (meta, salmon quant abundance)
+    rna_strandedness = rna.rna_strand // (meta, rna strand prediction)
+    
+    
+    // GERMLINE CALLING
+    // ****************************************************************
+    
+    // Run germline calling only on Normal samples
+    bams_type_split = preproc_bams.branch { meta, bam, bai ->
+        tumor: meta.sample_type == "Tumor"
+        normal: meta.sample_type == "Normal"
+    }
 
+    // Run basic haplotype calling on individual samples
+    haplotype_caller = HAPLOTYPE_CALLER(
+        bams_type_split.normal,
+        intervals,
+        num_intervals,
+        params.interval_padding,
+        reference_genome,
+        hapmap,
+        mills
+    )
 
+    germline_vcf = haplotype_caller.germline_vcf
+        
+    
+    
+    // MUTECT2 VARIANT CALLING
+    // ****************************************************************
 
+    // Groups samples into the form (somatic metamap, tumor bam, tumor bai, normal bam, normal bai)
+    preproc_bams_type_branched = preproc_bams.map{meta, bam, bai ->
+        tuple(meta.somatic_name, meta, bam, bai)
+    }
+    .branch {somatic_name, meta, bam, bai ->
+        tumor: meta.sample_type == "Tumor"
+        normal: meta.sample_type == "Normal"
+    }
+    paired_samples = preproc_bams_type_branched.tumor.join(preproc_bams_type_branched.normal)
+    somatic_samples = paired_samples.map {somatic_name, tumor_meta, tumor_bam, tumor_bai, normal_meta, normal_bam, normal_bai ->
+        def somatic_meta = [
+            somatic_name: somatic_name,
+            tumor_meta: tumor_meta,
+            normal_meta: normal_meta
+        ]
+        tuple(somatic_meta, tumor_bam, tumor_bai, normal_bam, normal_bai)
+    }
+
+    // Group pileups into the form (somatic metamap, tumor pileups, normal pileups)
+    type_pileups = pileup_summaries.map{meta,pileup_table ->
+        tuple(meta.somatic_name, meta, pileup_table)
+    }
+    .branch {somatic_name, meta, pileup_table ->
+        tumor: meta.sample_type == "Tumor"
+        normal: meta.sample_type == "Normal"
+    }
+    paired_pileups = type_pileups.tumor.join(type_pileups.normal)
+    somatic_pileups = paired_pileups.map {somatic_name, tumor_meta, tumor_pileup, normal_meta, normal_pileup ->
+        def somatic_meta = [
+            somatic_name: somatic_name,
+            tumor_meta: tumor_meta,
+            normal_meta: normal_meta
+        ]
+        tuple(somatic_meta, tumor_pileup, normal_pileup)
+    }
+    
+    // Run mutect2 on paired Tumor-Normal samples
+    mutect = MUTECT2(
+        somatic_samples,
+        somatic_pileups,
+        intervals,
+        num_intervals,
+        params.interval_padding,
+        reference_genome,
+        gnomad,
+        pon
+    )
+
+    // ****************************************************************
+    // STRELKA CALLING
+    
+    // Doesn't use the BQSR bams, just the bams with duplicates marked
+    // Get into the format (somatic metadata, tumor bam, tumor bai, normal bam, normal bai)
+
+    markdup_bams_type_branched = markdup_bams.map{meta, bam, bai ->
+        tuple(meta.somatic_name, meta, bam, bai)
+    }
+    .branch {somatic_name, meta, bam, bai ->
+        tumor: meta.sample_type == "Tumor"
+        normal: meta.sample_type == "Normal"
+    }
+
+    markdup_paired_samples = markdup_bams_type_branched.tumor.join(markdup_bams_type_branched.normal)
+
+    markdup_somatic_samples = markdup_paired_samples.map {somatic_name, tumor_meta, tumor_bam, tumor_bai, normal_meta, normal_bam, normal_bai ->
+        def somatic_meta = [
+            somatic_name: somatic_name,
+            tumor_meta: tumor_meta,
+            normal_meta: normal_meta
+        ]
+        tuple(somatic_meta, tumor_bam, tumor_bai, normal_bam, normal_bai)
+    }
+    
+    // Get vcf of strelka called snvs and indels
+    strelka = STRELKA_WORKFLOW(markdup_somatic_samples, reference_genome, intervals_file)
+
+    
+    // ****************************************************************
+    // FUSION CALLING
+    
+    fusions = FUSION_CALLING(
+        rna.star_bam, 
+        rna.star_chimeric_out, 
+        reference_genome,
+        gtf,
+        ctat_bundle,
+        arriba_resources
+    )
+    
+
+    // ****************************************************************
+    // PVACTOOLS INPUT FILE PREPARATION
+
+    pvac_input = PVAC_INPUT_PREP_WORKFLOW(
+        mutect.mutect2_vcf,
+        strelka.strelka_vcf,
+        markdup_bams,
+        rna.star_bam,
+        rna.kallisto_tx,
+        rna.kallisto_gene,
+        reference_genome,
+        params.vep_cache,
+        vep_plugins,
+        germline_vcf
+    )
+
+    
     /*
 
-    preproc_bams_type_branched = preprc.preproc_bams
-                                   | branch {meta, bam, bai ->
-                                        normal: meta.sample_type == "Normal"
-                                        tumor: meta.sample_type == "Tumor"
-                                        }
-    
-    preproc_bams_by_sample = preprc.preproc_bams.map { meta, bam, bai -> tuple(meta.somatic_sample, [meta, bam, bai]) } 
-                                                     | groupTuple
-                                                     | map { somatic_id, samples ->
-                                                                def tumor  = samples.find { it[0].sample_type == 'Tumor' }
-                                                                def normal = samples.find { it[0].sample_type == 'Normal' }
-                                                                                     
-                                                                return [ somatic_id, 
-                                                                         tumor[0], tumor[1], tumor[2],
-                                                                         normal[0], normal[1], normal[2]]
-                                                     }
-    
-
-    // ****************************************************************
-    // ALIGNMENT OF RNA SEQUENCING USING STAR
-    
-    if (params.star_index) {
-        star_index = Channel.fromPath(params.star_index)
-    }
-    else {
-        star_index = CREATE_STAR_INDEX(reference_fa, reference_index_files, gencode_gtf).star_index
-    }
-    
-    star_rna_align = STAR_ALIGN(fastp_by_molec.rna, params.star_index)
-    star_rna = STAR_INDEX_BAM(star_rna_align)
-
-    // ****************************************************************
-    // Transcript-fusion detection using STAR_FUSION and ARRIBA
-
-    star_fusion = STAR_FUSION(star_rna_align.chimeric_out, ctat_resource_dir)
-    
-    arriba_fusions = ARRIBA_FUSION(star_rna_align.star_bam,
-                                    reference_fa,
-                                    reference_index_files,
-                                    gencode_gtf,
-                                    arriba_blacklist,
-                                    arriba_known_fusions,
-                                    arriba_protein_domains)
-
-    
-    // ****************************************************************
-
-    // RNA: TRANSCRIPT ABUNDANCE ESTIMATION
-    
-    if (params.kallisto_index) {
-        kallisto_index = params.kallisto_index
-    } else {
-        kallisto_index = KALLISTO_INDEX(kallisto_reference)
-
-    }
-
-    kallisto = KALLISTO_QUANT(fastp_by_molec.rna,
-                              kallisto_index)
-
-    kallisto = kallisto.abundance
-
-    kallisto_gene = KALLISTO_TXIMPORT(kallisto, gencode_gtf)
-
-    
-    // ****************************************************************
-    // INTERVAL CREATION FOR VARIANT CALLING
-
-    intervals = SPLIT_INTERVALS(reference_fa, reference_index_files,
-                                intervals_file, params.scatter_count)
-
-
-    
-   
-    
-    // ****************************************************************
-
-    // GERMLINE VARIANT CALLING
-
-    // Run HaplotypeCaller with scatter/gather approach and preprocess with CNNScoreVariants and FilterVariantTranches
-    // For later use in phasing the somatic VCF with proximal variants
-    germline = HAPLOTYPE_CALLER_SCATTER(preproc_bams_type_branched.normal,
-                intervals.flatten(),
-                reference_fa, reference_index_files) 
-                | groupTuple
-
-    germline_postprocess = POSTPROCESS_HAPLOTYPE_SCATTER(germline, 
-                                                        reference_fa,
-                                                        reference_index_files,
-                                                        hapmap,
-                                                        hapmap_index,
-                                                        mills,
-                                                        mills_index)
-    // Use vt decompose on germline calls
-    vt_germline = VT_POSTPROCESS_GERMLINE(germline_postprocess,
-                                          reference_fa,
-                                          reference_index_files)
-    
-    vep_germline = VEP_ANNOTATE_GERMLINE(vt_germline,
-                                         reference_fa,
-                                         params.vep_cache,
-                                         params.vep_plugins)
-
-
-    final_germline = INDEX_FINAL_VCF_GERMLINE(vep_germline)
-
-    
-    // ****************************************************************
-    // SOMATIC VARIANT CALLING
-    
-
-    
-    // MUTECT2
-   
-    mutect_scattered = MUTECT2_SCATTER(preproc_bams_by_sample,
-                    intervals.flatten(),
-                    reference_fa, reference_index_files,
-                    gnomad, gnomad_index,
-                    pon, pon_index) 
-   
-    mutect_gathered = mutect_scattered 
-                        | groupTuple 
-                        | map { meta, vcf, vcf_index, f1r2, stats -> tuple(meta.somatic_name, [meta, vcf, vcf_index, f1r2, stats]) }
-    
-    pileups = preprc.preproc_bams_pileups.map { meta, pileups -> tuple(meta.somatic_sample, [meta, pileups]) } 
-                                         | groupTuple
-                                         | map { somatic_name, samples ->
-                                                 def tumor = samples.find { it[0].sample_type == "Tumor" }
-                                                 def normal = samples.find { it[0].sample_type == "Normal" }
-
-                                             return [somatic_name, tumor[1], normal[1] ]
-                                     }
-
-    mutect_scattered_pileups = mutect_gathered
-        | join(pileups)
-        | map { somatic_name, inner, tumor_pileups, normal_pileups ->
-                def (meta, vcfs, tbis, f1r2s, stats) = inner
-                tuple(somatic_name, meta, vcfs, tbis, f1r2s, stats, tumor_pileups, normal_pileups)
-        }
-
-    
-    // Postprocess Mutect2 Output using pileups, stats, etc.
-    mutect_postprocess = POSTPROCESS_MUTECT2_SCATTER(mutect_scattered_pileups,
-                                                     reference_fa,
-                                                     reference_index_files)
-
-    
-    // STRELKA
-    strelka = STRELKA(preproc_bams_by_sample, reference_fa, reference_index_files)
-
-    strelka_postprocess = POSTPROCESS_STRELKA(strelka)
-    
-    strelka = ADD_VCF_GT_FIELD(strelka_postprocess.strelka_vcf)
-
-    somatic_vcfs = mutect_postprocess.concat(strelka)
-    
-    somatic_filtered_vcfs = FILTER_VCF(somatic_vcfs).filter_vcf
-   
-    
-
-    // ****************************************************************
-    // POST-PROCESS SOMATIC VCFS
-
-    // Variant Decomposition & Normalization
-    somatic_vcfs_vt = VT_SOMATIC_POSTPROCESS(somatic_filtered_vcfs, reference_fa, reference_index_files)
-        | map { meta, vcf, tbi  -> tuple(meta.somatic_name, [meta, vcf, tbi]) }
-        | groupTuple
-        
-
-    merged_vcf = MERGE_SOMATIC_VCFS(somatic_vcfs_vt,
-                                      reference_fa,
-                                      reference_index_files)
-
-    
-    // ****************************************************************
-    // PVACtools VCF PREPARATION
-    
-    // Annotate VCF with VEP
-    vep_annot = VEP_ANNOTATE(merged_vcf,
-                       reference_fa,
-                       params.vep_cache,
-                       params.vep_plugins)
-
-    vep = VEP_FILTER(vep_annot, params.vep_cache, params.vep_plugins)
-
-
-    // Put all bams together (DNA + RNA) for input into bamreadcount
-    all_bams = preprc.preproc_bams.concat(star_rna.star_bam)
-        | map { meta, bam, bai -> tuple(meta.sample_name, [meta, bam, bai]) }
-
-
-    vcf_prepared = vep.flatMap { vcf_meta, vcf ->
-        [
-            [ vcf_meta.tumor_metamap,  vcf_meta, vcf ],
-            [ vcf_meta.normal_metamap, vcf_meta, vcf ]
-        ]
-    } 
-    | map { sample_meta, vcf_meta, vcf  ->
-                tuple(sample_meta.sample_name, [vcf_meta, vcf])
-    }
-    | combine(all_bams, by:0)
-    | map { sample_name, vcf_list, bam_list ->
-            def (vcf_meta, vcf) = vcf_list
-            def (bam_meta, bam, bai) = bam_list
-            return [vcf_meta, vcf, bam_meta, bam, bai]
-    }
-
-
-
-    // Add Read Coverage to VCF with Bamreadcount
-    bamreadcount = BAMREADCOUNT(vcf_prepared,
-                              reference_fa)
-
-    bamreadcount_by_sample = bamreadcount.map { vcf_meta, vcf, bam_meta, brc_indel, brc_snv ->
-                                                tuple (vcf_meta.somatic_name, [vcf_meta, vcf, bam_meta, brc_indel, brc_snv])
-                                } | groupTuple 
-                                | map { somatic_name, samples  ->
-
-                                    def tumor = samples.find { it[2].sample_type == "Tumor" && it[2].molecule == 'DNA' }
-                                    def normal = samples.find { it[2].sample_type == "Normal" && it[2].molecule == "DNA" }
-                                    def tumor_rna = samples.find { it[2].sample_type == "Tumor" && it[2].molecule == "RNA" }
-
-                                    def vcf_metadata = tumor[0]
-                                    def vcf_file     = tumor[1]
-                                    
-                                    def tumor_files  = [ tumor[3], tumor[4] ]
-                                    def normal_files = [ normal[3], normal[4] ]
-                                    def tumor_rna_files    = [ tumor_rna[3], tumor_rna[4] ]
-                                    
-                                    return tuple(somatic_name, vcf_metadata, vcf_file, tumor_files, normal_files, tumor_rna_files)
-                                }
-
-
-
-    vcf_rna_annotated_coverage = ANNOTATE_VCF_COVERAGE(bamreadcount_by_sample)
-    
-    
-    // Add transcript abundance estimation from kallisto
-    
-
-    kallisto = kallisto | map { meta, abundance -> tuple(meta.sample_name, [meta, abundance]) }
-    kallisto_gene = kallisto_gene | map { meta, gene_tpm -> tuple (meta.sample_name, [meta, gene_tpm]) }
-    vcf_annot = vcf_rna_annotated_coverage | map { meta, vcf -> tuple(meta.tumor_metamap.sample_name, [meta, vcf]) }
-    
-    vcf_annotated = vcf_annot
-        | join(kallisto)
-        | join(kallisto_gene)
-        | map { id, vcf_info, kallisto_tx, kallisto_gene ->
-                def (vcf_meta, vcf) = vcf_info
-                def (kallisto_tx_meta, tx_abundance) = kallisto_tx
-                def (kallisto_gene_meta, gene_abundance) = kallisto_gene
-                return [vcf_meta, vcf, kallisto_tx_meta, tx_abundance, gene_abundance ]
-        }
-
-    vcf_annotated_expression = ANNOTATE_VCF_EXPRESSION(vcf_annotated)
-
-    
-    // Index final somatic vcf for input to PVACseq
-    vcf_final = INDEX_FINAL_VCF(vcf_annotated_expression)
-    vcf_tables = VCF_TO_TABLE(vcf_final)
-    
-    
-    vcf_final_grouped = vcf_final
-        | map { meta, vcf, vcf_index -> tuple(meta.normal_metamap.sample_name, [meta, vcf, vcf_index]) }
-        | groupTuple
-    germline_grouped = vt_germline
-        | map { meta, vcf, vcf_index -> tuple(meta.sample_name, [meta, vcf, vcf_index]) }
-        | groupTuple
-
-
-    vcf_final_somatic_germline_grouped = vcf_final_grouped
-        | join(germline_grouped)
-        | map { id, somatic_vcf_tuple, germline_vcf_tuple ->
-                def (somatic_meta, somatic_vcf, somatic_vcf_index) = somatic_vcf_tuple[0]
-                def (germline_meta, germline_vcf, germline_vcf_index) = germline_vcf_tuple[0]
-                return [somatic_meta, somatic_vcf, somatic_vcf_index, germline_meta, germline_vcf, germline_vcf_index ]
-        }
-    
-
-    // PERFORM VCF PHASING USING GERMLINE CALLS
-
-    // Create Tumor-Only VCF From Final Somatic VCF (vcf_final)
-    vcf_phase_select_variants = PHASE_VCF_SELECT_VARIANTS(vcf_final_somatic_germline_grouped,
-                           reference_fa,
-                           reference_index_files)
-    
-    vcf_phase_rename_samples = PHASE_VCF_RENAME(vcf_phase_select_variants)
-    
-
-    // Combine Tumor-Only VCF with germline variants
-    vcf_phase_combine = PHASE_VCF_COMBINE_VARIANTS(vcf_phase_rename_samples,
-                                                   reference_fa,
-                                                   reference_index_files)
-    // Sort combined VCF
-    vcf_phase_sort = PHASE_VCF_SORT_VCF(vcf_phase_combine, reference_dict)
-    
-    
-    // Call GATK ReadBackedPhasing (required gatk 3.6.0) to phase VCF
-    
-    vcf_phase_sort_group = vcf_phase_sort
-        | map {meta, vcf -> tuple(meta.tumor_metamap.sample_name, [meta, vcf]) }
-        | groupTuple
-
-    preproc_bams_type_branched_group = preproc_bams_type_branched.tumor
-        | map { meta, bam, bai -> tuple(meta.sample_name, [meta, bam, bai]) }
-        | groupTuple
-
-    vcf_phase_sort_group_bams = vcf_phase_sort_group 
-        | join(preproc_bams_type_branched_group)
-        | map { id, phased_vcf_tuple, bam_tuple ->
-                def (vcf_meta, vcf) = phased_vcf_tuple[0]
-                def (bam_meta, bam, bai) = bam_tuple[0]
-                return [vcf_meta, vcf, bam_meta, bam, bai]
-        }
-    
-    vcf_phase_rbphase = PHASE_VCF_RBPHASING(vcf_phase_sort_group_bams,
-                                            reference_fa, reference_index_files)
-    
-    /// VEP Annotation phased vcf
-    vcf_phase_vep = PHASE_VCF_VEP(vcf_phase_rbphase,
-                                    reference_fa, 
-                                    params.vep_cache, params.vep_plugins)        
-    // Zip and index phased vcf
-    vcf_phased = PHASE_VCF_INDEX(vcf_phase_vep)
-    
     final_phased = vcf_phased
         | map { meta, vcf, vcf_index -> tuple(meta.somatic_name, [meta, vcf, vcf_index]) }
 

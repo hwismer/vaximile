@@ -1,4 +1,4 @@
-include { CREATE_STAR_INDEX; STAR_ALIGN; CREATE_KALLISTO_INDEX; KALLISTO_QUANT; KALLISTO_TXIMPORT; CREATE_SALMON_INDEX; SALMON_QUANT; GET_RNA_STRANDEDNESS } from "../modules/rnaseq.nf"
+include { CREATE_STAR_INDEX; STAR_ALIGN; STAR_SORT_INDEX_BAM; CREATE_KALLISTO_INDEX; KALLISTO_QUANT; KALLISTO_TXIMPORT; CREATE_SALMON_INDEX; SALMON_QUANT; GET_RNA_STRANDEDNESS } from "../modules/rnaseq.nf"
 
 workflow RNASEQ_WORKFLOW {
 
@@ -22,6 +22,7 @@ workflow RNASEQ_WORKFLOW {
 
         // Align fastqs to genome
         star = STAR_ALIGN(fastqs, star_index_ch, gtf)
+        star_sorted = STAR_SORT_INDEX_BAM(star.star_bam)
 
         // If null parameter, then generate kallisto index using transcriptome_fa
         if ( kallisto_index ) {
@@ -51,11 +52,11 @@ workflow RNASEQ_WORKFLOW {
             .map { meta, pred ->
                 tuple(meta, pred.text.trim())
             }
-        rna_strand_predictions.view()
-
 
     emit:
-        star = star.star_bam
+        star_bam = star_sorted.bam
+        star_chimeric_out = star.chimeric_out
+        star_gene_quant = star.gene_quant
         kallisto_tx = kallisto.abundance
         kallisto_gene = kallisto_gene_quant.gene_abundance
         salmon_tx = salmon.quant
