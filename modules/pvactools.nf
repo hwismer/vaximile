@@ -27,7 +27,8 @@ process PVACSEQ {
     publishDir "${params.outdir}/${somatic_meta.somatic_name}/pvactools/", mode: "copy"
 
     input:
-        tuple val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index),path(phased_vcf), path(phased_vcf_index), path(hla_pvac_input)
+        tuple val(somatic_name), val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index),
+            path(phased_vcf), path(phased_vcf_index), path(hla_meta), path(hla_pvac_input)
         path(human_ref_peptides)
     output:
         path("${somatic_meta.somatic_name}_pvacseq"), emit: pvacseq_dir
@@ -36,14 +37,14 @@ process PVACSEQ {
         """
         pvacseq run \
             $somatic_vcf \
-            ${somatic_meta.tumor_metamap.sample_name} \
+            ${somatic_meta.tumor_meta.sample_name} \
             \$(head $hla_pvac_input -n 1) \
             all \
             "${somatic_meta.somatic_name}_pvacseq" \
             -e1 8,9,10,11 \
             -e2 12,13,14,15,16,17,18 \
             --phased-proximal-variants-vcf $phased_vcf \
-            --normal-sample-name ${somatic_meta.normal_metamap.sample_name} \
+            --normal-sample-name ${somatic_meta.normal_meta.sample_name} \
             --iedb-install-directory /opt/iedb \
             --pass-only \
             --run-reference-proteome-similarity \

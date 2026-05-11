@@ -168,7 +168,7 @@ process HLAHD {
     */
     
     cpus 16
-    memory "32GB"
+    memory "128GB"
 
     container "griffithlab/hlahd:1.0"
 
@@ -199,3 +199,54 @@ process HLAHD {
         """
 
 }
+
+
+process EXTRACT_MHC_REGION {
+
+    /*
+
+    */
+    
+    cpus 8
+    memory "32GB"
+
+    input:
+        tuple val(meta), path(bam), path(bai)
+    
+    output:
+        tuple val(meta), path("${meta.sample_name}_hla_regions.bam") 
+
+    script:
+        """
+        samtools view --threads $task.cpus -h -b -f 4 $bam > unmapped.bam
+        samtools view --threads $task.cpus -h -b $bam chr6:28,510,120-33,480,577 > mhc.bam
+        samtools merge --threads $task.cpus -o hla_regions.bam mhc.bam unmapped.bam
+        samtools collate --threads $task.cpus -o "${meta.sample_name}_hla_regions.bam" hla_regions.bam
+        """
+
+}
+
+process BAM_TO_FASTQ {
+
+    /*
+
+    */
+    
+    cpus 8
+    memory "32GB"
+
+    input:
+        tuple val(meta), path(bam)
+    
+    output:
+        tuple val(meta), path("${meta.sample_name}_${sample.molecule}_R1.fastq"), path("${meta.sample_name}_${sample.molecule}_R2.fastq")
+
+
+    script:
+        """
+        samtools fastq --threads $task.cpus -1 ${meta.sample_name}_${sample.molecule}_R1.fastq -2 ${meta.sample_name}_${sample.molecule}_R2.fastq -n $bam
+        """
+
+}
+
+

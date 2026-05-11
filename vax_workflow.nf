@@ -37,7 +37,7 @@ params.mills_index = "gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1
 
 
 // Helper processes included in the main workflow
-include { SPLIT_INTERVALS; COMBINE_FASTQS } from "./modules/utilities.nf"
+include { SPLIT_INTERVALS; COMBINE_FASTQS; MULTIQC } from "./modules/utilities.nf"
 include { PULL_VEP_PVAC_PLUGINS; PULL_CTAT_RESOURCE_BUNDLE; PULL_ARRIBA_RESOURCES } from "./modules/utilities.nf"
 
 // Subworkflows 
@@ -50,6 +50,7 @@ include { STRELKA_WORKFLOW } from "./workflows/strelka_workflow.nf"
 include { HAPLOTYPE_CALLER } from "./workflows/germline_workflow.nf"
 include { FUSION_CALLING } from  "./workflows/fusion_calling_workflow.nf"
 include { PVAC_INPUT_PREP_WORKFLOW } from "./workflows/pvac_vcf_preparation.nf"
+include { PVACTOOLS_WORKFLOW } from "./workflows/pvactools_workflow.nf"
 
 
 // Make a (vcf, vcf index) channel automatically given a vcf path. Tbi must also exist
@@ -58,7 +59,6 @@ def make_vcf_channel(vcf_param) {
         ? Channel.value(tuple(file(vcf_param), file("${vcf_param}.tbi")))
         : Channel.empty()
 }
-
 
 
 workflow {
@@ -124,16 +124,15 @@ workflow {
         }
     dna_inputs = samples_branched.dna
     rna_inputs = samples_branched.rna
-    
-    
+
     
     // RUN FASTP QC ON ALL SAMPLES
     // ****************************************************************
     
     dna_fastp = DNA_QC_WORKFLOW(dna_inputs)
     rna_fastp = RNA_QC_WORKFLOW(rna_inputs)
-    
-    
+
+        
     // SPLIT CAPTURE INTERVALS
     // ****************************************************************
 
@@ -144,29 +143,7 @@ workflow {
     
     // DO WGS/WES ALIGNMENT AND GATK BEST PRACTICES PREPROCESSING
     // ****************************************************************
-
-    preproc_bam_workflow = DNA_ALIGN_AND_PREPROC(
-        dna_fastp.fastp_fastqs,
-        reference_genome,
-        bwa_index,
-        known_sites_dbsnp,
-        known_sites_1000g_snps,
-        known_indels,
-        mills,
-        common_germline,
-        intervals,
-        num_intervals
-    )
-
-
-    preproc_bams = preproc_bam_workflow.preproc_bams // GATK best practices preprocess bams ie BQSR (meta, bam, bai)
-    markdup_bams = preproc_bam_workflow.markdup_bams // Bam with duplicates marked but no further processing (meta, bam, bai)
-    base_recal = preproc_bam_workflow.base_recal // Base recalibration tables from GATK (meta, recal_table)
-    pileup_summaries = preproc_bam_workflow.pileup_summaries // Pileup summaries from GATK (meta, pileup summary)
-        
     
-    // HLA TYPING
-    // ****************************************************************
     
     // Combine dna fastqs from the same somatic sample ie Tumor + Normal
     // Currently only works with two samples
@@ -187,13 +164,70 @@ workflow {
         }
     combined_fastqs = COMBINE_FASTQS(sample_grouped_fastqs)
 
+
+    all_dna_fastqs = dna_fastp.fastp_fastqs.mix(combined_fastqs)
+    preproc_bam_workflow = DNA_ALIGN_AND_PREPROC(
+        all_dna_fastqs,
+        reference_genome,
+        bwa_index,
+        known_sites_dbsnp,
+        known_sites_1000g_snps,
+        known_indels,
+        mills,
+        common_germline,
+        intervals,
+        num_intervals
+    )
+    
+    // GATK best practices preprocess bams ie BQSR (meta, bam, bai)
+    preproc_bams = preproc_bam_workflow.preproc_bams
+    preproc_bams_samples = preproc_bams.branch{meta, bam, bai ->
+        merged: meta.sample_type == "Tumor_Normal"
+        single: meta.sample_type == "Tumor" || meta.sample_type == "Normal"
+    }
+
+    // Bam with duplicates marked but no further processing (meta, bam, bai)
+    markdup_bams = preproc_bam_workflow.markdup_bams
+    markdup_bams_samples = markdup_bams.branch{meta, bam, bai ->
+        merged: meta.sample_type == "Tumor_Normal"
+        single: meta.sample_type == "Tumor" || meta.sample_type == "Normal"
+    }
+
+    
+    // Base recalibration tables from GATK (meta, recal_table)
+    base_recal = preproc_bam_workflow.base_recal
+    base_recal_samples = base_recal.branch{meta, recal_table ->
+        merged: meta.sample_type == "Tumor_Normal"
+        single: meta.sample_type == "Tumor" || meta.sample_type == "Normal"
+    }
+
+
+    // Pileup summaries from GATK (meta, pileup summary)
+    pileup_summaries = preproc_bam_workflow.pileup_summaries     
+    pileup_summaries_samples = pileup_summaries.branch{meta, summary ->
+        merged: meta.sample_type == "Tumor_Normal"
+        single: meta.sample_type == "Tumor" || meta.sample_type == "Normal"
+    }
+    
+    // HLA TYPING
+    // ****************************************************************
+    
+    hla_workflow = HLA_TYPING_WORKFLOW(markdup_bams)
+    
+    /* 
     hla_fastq_input = dna_fastp.fastp_fastqs.mix(combined_fastqs)
     hla_workflow = HLA_TYPING_WORKFLOW(hla_fastq_input)
 
+    optitype = hla_workflow.optitype
+    hlahd = hla_workflow.hlahd
+    hla_pvac_input = hla_workflow.pvac_input
+    */
 
     
     // RNASEQ PROCESSING
     // ****************************************************************
+
+    
     rna = RNASEQ_WORKFLOW(
         rna_fastp.fastp_fastqs,
         reference_genome,
@@ -209,6 +243,7 @@ workflow {
     kallisto_gene = rna.kallisto_gene // (meta, kallisto gene abundance)
     salmon_tx = rna.salmon_tx // (meta, salmon quant abundance)
     rna_strandedness = rna.rna_strand // (meta, rna strand prediction)
+
     
     
     // GERMLINE CALLING
@@ -317,7 +352,8 @@ workflow {
     
     // ****************************************************************
     // FUSION CALLING
-    
+   
+    /*
     fusions = FUSION_CALLING(
         rna.star_bam, 
         rna.star_chimeric_out, 
@@ -326,6 +362,7 @@ workflow {
         ctat_bundle,
         arriba_resources
     )
+    */
     
 
     // ****************************************************************
@@ -344,54 +381,58 @@ workflow {
         germline_vcf
     )
 
+    somatic_vcf = pvac_input.somatic_vcf
+    phased_vcf = pvac_input.phased_vcf
+    vep_report = pvac_input.vep_report
+
     
     /*
 
-    final_phased = vcf_phased
-        | map { meta, vcf, vcf_index -> tuple(meta.somatic_name, [meta, vcf, vcf_index]) }
-
-    final_somatic = vcf_final
-        | map { meta, vcf, vcf_index -> tuple(meta.somatic_name, [meta, vcf, vcf_index]) }
-
-    final_hla = hla_calls
-        | map { meta, hla_calls -> tuple(meta.somatic_sample, [meta, hla_calls]) }
-    
-    pvacseq_input = final_somatic
-        | join(final_phased)
-        | join(final_hla)
-        | map {id, somatic_tuple, phased_tuple, hla_tuple ->
-            def (somatic_meta, somatic_vcf, somatic_vcf_index) = somatic_tuple
-            def (phased_meta, phased_vcf, phased_vcf_index) = phased_tuple
-            def (hla_meta, hla_calls) = hla_tuple
-            return [somatic_meta, somatic_vcf, somatic_vcf_index, phased_vcf, phased_vcf_index, hla_calls ]
-        }
-
-            
-    
     // ****************************************************************
-    // RUN PVACTOOLS SUITE (PVACSEQ + PVACFUSE)
+    // PVACTOOLS NEOANTIGEN PREDICTIONS
 
-    PVACSEQ = PVACSEQ(pvacseq_input, human_ref_peptides)
+    hla_branched = hla_pvac_input.branch{meta, calls ->
+        combined: meta.sample_type == "Tumor_Normal"
+        tumor: meta.sample_type == "Tumor"
+        normal: meta.sample_type == "Normal"
+    }
+
+    combined_hla = hla_branched.combined.map{meta, calls ->
+        tuple(meta.somatic_name, meta, calls)
+    }
+
+    somatic_phased = somatic_vcf.join(phased_vcf).map{meta, somatic_vcf, somatic_index, phased_vcf, phased_index ->
+        tuple(meta.somatic_name, meta, somatic_vcf, somatic_index, phased_vcf, phased_index)
+    }
+
+    pvacseq_input = somatic_phased.join(combined_hla)
+
+    //pvactools = PVACTOOLS_WORKFLOW(pvacseq_input, human_ref_peptides)
+
+    
+    mqc_dna_fastp_reports = dna_fastp.fastp_reports.map{ meta, json -> tuple(meta.somatic_name, json) } // sample_meta
+    mqc_rna_fastp_reports = rna_fastp.fastp_reports.map{ meta, json -> tuple(meta.somatic_name, json) }  //sample_meta
+    mqc_base_recal = preproc_bam_workflow.base_recal.map{ meta, table -> tuple(meta.somatic_name, table) }  // Base recalibration tables from GATK (meta, recal_table)
+    mqc_optitype = optitype.map{ meta, tsv_file, pdf -> tuple(meta.somatic_name, tsv_file) }
+    mqc_salmon_tx = salmon_tx.map{ meta, quant -> tuple(meta.somatic_name, quant) }
+    mqc_star_log = rna.star_final_log.map{ meta, log -> tuple(meta.somatic_name, log) }
+    mqc_vep_report = vep_report.map{meta, html -> tuple(meta.somatic_name, html) }
+
+    mqc_reports = mqc_dna_fastp_reports
+        .mix(mqc_rna_fastp_reports)
+        .mix(mqc_base_recal)
+        .mix(mqc_optitype)
+        .mix(mqc_salmon_tx)
+        .mix(mqc_star_log)
+        .mix(mqc_vep_report)
+        .groupTuple()
 
 
-    final_fusions = arriba_fusions.arriba_fusions
-        | map { meta, fusion_tsv -> tuple(meta.somatic_sample, [meta, fusion_tsv]) }
-    final_starfusions = star_fusion.fusion_preds
-        | map { meta, star_fusion_pred -> tuple(meta.somatic_sample, [meta, star_fusion_pred]) }
 
-    pvacfuse_input = final_fusions | join(final_hla) | join(final_starfusions)
-        | map { id, arriba_fusion_tuple, hla_tuple, starfusion_tuple ->
-                def (arriba_meta, arriba_fusions) = arriba_fusion_tuple
-                def (hla_meta, hla_calls) = hla_tuple
-                def (starfusion_meta, starfusion_calls) = starfusion_tuple
-                return [ arriba_meta, arriba_fusions, hla_calls, starfusion_calls ]
-        }
-
-
-    PVACFUSE = PVACFUSE(pvacfuse_input, human_ref_peptides)
+    multiqc = MULTIQC(mqc_reports)
 
     */
-
+    
     publish:
         dna_fastp_fastqs = dna_fastp.fastp_fastqs
 }

@@ -86,7 +86,10 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
     somatic_name_gene = kallisto_gene_abundance.map{ meta, gene -> tuple(meta.somatic_name, meta, gene) }
     gene_vcf = ANNOTATE_VCF_GENE_EXPRESSION(tx_vcf_somatic_name.join(somatic_name_gene))
 
-    final_vcf = INDEX_VCF(gene_vcf) 
+    index_input = gene_vcf.map{meta, vcf ->
+        tuple(meta.somatic_name, meta, vcf)
+    }
+    final_vcf = INDEX_VCF(index_input, "variants") 
 
 
     // CREATE PHASED VCF 
@@ -110,6 +113,7 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
     emit:
         somatic_vcf = final_vcf
         phased_vcf = phased_vcf_final
+        vep_report = vep.report
 }
 
 
@@ -147,8 +151,11 @@ workflow PVAC_VCF_PHASING {
 
     phased_vep = VEP_ANNOTATE(rbphased, reference_genome, vep_cache, vep_plugins)
 
-
-    final_phased = INDEX_VCF(phased_vep.vcf)
+    
+    index_input = phased_vep.vcf.map{meta, vcf ->
+        tuple(meta.tumor_meta.sample_name, meta, vcf)
+    }
+    final_phased = INDEX_VCF(index_input, "phased")
 
     
     emit:

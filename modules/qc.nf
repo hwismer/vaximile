@@ -20,7 +20,7 @@ process FASTP {
 
     output:
         tuple val(meta), path("${meta.sample_name}_${meta.molecule}_R1_fastp.fastq.gz"), path("${meta.sample_name}_${meta.molecule}_R2_fastp.fastq.gz"), emit: fastqs
-        tuple val(meta), path("${meta.sample_name}_*{html,json}*"), emit: reports
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_fastp_report.json"), emit: reports
     
     tag "FastP on ${meta.sample_name} w/ ${meta.molecule}"
 

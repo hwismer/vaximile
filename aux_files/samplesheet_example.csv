@@ -1,0 +1,4 @@
+somatic_name,sample_name,sample_type,sequencing_type,fastqr1,fastqr2
+PatientX_Tumor1_Normal1,PatientX_Tumor1,Tumor,exome,fastq_t1_r1.fastq.gz,fastq_t1_r2.fastq.gz
+PatientX_Tumor1_Normal1,PatienX_Normal1,Normal,exome,fastq_n1_r1.fastq.gz,fastq_n1_r2.fastq.gz
+PatientX_Tumor1_Normal1,PatientX_Tumor1,Tumor,rna,fastq_t1_rna_r1.fastq.gz,fastq_t1_rna_r2.fastq.gz

@@ -100,7 +100,7 @@ process VEP_ANNOTATE {
 
     output:
         tuple val(somatic_meta), path("${somatic_meta.somatic_name}_vep.vcf"), emit: vcf
-        tuple val(somatic_meta), path("*"), emit: stats
+        tuple val(somatic_meta), path("*.html"), emit: report
 
     script:
         """

@@ -1,3 +1,34 @@
+process MULTIQC {
+
+    cpus 2
+    memory "16GB"
+    conda "bioconda::multiqc=1.34-0"
+
+    tag "Running MultiQC on ${somatic_name}"
+
+    publishDir "./multiqc/"
+
+    input:
+        tuple val(somatic_name), path(files)
+
+    output:
+        tuple val(somatic_name), path("${somatic_name}_multiqc_report.html")
+
+    script:
+    """
+    multiqc \
+        -n ${somatic_name}_multiqc_report.html \
+        .
+
+    """
+
+
+
+
+
+}
+
+
 process COMBINE_FASTQS {
 
     cpus 2
@@ -169,15 +200,16 @@ process INDEX_VCF {
     publishDir "./testout/"
 
     input:
-        tuple val(meta), path(vcf)
-       
+        tuple val(vcf_name), val(meta), path(vcf)
+        val(filename_suffix)
+
     output:
-        tuple val(meta), path("${vcf.baseName}.vcf.gz"), path("${vcf.baseName}.vcf.gz.tbi")
+        tuple val(meta), path("${vcf_name}_${filename_suffix}.vcf.gz"), path("${vcf_name}_${filename_suffix}.vcf.gz.tbi")
 
     script:
         """
-        bcftools view $vcf -Oz -o "${vcf.baseName}.vcf.gz"
-        bcftools index -t ${vcf.baseName}.vcf.gz
+        bcftools view $vcf -Oz -o "${vcf_name}_${filename_suffix}.vcf.gz"
+        bcftools index -t ${vcf_name}_${filename_suffix}.vcf.gz
         """
 
 }

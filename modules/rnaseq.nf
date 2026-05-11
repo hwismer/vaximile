@@ -307,7 +307,6 @@ process SALMON_QUANT {
 
     output:
         tuple val(meta), path("${meta.sample_name}_salmon_quant"), emit: quant
-        tuple val(meta), path("*"), emit: tutto
 
     script:
     """

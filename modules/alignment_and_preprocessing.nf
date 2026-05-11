@@ -8,7 +8,7 @@ process BWA_MAP {
     */
 
     cpus 16
-    memory "40GB"
+    memory "64GB"
     cache "lenient"
 
     container "iarcbioinfo/bwa-mem2-tools:v1.0"
@@ -98,7 +98,7 @@ process MARK_DUPLICATES_SPARK {
 process BASE_RECALIBRATOR_SCATTER {
 
     cpus 2
-    memory "8GB"
+    memory "12GB"
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "BaseRecalibrator on ${meta.sample_name} ${interval_shard}"
@@ -132,7 +132,7 @@ process BASE_RECALIBRATOR_SCATTER {
 process BASE_RECALIBRATOR_GATHER {
     
     cpus 2
-    memory "8GB"
+    memory "812GB"
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "GatherBQSRReports on ${meta.sample_name}"

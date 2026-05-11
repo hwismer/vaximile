@@ -57,6 +57,7 @@ workflow RNASEQ_WORKFLOW {
         star_bam = star_sorted.bam
         star_chimeric_out = star.chimeric_out
         star_gene_quant = star.gene_quant
+        star_final_log = star.final_log
         kallisto_tx = kallisto.abundance
         kallisto_gene = kallisto_gene_quant.gene_abundance
         salmon_tx = salmon.quant
