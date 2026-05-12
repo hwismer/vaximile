@@ -1,12 +1,14 @@
-include { OPTITYPE; HLAHD; HLA_CALLS_PVAC }  from "../modules/hla_typing.nf"
+include { OPTITYPE; HLAHD; HLA_CALLS_PVAC; EXTRACT_MHC_REGION; BAM_TO_FASTQ }  from "../modules/hla_typing.nf"
 
 workflow HLA_TYPING_WORKFLOW {
 
     take:
-        fastqs // (metamap, fastq1, fastq2)
+        bams // (metamap, sorted bam, bai)
 
     main:
-        
+
+        mhc_region = EXTRACT_MHC_REGION(bams)
+        fastqs = BAM_TO_FASTQ(mhc_region)
         // Run Optitype and HLA-HD on fastqs
         optitype = OPTITYPE(fastqs)
         hlahd = HLAHD(fastqs)

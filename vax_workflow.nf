@@ -166,6 +166,7 @@ workflow {
 
 
     all_dna_fastqs = dna_fastp.fastp_fastqs.mix(combined_fastqs)
+
     preproc_bam_workflow = DNA_ALIGN_AND_PREPROC(
         all_dna_fastqs,
         reference_genome,
@@ -179,49 +180,49 @@ workflow {
         num_intervals
     )
     
+    
     // GATK best practices preprocess bams ie BQSR (meta, bam, bai)
-    preproc_bams = preproc_bam_workflow.preproc_bams
-    preproc_bams_samples = preproc_bams.branch{meta, bam, bai ->
+    preproc_bams_all = preproc_bam_workflow.preproc_bams
+    preproc_bams_samples = preproc_bams_all.branch{meta, bam, bai ->
         merged: meta.sample_type == "Tumor_Normal"
         single: meta.sample_type == "Tumor" || meta.sample_type == "Normal"
     }
+    preproc_bams = preproc_bams_samples.single
 
     // Bam with duplicates marked but no further processing (meta, bam, bai)
-    markdup_bams = preproc_bam_workflow.markdup_bams
-    markdup_bams_samples = markdup_bams.branch{meta, bam, bai ->
+    markdup_bams_all = preproc_bam_workflow.markdup_bams
+    markdup_bams_samples = markdup_bams_all.branch{meta, bam, bai ->
         merged: meta.sample_type == "Tumor_Normal"
         single: meta.sample_type == "Tumor" || meta.sample_type == "Normal"
     }
+    markdup_bams = markdup_bams_samples.single
 
     
     // Base recalibration tables from GATK (meta, recal_table)
-    base_recal = preproc_bam_workflow.base_recal
-    base_recal_samples = base_recal.branch{meta, recal_table ->
+    base_recal_all = preproc_bam_workflow.base_recal
+    base_recal_samples = base_recal_all.branch{meta, recal_table ->
         merged: meta.sample_type == "Tumor_Normal"
         single: meta.sample_type == "Tumor" || meta.sample_type == "Normal"
     }
+    base_recal = base_recal_samples.single
 
 
     // Pileup summaries from GATK (meta, pileup summary)
-    pileup_summaries = preproc_bam_workflow.pileup_summaries     
-    pileup_summaries_samples = pileup_summaries.branch{meta, summary ->
+    pileup_summaries_all = preproc_bam_workflow.pileup_summaries     
+    pileup_summaries_samples = pileup_summaries_all.branch{meta, summary ->
         merged: meta.sample_type == "Tumor_Normal"
         single: meta.sample_type == "Tumor" || meta.sample_type == "Normal"
     }
-    
+    pileup_summaries = pileup_summaries_samples.single 
+
     // HLA TYPING
     // ****************************************************************
     
-    hla_workflow = HLA_TYPING_WORKFLOW(markdup_bams)
+    hla_workflow = HLA_TYPING_WORKFLOW(markdup_bams_all)
     
-    /* 
-    hla_fastq_input = dna_fastp.fastp_fastqs.mix(combined_fastqs)
-    hla_workflow = HLA_TYPING_WORKFLOW(hla_fastq_input)
-
     optitype = hla_workflow.optitype
     hlahd = hla_workflow.hlahd
     hla_pvac_input = hla_workflow.pvac_input
-    */
 
     
     // RNASEQ PROCESSING

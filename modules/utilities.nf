@@ -21,12 +21,8 @@ process MULTIQC {
         .
 
     """
-
-
-
-
-
 }
+
 
 
 process COMBINE_FASTQS {
@@ -62,7 +58,7 @@ process SORT_BAM {
     cpus 16
     memory "32GB"
 
-    container "biocontainers/samtools:v1.9-4-deb_cv1"
+    conda "bioconda::samtools=1.23.1 bioconda::htslib=1.23.1"
 
     tag "Sorting ${meta.sample_name}"
 

@@ -7,9 +7,11 @@ process STAR_ALIGN {
 
     */
 
-    cpus 32
+    cpus 24
 
-    memory "80GB"
+    memory "48GB"
+    
+    clusterOptions '--gres=scratch:500G'
 
     container "alexdobin/star:2.7.10a_alpha_220506"
 
@@ -81,7 +83,7 @@ process CREATE_STAR_INDEX {
 
     */
 
-    cpus 16
+    cpus 24
     memory "64GB"
     cache 'lenient'
 
@@ -124,8 +126,7 @@ process STAR_SORT_INDEX_BAM {
 
     cpus 8
     memory "32GB"
-
-    container "biocontainers/samtools:v1.9-4-deb_cv1"
+    conda "bioconda::samtools=1.23.1 bioconda::htslib=1.23.1"
 
     input:
         tuple val(meta), path(bam)
@@ -214,8 +215,6 @@ process KALLISTO_QUANT {
 
     conda "bioconda::kallisto=0.51.1"
     
-    publishDir "./quant/"
-
     tag "Kallisto quant on ${meta.sample_name}"
 
     input:
@@ -242,7 +241,7 @@ process CREATE_KALLISTO_INDEX {
 
     */
     
-    cpus 32
+    cpus 16
     memory "32GB"
     cache 'lenient'
     

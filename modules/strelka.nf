@@ -58,8 +58,8 @@ process MANTA {
 
    cpus 16
    memory "32GB"
-
-   container 'quay.io/wtsicgp/strelka2-manta'
+    
+   container "mgibio/manta_somatic-cwl:1.6.0"
 
    input:
         tuple val(somatic_meta), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai)
@@ -86,17 +86,18 @@ process MANTA {
 }
 
 process STRELKA {
-
+    
     /*
 
     Run Manta Indel Caller
 
     */
-
-   cpus 16
-   memory "32GB"
-
-   container 'quay.io/wtsicgp/strelka2-manta'
+    
+    cpus 16
+    
+    memory "32GB"
+    
+    container "mgibio/strelka:2.9.9"
 
    input:
         tuple val(somatic_meta), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai), path(manta_dir)

@@ -1,6 +1,7 @@
 include { BWA_MAP;  CREATE_BWA_INDEX; } from "../modules/alignment_and_preprocessing.nf"
 include { MARK_DUPLICATES_SPARK; BASE_RECALIBRATOR_SCATTER; BASE_RECALIBRATOR_GATHER; APPLY_BQSR_SCATTER; APPLY_BQSR_GATHER; GET_PILEUP_SUMMARIES } from "../modules/alignment_and_preprocessing.nf"
 include { SORT_BAM } from "../modules/utilities.nf"
+include { SAMTOOLS_FLAGSTAT; SAMTOOLS_COVERAGE } from "../modules/qc.nf"
 
 workflow DNA_ALIGN_AND_PREPROC {
 
@@ -17,14 +18,15 @@ workflow DNA_ALIGN_AND_PREPROC {
         num_intervals // Integer for how many intervals are present
         
     main:
-
+        
+        println "bwa = $bwa_index"
         // If bwq_index is null (not explicitly defined as a param), then generate a bew index using the supplied reference genome
         if ( bwa_index ) {
-           bwa_index_ch = Channel.fromPath(bwa_index).collect()
+           bwa_index_ch = Channel.fromPath(bwa_index)
         } else {
             bwa_index_ch = CREATE_BWA_INDEX(reference_genome)
         }
-        //bwa_index.view()
+        bwa_index_ch.view()
         
         // Map with BWA-mem2
         bwa_sam = BWA_MAP(fastqs, reference_genome, bwa_index_ch)
@@ -59,11 +61,16 @@ workflow DNA_ALIGN_AND_PREPROC {
 
         pileup_summaries = GET_PILEUP_SUMMARIES(bqsr_gather, common_germline)
 
+        flagstat = SAMTOOLS_FLAGSTAT(mark_dup)
+        coverage = SAMTOOLS_COVERAGE(mark_dup)
+
     emit:
         preproc_bams = bqsr_sort // For somatic calling
         markdup_bams = mark_dup // Non-recalibrated BAMS for callers like Strelka that don't expect recalibrated scores
         base_recal = base_recal_gathered // Recalibration metrics for MultiQC report
         pileup_summaries = pileup_summaries
+        flagstat = flagstat
+        coverage = coverage
 
 }
 

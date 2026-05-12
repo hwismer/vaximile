@@ -111,6 +111,7 @@ process OPTITYPE {
     container "fred2/optitype:latest"
     cpus 16
 
+    clusterOptions '--gres=scratch:500G'
     memory "128GB"
 
     tag "Optitype calls for ${meta.sample_name}"
@@ -169,7 +170,7 @@ process HLAHD {
     
     cpus 16
     memory "128GB"
-
+    clusterOptions '--gres=scratch:500G'
     container "griffithlab/hlahd:1.0"
 
     tag "HLA-HD on ${meta.sample_name}"
@@ -209,7 +210,7 @@ process EXTRACT_MHC_REGION {
     
     cpus 8
     memory "32GB"
-
+    conda "bioconda::samtools=1.23.1 bioconda::htslib=1.23.1"
     input:
         tuple val(meta), path(bam), path(bai)
     
@@ -234,6 +235,7 @@ process BAM_TO_FASTQ {
     
     cpus 8
     memory "32GB"
+    conda "bioconda::samtools=1.23.1 bioconda::htslib=1.23.1"
 
     input:
         tuple val(meta), path(bam)

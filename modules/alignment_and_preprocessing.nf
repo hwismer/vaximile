@@ -11,8 +11,10 @@ process BWA_MAP {
     memory "64GB"
     cache "lenient"
 
-    container "iarcbioinfo/bwa-mem2-tools:v1.0"
+    clusterOptions '--gres=scratch:250G'
 
+    container "iarcbioinfo/bwa-mem2-tools:v1.0"
+    
     tag "BWA Alignment on ${meta.sample_name}"
 
     input:
@@ -38,9 +40,10 @@ process CREATE_BWA_INDEX {
         Create a bwa-mem2 index for bwa mem mapping.
     */
 
-    cpus 24
-    memory "100GB"
-    
+    cpus 16
+    memory "96GB"
+    clusterOptions '--gres=scratch:100G'
+
     container "iarcbioinfo/bwa-mem2-tools:v1.0"
 
     tag "Creating BWA index for $reference_fa"
@@ -67,6 +70,7 @@ process MARK_DUPLICATES_SPARK {
     cpus 16
     memory "64GB"
     container "broadinstitute/gatk:4.6.1.0"
+    clusterOptions '--gres=scratch:750G'
 
     tag "MarkDuplicatesSpark on ${meta.sample_name}"
 
@@ -132,7 +136,7 @@ process BASE_RECALIBRATOR_SCATTER {
 process BASE_RECALIBRATOR_GATHER {
     
     cpus 2
-    memory "812GB"
+    memory "8GB"
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "GatherBQSRReports on ${meta.sample_name}"
@@ -157,7 +161,7 @@ process BASE_RECALIBRATOR_GATHER {
 process APPLY_BQSR_SCATTER {
     
     cpus 4
-    memory "16GB"
+    memory "12GB"
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "ApplyBQSR on ${meta.sample_name} ${interval_index}"
@@ -183,7 +187,7 @@ process APPLY_BQSR_SCATTER {
 process APPLY_BQSR_GATHER {
 
     cpus 4
-    memory "32GB"
+    memory "16GB"
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "GatherBams on ${meta.sample_name}"
@@ -211,7 +215,7 @@ process APPLY_BQSR_GATHER {
 process GET_PILEUP_SUMMARIES {
     
     cpus 4
-    memory "24GB"
+    memory "16GB"
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "GetPileupSummaries on ${meta.sample_name}"

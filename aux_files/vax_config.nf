@@ -4,8 +4,8 @@ process {
     time = 14.d
     //cache = "lenient"
     scratch = true
-    clusterOptions = '--gres=scratch:800G'
-    errorStrategy = 'ignore'
+    clusterOptions = '--gres=scratch:500G'
+    //errorStrategy = 'ignore'
 }
 
 apptainer {
@@ -17,7 +17,7 @@ apptainer {
 
 executor {
     name = "slurm"
-    queueSize = 50
+    queueSize = 6
 }
 
 plugins {
@@ -28,4 +28,5 @@ google {
 }
 conda.enabled = true
 
-outputDir = 'results'
+outputDir = '.'
+

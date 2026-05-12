@@ -107,8 +107,8 @@ process FILTER_VCF {
     
     cpus 4
     memory "16GB"
-    
-    container "biocontainers/bcftools:v1.9-1-deb_cv1"
+   
+    container "staphb/bcftools:1.23"
     
     //publishDir "${params.outdir}/${somatic_meta.somatic_name}/somatic/${somatic_meta.somatic_caller}/", mode:"copy"
 
