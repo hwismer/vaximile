@@ -13,8 +13,6 @@ process BAMREADCOUNT {
 
     container "mgibio/bam_readcount_helper-cwl:1.2.1"
 
-    //publishDir "${params.outdir}/${vcf_meta.somatic_name}/coverage/", mode: "copy"
-
     input:
         tuple val(somatic_name), val(somatic_meta), path(vcf), val(sample_meta), path(bam), path(bai)
         tuple path(reference_fa), path(reference_index), path(reference_dict)
@@ -48,8 +46,6 @@ process ANNOTATE_VCF_COVERAGE {
     memory "16GB"
 
     container "griffithlab/vatools:5.2.0"
-
-    publishDir "${params.outdir}/${somatic_meta.somatic_name}/coverage/", mode: "copy"
 
     input:
         tuple val(somatic_meta), val(sample_meta), path(indels), path(snvs), path(vcf)
@@ -165,8 +161,6 @@ process ANNOTATE_VCF_TRANSCRIPT_EXPRESSION {
 
     container "griffithlab/vatools:5.2.0"
 
-    //publishDir "${params.outdir}/${vcf_meta.somatic_name}/coverage/", mode: "copy"
-
     input:
         tuple val(somatic_name), val(somatic_meta), path(vcf), val(sample_meta), path(tx_abundance)
 
@@ -197,8 +191,6 @@ process ANNOTATE_VCF_GENE_EXPRESSION {
     memory "16GB"
 
     container "griffithlab/vatools:5.2.0"
-
-    //publishDir "${params.outdir}/${vcf_meta.somatic_name}/coverage/", mode: "copy"
 
     input:
         tuple val(somatic_name), val(somatic_meta), path(vcf), val(sample_meta), path(gene_abundance)

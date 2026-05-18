@@ -230,8 +230,6 @@ process PHASE_VCF_INDEX {
 
     conda "bioconda::tabix=0.2.6"
 
-    publishDir "${params.outdir}/${meta.somatic_name}/variants/phased_variants/", mode: "copy"
-
     input:
         tuple val(meta), path(phased_vcf)
 

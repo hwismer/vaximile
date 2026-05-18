@@ -6,20 +6,60 @@ process MULTIQC {
 
     tag "Running MultiQC on ${somatic_name}"
 
-    publishDir "./multiqc/"
-
+    
     input:
-        tuple val(somatic_name), path(files)
+        tuple val(somatic_name), val(sample_names), path(files)
 
     output:
         tuple val(somatic_name), path("${somatic_name}_multiqc_report.html")
 
     script:
+    
+    def clean_sample_names = sample_names.findAll { it != null }.unique().sort { -it.size() }
+    
+    def rename_tsv = (clean_sample_names)
+            .unique()
+            .collect { s -> "^${s}.*\t${s}" }
+            .plus("^Merged.*\t${somatic_name}")
+            .join('\n')
+
+
     """
+    printf '%s\n' "${rename_tsv}" > ${somatic_name}_rename.tsv
+    cat ${somatic_name}_rename.tsv
     multiqc \
         -n ${somatic_name}_multiqc_report.html \
+		--replace-names ${somatic_name}_rename.tsv \
+        --cl-config "sample_names_replace_regex: true" \
         .
+    """
+}
 
+process MERGE_BAMS {
+    
+    cpus 6
+    memory "18GB"
+    conda "bioconda::samtools=1.23.1 bioconda::bedtools=2.31.1 bioconda::htslib=1.23.1"
+
+    input:
+        tuple val(meta), path(bams), path(bais)
+
+    output:
+       tuple val(meta), path("${meta.sample_name}.bam"), path("${meta.sample_name}.bam.bai")
+
+    script:
+	"""
+    set -euo pipefail
+
+    samtools merge \
+        -@ ${task.cpus} \
+        -f \
+        ${meta.sample_name}.bam \
+        ${bams.join(' ')}
+
+    samtools index \
+        -@ ${task.cpus} \
+        ${meta.sample_name}.bam
     """
 }
 
@@ -55,15 +95,15 @@ process SORT_BAM {
 
     */
 
-    cpus 16
-    memory "32GB"
+    cpus 8
+    memory "24GB"
 
     conda "bioconda::samtools=1.23.1 bioconda::htslib=1.23.1"
 
     tag "Sorting ${meta.sample_name}"
 
     input:
-        tuple val(meta), path(bam), path(bai)
+        tuple val(meta), path(bam)
 
     output:
         tuple val(meta), path("${meta.sample_name}_${meta.molecule}_sorted.bam"), path("${meta.sample_name}_${meta.molecule}_sorted.bam.bai")
@@ -93,12 +133,12 @@ process SPLIT_INTERVALS {
 
     input:
         tuple path(reference_fa), path(reference_fa_index), path(reference_dict)
-        path intervals_file
+        tuple val(capture_kit), path(intervals_file)
         val scatter_count
         val interval_padding
 
     output:
-         path("*-scattered.interval_list"), emit: interval_shards
+         tuple val(capture_kit), path("*-scattered.interval_list"), emit: interval_shards
 
     script:
     """
@@ -193,8 +233,6 @@ process INDEX_VCF {
     
     container "staphb/bcftools:1.23"
 
-    publishDir "./testout/"
-
     input:
         tuple val(vcf_name), val(meta), path(vcf)
         val(filename_suffix)
@@ -210,7 +248,7 @@ process INDEX_VCF {
 
 }
 
-process BED_BGZIP_INDEX {
+process CAPTURE_KIT_BED_PROCESS {
 
     cpus 2
     memory "8GB"
@@ -218,10 +256,10 @@ process BED_BGZIP_INDEX {
     conda "bioconda::samtools=1.23.1 bioconda::bedtools=2.31.1 bioconda::htslib=1.23.1"
 
     input:
-        path(bed)
+        tuple val(kit), path(bed)
 
     output:
-        tuple path("${bed.baseName}_sorted.bed.gz"), path("${bed.baseName}_sorted.bed.gz.tbi")
+        tuple val(kit), path("${bed.baseName}_sorted.bed.gz"), path("${bed.baseName}_sorted.bed.gz.tbi")
 
     script:
     """

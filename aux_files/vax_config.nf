@@ -4,8 +4,10 @@ process {
     time = 14.d
     //cache = "lenient"
     scratch = true
-    clusterOptions = '--gres=scratch:500G'
-    //errorStrategy = 'ignore'
+    queue = "krummellab"
+    clusterOptions = '--gres=scratch:250G --nodelist=c4-n18,c4-n35 --exclude=c4-n1,c4-n2,c4-n4'
+    errorStrategy = 'ignore'
+    maxRetries = 2
 }
 
 apptainer {
@@ -17,14 +19,11 @@ apptainer {
 
 executor {
     name = "slurm"
-    queueSize = 6
+    queueSize = 50
 }
 
 plugins {
     id 'nf-google'
-}
-google {
-    enabled = true
 }
 conda.enabled = true
 

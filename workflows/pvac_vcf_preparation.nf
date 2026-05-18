@@ -28,6 +28,7 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
     take:
         mutect_vcf
         strelka_vcf
+        deepsomatic_vcf
         preproc_bams
         star_bam
         kallisto_tx_abundance
@@ -44,17 +45,19 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
 
     strelka = strelka_gt.map{meta, vcf, tbi -> tuple(meta, "strelka", vcf, tbi)}
     mutect = mutect_vcf.map{meta, vcf, tbi -> tuple(meta, "mutect", vcf, tbi)}
+    deepsomatic = deepsomatic_vcf.map{meta, vcf, tbi -> tuple(meta, "deepsomatic", vcf, tbi) }
 
-    vcfs = mutect.mix(strelka)
+    vcfs = mutect.mix(deepsomatic).mix(strelka)
     vcfs_filtered = FILTER_VCF(vcfs).filtered_vcf
     vcfs_normalized = POSTPROCESS_VCF(vcfs_filtered, reference_genome)
 
     callers = vcfs_normalized.branch{ meta, caller, vcf, tbi ->
         mutect: caller == "mutect"
         strelka: caller == "strelka"
+        deepsomatic: caller == "deepsomatic"
     }
     
-    merged_callers = callers.mutect.join(callers.strelka)
+    merged_callers = callers.mutect.join(callers.deepsomatic).join(callers.strelka)
 
     merged_vcf = MERGE_SOMATIC_VCFS(merged_callers, reference_genome)
     vep = VEP_ANNOTATE(merged_vcf, reference_genome, vep_cache, vep_plugins)

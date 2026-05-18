@@ -1,6 +1,6 @@
 process MUTECT2_FILTER_MUTECT_CALLS {
     
-    cpus 4
+    cpus 2
     memory "16GB"
     
     container "broadinstitute/gatk:4.6.1.0"
@@ -28,7 +28,7 @@ process MUTECT2_FILTER_MUTECT_CALLS {
 
 process MUTECT2_MERGE_STATS {
     
-    cpus 4
+    cpus 2
     memory "8GB"
     
     container "broadinstitute/gatk:4.6.1.0"
@@ -140,10 +140,10 @@ process MUTECT2_GATHER_SELECT_VARIANTS {
     container "broadinstitute/gatk:4.6.1.0"
 
     input:
-        tuple val(somatic_meta), path(vcf), path(vcf_index), val(interval_index), path(interval_shard)
+        tuple val(somatic_meta), path(vcf), path(vcf_index),  path(interval_shard)
 
     output:
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_${interval_index}.vcf.gz")
+        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_${interval_shard}.vcf.gz")
 
     script:
     
@@ -151,7 +151,7 @@ process MUTECT2_GATHER_SELECT_VARIANTS {
     gatk SelectVariants \
         -V $vcf \
         -L $interval_shard \
-        -O "${somatic_meta.somatic_name}_${interval_index}.vcf.gz"
+        -O "${somatic_meta.somatic_name}_${interval_shard}.vcf.gz"
     """
 
 }
@@ -174,17 +174,17 @@ process MUTECT2_SCATTER {
     container "broadinstitute/gatk:4.6.1.0"
 
     input:
-        tuple val(somatic_meta), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai), val(interval_index), path(interval_shard)
+        tuple val(somatic_meta), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai), path(interval_shard)
         tuple path(reference_fa), path(reference_index), path(reference_dict)
         tuple path(germline_resource), path(germline_resource_index)
         tuple path(pon), path(pon_index)
         val interval_padding
 
     output:
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_${interval_index}_mutect.vcf.gz"), 
-        path("${somatic_meta.somatic_name}_${interval_index}_mutect.vcf.gz.tbi"), val(interval_index), path(interval_shard), emit: vcf
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_${interval_index}_mutect_f1r2.tar.gz"), emit: f1r2
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_${interval_index}_mutect.vcf.gz.stats"), emit: stats
+        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_${interval_shard}_mutect.vcf.gz"), 
+        path("${somatic_meta.somatic_name}_${interval_shard}_mutect.vcf.gz.tbi"), path(interval_shard), emit: vcf
+        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_${interval_shard}_mutect_f1r2.tar.gz"), emit: f1r2
+        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_${interval_shard}_mutect.vcf.gz.stats"), emit: stats
 
     script:
 
@@ -196,10 +196,10 @@ process MUTECT2_SCATTER {
             -normal ${somatic_meta.normal_meta.sample_name} \
             --germline-resource $germline_resource \
             --panel-of-normals $pon \
-            --f1r2-tar-gz "${somatic_meta.somatic_name}_${interval_index}_mutect_f1r2.tar.gz" \
+            --f1r2-tar-gz "${somatic_meta.somatic_name}_${interval_shard}_mutect_f1r2.tar.gz" \
             -L $interval_shard \
             -ip $interval_padding \
-            -O "${somatic_meta.somatic_name}_${interval_index}_mutect.vcf.gz" \
+            -O "${somatic_meta.somatic_name}_${interval_shard}_mutect.vcf.gz" \
             --native-pair-hmm-threads $task.cpus
         """
 }

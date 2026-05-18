@@ -1,7 +1,85 @@
+process MHC_REGION_FASTQS {
+    
+    cpus 4
+    memory "16GB"
+
+    conda "bioconda::samtools=1.23.1 bioconda::bedtools=2.31.1 bioconda::htslib=1.23.1"
+    
+    tag "Extracting MHC regions from ${meta.sample_name}"
+
+    input:
+    	tuple val(meta), path(bam), path(bai)
+
+    output:
+    	tuple val(meta), path("${meta.sample_name}_R1.fastq"), path("${meta.sample_name}_R2.fastq")
+
+    script:
+    def mhc_region = 'chr6:28510120-33480577'
+
+    """
+    set -euo pipefail
+
+    # Build BED of non-primary contigs
+    samtools idxstats $bam \
+      | awk '
+          \$1 != "*" &&
+          \$1 != "chr6" &&
+          \$1 !~ /^chr([1-9]|1[0-9]|2[0-2]|X|Y|M)\$/ &&
+          \$1 != "MT"
+        ' \
+      | awk '{print \$1 "\\t0\\t" \$2}' \
+      > nonprimary.bed
+
+    # chr6 MHC interval
+    samtools view \
+        -b \
+        -F 0x904 \
+        ${bam} \
+        ${mhc_region} \
+        > chr6_mhc.bam
+
+    # unmapped reads
+    samtools view \
+        -b \
+        -f 4 \
+        -F 0x904 \
+        ${bam} \
+        > unmapped.bam
+
+    # reads on non-primary contigs
+    samtools view \
+        -b \
+        -F 0x904 \
+        -L nonprimary.bed \
+        ${bam} \
+        > nonprimary.bam
+
+    # merge selected reads
+    samtools merge \
+        -f \
+        merged.bam \
+        chr6_mhc.bam \
+        unmapped.bam \
+        nonprimary.bam
+
+    # BAM -> paired FASTQ
+    samtools collate -Ou merged.bam \
+      | samtools fastq \
+            -1 ${meta.sample_name}_R1.fastq \
+            -2 ${meta.sample_name}_R2.fastq \
+			-0 /dev/null \
+			-s /dev/null \
+            -
+    """
+}
+
+
+
+
 
 process HLA_CALLS_PVAC {
 
-    cpus 1
+    cpus 2
     memory "4GB"
 
     conda "python=3.10 pandas=2.1"
@@ -94,9 +172,8 @@ process HLA_CALLS_PVAC {
         writer.writerow(alleles)
 
     """
-
-
 }
+
 
 
 process OPTITYPE {
@@ -109,10 +186,8 @@ process OPTITYPE {
     */
     
     container "fred2/optitype:latest"
-    cpus 16
-
-    clusterOptions '--gres=scratch:500G'
-    memory "128GB"
+    cpus 8
+    memory "32GB"
 
     tag "Optitype calls for ${meta.sample_name}"
 
@@ -168,9 +243,8 @@ process HLAHD {
 
     */
     
-    cpus 16
-    memory "128GB"
-    clusterOptions '--gres=scratch:500G'
+    cpus 8
+    memory "32GB"
     container "griffithlab/hlahd:1.0"
 
     tag "HLA-HD on ${meta.sample_name}"
@@ -184,15 +258,10 @@ process HLAHD {
 
     script:
         """
-        ulimit -n 1024
-        
-        gzip -dc $fastq1 > fastq_r1.fastq
-        gzip -dc $fastq2 > fastq_r2.fastq
-
         /opt/hlahd/bin/hlahd.1.6.1.sh \
             -f /opt/hlahd/freq_data \
             -t $task.cpus \
-            fastq_r1.fastq fastq_r2.fastq \
+            $fastq1 $fastq2 \
             /opt/hlahd/HLA_gene.split.txt \
             /opt/hlahd/dictionary \
             "${meta.sample_name}" \
@@ -203,14 +272,10 @@ process HLAHD {
 
 
 process EXTRACT_MHC_REGION {
-
-    /*
-
-    */
-    
-    cpus 8
-    memory "32GB"
+    cpus 4
+    memory "16GB"
     conda "bioconda::samtools=1.23.1 bioconda::htslib=1.23.1"
+
     input:
         tuple val(meta), path(bam), path(bai)
     
@@ -220,12 +285,13 @@ process EXTRACT_MHC_REGION {
     script:
         """
         samtools view --threads $task.cpus -h -b -f 4 $bam > unmapped.bam
-        samtools view --threads $task.cpus -h -b $bam chr6:28,510,120-33,480,577 > mhc.bam
+        samtools view --threads $task.cpus -h -b $bam chr6:28510120-33480577 > mhc.bam
         samtools merge --threads $task.cpus -o hla_regions.bam mhc.bam unmapped.bam
         samtools collate --threads $task.cpus -o "${meta.sample_name}_hla_regions.bam" hla_regions.bam
         """
 
 }
+
 
 process BAM_TO_FASTQ {
 
@@ -233,20 +299,20 @@ process BAM_TO_FASTQ {
 
     */
     
-    cpus 8
-    memory "32GB"
+    cpus 4
+    memory "16GB"
     conda "bioconda::samtools=1.23.1 bioconda::htslib=1.23.1"
 
     input:
         tuple val(meta), path(bam)
     
     output:
-        tuple val(meta), path("${meta.sample_name}_${sample.molecule}_R1.fastq"), path("${meta.sample_name}_${sample.molecule}_R2.fastq")
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_R1.fastq"), path("${meta.sample_name}_${meta.molecule}_R2.fastq")
 
 
     script:
         """
-        samtools fastq --threads $task.cpus -1 ${meta.sample_name}_${sample.molecule}_R1.fastq -2 ${meta.sample_name}_${sample.molecule}_R2.fastq -n $bam
+        samtools fastq --threads $task.cpus -1 ${meta.sample_name}_${meta.molecule}_R1.fastq -2 ${meta.sample_name}_${meta.molecule}_R2.fastq -n $bam
         """
 
 }

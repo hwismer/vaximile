@@ -10,8 +10,6 @@ process INDEX_FINAL_VCF {
 
     conda "bioconda::tabix=0.2.6"
 
-    publishDir "${params.outdir}/${meta.somatic_name}/variants", mode: "copy"
-
     input:
         tuple val(meta), path(vcf)
         
@@ -33,8 +31,6 @@ process VCF_TO_TABLE {
     memory "8GB"
 
     container "broadinstitute/gatk:4.6.1.0"
-
-    publishDir "${params.outdir}/${meta.somatic_name}/variants", mode: "copy"
 
     input:
         tuple val(meta), path(vcf), path(vcf_index)
@@ -69,12 +65,11 @@ process MERGE_SOMATIC_VCFS {
     
     container "broadinstitute/gatk3:3.6-0"
 
-    //publishDir "${params.outdir}/${merged_meta.somatic_name}/somatic/", mode: "copy"
-
     input:
         tuple val(somatic_meta), 
             val(vcf1_caller), path(vcf1), path(vcf1_index), 
-            val(vcf2_caller), path(vcf2), path(vcf2_index)
+            val(vcf2_caller), path(vcf2), path(vcf2_index),
+            val(vcf3_caller), path(vcf3), path(vcf3_index)
         tuple path(reference_fa), path(reference_index), path(reference_dict)
     
     output:
@@ -88,9 +83,11 @@ process MERGE_SOMATIC_VCFS {
             -T CombineVariants \
             -R $reference_fa \
             -genotypeMergeOptions PRIORITIZE \
-            --rod_priority_list $vcf1_caller,$vcf2_caller \
+            --rod_priority_list $vcf1_caller,$vcf2_caller,$vcf3_caller \
             -V:$vcf1_caller $vcf1 \
             -V:$vcf2_caller $vcf2 \
+            -V:$vcf3_caller $vcf3 \
+            --minimumN 2 \
             -o "${somatic_meta.somatic_name}_variants.vcf.gz"
 
         """
@@ -110,8 +107,6 @@ process FILTER_VCF {
    
     container "staphb/bcftools:1.23"
     
-    //publishDir "${params.outdir}/${somatic_meta.somatic_name}/somatic/${somatic_meta.somatic_caller}/", mode:"copy"
-
     
     input:
         tuple val(somatic_meta), val(caller), path(somatic_vcf), path(tbi)
@@ -210,8 +205,6 @@ process POSTPROCESS_VCF {
     cache "lenient"
 
     container "staphb/bcftools:1.23"
-
-    //publishDir "${params.outdir}/${meta.somatic_name}/somatic/${meta.somatic_caller}/", mode:"copy"
 
     input:
         tuple val(meta), val(caller), path(somatic_vcf), path(somatic_vcf_index)

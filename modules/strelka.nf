@@ -56,23 +56,23 @@ process MANTA {
 
     */
 
-   cpus 16
-   memory "32GB"
+   cpus 8
+   memory "24GB"
+   tag "Running Manta on ${somatic_meta.somatic_name}"
     
    container "mgibio/manta_somatic-cwl:1.6.0"
 
    input:
-        tuple val(somatic_meta), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai)
+        tuple val(somatic_meta), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai), path(bed), path(bed_index)
         tuple path(reference_fa), path(reference_fai), path(reference_dict)
-        tuple path(bed), path(bed_index)
     output:
         tuple val(somatic_meta), path("./${somatic_meta.somatic_name}_manta")
 
     script:
-    def exome_flag = (somatic_meta.tumor_meta.sequencing_type == "exome" || somatic_meta.tumor-meta.sequencing_type == "exome_ffpe") ? "--exome" : ""
+    def exome_flag = (somatic_meta.tumor_meta.sequencing_type == "exome" || somatic_meta.tumor_meta.sequencing_type == "exome_ffpe") ? "--exome" : ""
 
     """
-    configManta.py \
+    /usr/bin/manta/bin/configManta.py \
         --normalBam $normal_bam \
         --tumorBam $tumor_bam \
         --referenceFasta $reference_fa \
@@ -93,16 +93,16 @@ process STRELKA {
 
     */
     
-    cpus 16
-    
-    memory "32GB"
+    cpus 8
+    memory "24GB"
     
     container "mgibio/strelka:2.9.9"
 
+    tag "Running Strelka on ${somatic_meta.somatic_name}"
+
    input:
-        tuple val(somatic_meta), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai), path(manta_dir)
+        tuple val(somatic_meta), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai), path(manta_dir), path(bed), path(bed_index)
         tuple path(reference_fa), path(reference_fai), path(reference_dict)
-        tuple path(bed), path(bed_index)
 
     output:
         tuple val(somatic_meta), 
@@ -111,10 +111,10 @@ process STRELKA {
 
     script:
 
-    def exome_flag = (somatic_meta.tumor_meta.sequencing_type == "exome" || somatic_meta.tumor-meta.sequencing_type == "exome_ffpe") ? "--exome" : ""
+    def exome_flag = (somatic_meta.tumor_meta.sequencing_type == "exome" || somatic_meta.tumor_meta.sequencing_type == "exome_ffpe") ? "--exome" : ""
 
     """
-    configureStrelkaSomaticWorkflow.py \
+    /opt/strelka/bin/configureStrelkaSomaticWorkflow.py \
         --normalBam $normal_bam \
         --tumorBam $tumor_bam \
         ${exome_flag} \

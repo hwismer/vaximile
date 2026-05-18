@@ -7,11 +7,9 @@ process STAR_ALIGN {
 
     */
 
-    cpus 24
+    cpus 16
 
     memory "48GB"
-    
-    clusterOptions '--gres=scratch:500G'
 
     container "alexdobin/star:2.7.10a_alpha_220506"
 
@@ -91,7 +89,7 @@ process CREATE_STAR_INDEX {
 
     tag "Creating STAR index with ${reference_fa} and ${gtf}"
 
-    publishDir "./resources/star/${reference_fa}_${gtf}_STAR", mode: "copy"
+    publishDir "./resources/star/", mode: "copy"
 
     input:
         tuple path(reference_fa), path(reference_index), path(reference_dict)
@@ -210,7 +208,7 @@ process KALLISTO_QUANT {
 
     */
 
-    cpus 16
+    cpus 8
     memory "32GB"
 
     conda "bioconda::kallisto=0.51.1"
@@ -241,7 +239,7 @@ process CREATE_KALLISTO_INDEX {
 
     */
     
-    cpus 16
+    cpus 8
     memory "32GB"
     cache 'lenient'
     
@@ -266,7 +264,7 @@ process CREATE_KALLISTO_INDEX {
 
 process CREATE_SALMON_INDEX {
 
-    cpus 16
+    cpus 8
     memory "32GB"
     
     conda "bioconda::salmon=1.11.4"
@@ -293,7 +291,7 @@ process CREATE_SALMON_INDEX {
 }
 process SALMON_QUANT {
 
-    cpus 16
+    cpus 8
     memory "32GB"
 
     conda "bioconda::salmon=1.11.4"

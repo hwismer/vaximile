@@ -1,8 +1,9 @@
 {
-    "samplesheet" : "./aux_files/samplesheet.csv", 
+    "samplesheet" : "./aux_files/samplesheet.csv",
+    "capture_kits" : "/krummellab/data1/hwismer/UCSF-Custom-Immunoprofiler-Vaccine-Pipeline/aux_files/capture_kits.csv",
     "outdir" : "cIPI_vax_out",
 
-    "reference_fa" : "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta",
+    "reference_fa" :"https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/GRCh38.primary_assembly.genome.fa.gz",
     
     "common_germline" : "gs://gatk-best-practices/somatic-hg38/small_exac_common_3.hg38.vcf.gz",
     "common_germline_index" : "gs://gatk-best-practices/somatic-hg38/small_exac_common_3.hg38.vcf.gz.tbi",
@@ -28,20 +29,12 @@
     "mills" : "gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz",
     "mills_index" : "gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz.tbi",
     
-    "gtf" : "/krummellab/data1/hwismer/Immunoprofiler-Vaccine-Development-Pipeline/resources/gencode.v49.annotation.gtf.gz",
+    "gtf" : "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.annotation.gtf.gz",
     "transcriptome_reference":"https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz",
 
     "scatter_count" : 30,
-    "intervals_file" : "/krummellab/data1/hwismer/resources/beds/AGV7_GRCh38_chr.bed",
     "vep_cache" : "/c4/home/hwismer/0_execs/vep/vep_data/",
 
-    "interval_padding":100,
-
-    "bwa_index":"/krummellab/data1/hwismer/Immunoprofiler-Vaccine-Development-Pipeline/resources/bwa/bwa_mem2_index_Homo_sapiens_assembly38.fasta/*",
-    "star_index":"/krummellab/data1/hwismer/Immunoprofiler-Vaccine-Development-Pipeline/resources/star/Homo_sapiens_assembly38.fasta_gencode.v49.annotation.gtf.gz_STAR/STARGenomeDir/",
-    "salmon_index":"/krummellab/data1/hwismer/Immunoprofiler-Vaccine-Development-Pipeline/resources/salmon/Homo_sapiens.GRCh38.cdna.all.fa.gz_salmon_index/",
-    "kallisto_index":"/krummellab/data1/hwismer/Immunoprofiler-Vaccine-Development-Pipeline/resources/kallisto/Homo_sapiens.GRCh38.cdna.all.fa.gz_kallisto_index.idx"
-
-    
+    "interval_padding":100
 
 }

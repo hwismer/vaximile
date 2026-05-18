@@ -6,12 +6,10 @@ process STAR_FUSION {
 
     */
 
-    cpus 4
+    cpus 8
     memory "64GB"
 
     container "trinityctat/starfusion:1.15.0"
-
-    publishDir "${params.outdir}/${meta.somatic_sample}/fusions/", mode: "copy"
 
     input:
         tuple val(meta), path(chimeric_out), path(fastq1), path(fastq2)
@@ -20,19 +18,14 @@ process STAR_FUSION {
     output:
         tuple val(meta), path("${meta.sample_name}_starfusion/*.fusion_predictions.tsv"), emit: fusion_preds
         tuple val(meta), path("${meta.sample_name}_starfusion/*.fusion_predictions.abridged.tsv"), emit: abridged_preds
-        tuple val(meta), path("${meta.sample_name}_starfusion/*.coding_effect.tsv"), emit: coding_effect
-        tuple val(meta), path("${meta.sample_name}_starfusion/"), emit: all_output
+        //tuple val(meta), path("${meta.sample_name}_starfusion/*.coding_effect.tsv"), emit: coding_effect
+        //tuple val(meta), path("${meta.sample_name}_starfusion/"), emit: all_output
 
 
     script:
         """
         STAR-Fusion --genome_lib_dir $ctat_resource_lib \
              -J $chimeric_out \
-             --examine_coding_effect \
-             --FusionInspector validate \
-             --left_fq $fastq1 \
-             --right_fq $fastq2 \
-             --denovo_reconstruct \
              --output_dir "./${meta.sample_name}_starfusion"
 
         """
@@ -42,12 +35,10 @@ process STAR_FUSION {
 
 process ARRIBA_FUSION {
 
-    cpus 4
-    memory "32GB"
+    cpus 8
+    memory "64GB"
 
     conda "bioconda::arriba=2.5.1"
-
-    publishDir "${params.outdir}/${meta.somatic_sample}/fusions/arriba", mode: "copy"
 
     input:
         tuple val(meta), path(star_bam), path(star_bam_index)

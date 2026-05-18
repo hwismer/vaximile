@@ -7,8 +7,8 @@ process BWA_MAP {
 
     */
 
-    cpus 16
-    memory "64GB"
+    cpus 8
+    memory "32GB"
     cache "lenient"
 
     clusterOptions '--gres=scratch:250G'
@@ -40,15 +40,14 @@ process CREATE_BWA_INDEX {
         Create a bwa-mem2 index for bwa mem mapping.
     */
 
-    cpus 16
-    memory "96GB"
-    clusterOptions '--gres=scratch:100G'
+    cpus 8
+    memory "80GB"
 
     container "iarcbioinfo/bwa-mem2-tools:v1.0"
 
     tag "Creating BWA index for $reference_fa"
 
-    publishDir "./resources/bwa/bwa_mem2_index_${reference_fa}"
+    publishDir "./resources/bwa/"
 
     cache 'lenient'
 
@@ -67,10 +66,10 @@ process CREATE_BWA_INDEX {
 
 process MARK_DUPLICATES_SPARK {
 
-    cpus 16
-    memory "64GB"
+    cpus 8
+    memory "32GB"
     container "broadinstitute/gatk:4.6.1.0"
-    clusterOptions '--gres=scratch:750G'
+    clusterOptions '--gres=scratch:600G'
 
     tag "MarkDuplicatesSpark on ${meta.sample_name}"
 
@@ -82,16 +81,15 @@ process MARK_DUPLICATES_SPARK {
     
     script:
 
-    def tmp = task.workDir
-
     """
+    mkdir -p tmp
     gatk MarkDuplicatesSpark \
         -I $aligned_sam \
         -O "${meta.sample_name}_${meta.molecule}_markdup.bam" \
         --create-output-bam-index \
-        --tmp-dir ${tmp} \
+        --tmp-dir ./tmp \
         --spark-master local[${task.cpus}] \
-        --conf spark.local.dir=${tmp} \
+        --conf spark.local.dir=./tmp \
         --conf spark.sql.shuffle.partitions=${task.cpus * 3} \
         --conf spark.executor.memory=${(task.memory.toGiga() * 0.8) as int}g \
         --conf spark.driver.memory=8g
@@ -108,7 +106,7 @@ process BASE_RECALIBRATOR_SCATTER {
     tag "BaseRecalibrator on ${meta.sample_name} ${interval_shard}"
 
     input:
-        tuple val(meta), path(markdup_bam), path(markdup_bam_bai), val(index), path(interval_shard)
+        tuple val(meta), path(markdup_bam), path(markdup_bam_bai), path(interval_shard)
         tuple path(reference_fa), path(reference_index), path(reference_dict)
         tuple path(known_sites_dbsnp), path(known_sites_dbsnp_index)
         tuple path(known_sites_1000g_snps), path(known_sites_1000g_snps_index)
@@ -164,10 +162,10 @@ process APPLY_BQSR_SCATTER {
     memory "12GB"
     container "broadinstitute/gatk:4.6.1.0"
 
-    tag "ApplyBQSR on ${meta.sample_name} ${interval_index}"
+    tag "ApplyBQSR on ${meta.sample_name} ${interval_shard}"
 
     input:
-        tuple val(meta), path(markdup_bam), path(markdup_bam_bai), path(recal_table), val(interval_index), path(interval_shard)
+        tuple val(meta), path(markdup_bam), path(markdup_bam_bai), path(recal_table), path(interval_shard)
         tuple path(reference_fa), path(reference_index), path(reference_dict)
 
     output:
@@ -195,19 +193,14 @@ process APPLY_BQSR_GATHER {
     input:
         tuple val(meta), path(bams)
     output:
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_bqsr.bam"), path("${meta.sample_name}_${meta.molecule}_bqsr.bam.bai")
-    
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_bqsr.bam")
+
     script:
     def sorted_bams = bams.sort { it.name }
     """
     gatk GatherBamFiles \
         ${bams.collect { "-I ${it}" }.join(' ')} \
         -O "${meta.sample_name}_${meta.molecule}_bqsr.bam"
-
-    gatk BuildBamIndex \
-        -I "${meta.sample_name}_${meta.molecule}_bqsr.bam" \
-        -O "${meta.sample_name}_${meta.molecule}_bqsr.bam.bai"
-
     """
 
 }
@@ -221,7 +214,7 @@ process GET_PILEUP_SUMMARIES {
     tag "GetPileupSummaries on ${meta.sample_name}"
 
     input:
-        tuple val(meta), path(bqsr_bam), path(bqsr_bai)
+        tuple val(meta), path(bqsr_bam), path(bqsr_index)
         tuple path(common_germline), path(common_germline_index)
 
     output:
@@ -241,3 +234,72 @@ process GET_PILEUP_SUMMARIES {
 
 }
 
+process PREPARE_FASTA {
+    
+	cpus 2
+	memory "8GB"
+	
+	publishDir "./resources/references/", mode: 'copy', overwrite: true
+
+    input:
+    	path fasta
+
+    output:
+    	path "reference.fa", emit: fasta
+
+    script:
+    	def is_gz = fasta.name.endsWith('.gz')
+
+    	"""
+    	set -euo pipefail
+
+    	if ${is_gz}; then
+        	gunzip -c ${fasta} > reference.fa
+    	else
+        	cp ${fasta} reference.fa
+    	fi
+    	"""
+}
+
+process INDEX_FASTA {
+
+
+    cpus 4
+    memory "16GB"
+    conda "bioconda::samtools=1.23.1 bioconda::bedtools=2.31.1 bioconda::htslib=1.23.1"
+    
+    publishDir "./resources/", mode: 'copy', overwrite: true
+    input:
+    	path fasta
+
+    output:
+    	tuple path(fasta), path("${fasta}.fai"), emit: fai
+
+    script:
+        """
+        set -euo pipefail
+    	samtools faidx $fasta
+        """
+}
+
+process MAKE_FASTA_DICT {
+
+    cpus 4
+    memory "16GB"
+    container "broadinstitute/gatk:4.6.1.0"
+
+    publishDir "./resources", mode: 'copy', overwrite: true
+
+    input:
+        tuple path(fasta), path(fai)
+
+    output:
+        tuple path(fasta), path(fai), path("${fasta.baseName}.dict"), emit: dict
+
+    script:
+    """
+    gatk CreateSequenceDictionary \
+        R=${fasta} \
+        O=${fasta.baseName}.dict
+    """
+}

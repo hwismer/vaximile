@@ -1,7 +1,44 @@
-include { BWA_MAP;  CREATE_BWA_INDEX; } from "../modules/alignment_and_preprocessing.nf"
+include { BWA_MAP;  CREATE_BWA_INDEX; PREPARE_FASTA; INDEX_FASTA; MAKE_FASTA_DICT } from "../modules/alignment_and_preprocessing.nf"
 include { MARK_DUPLICATES_SPARK; BASE_RECALIBRATOR_SCATTER; BASE_RECALIBRATOR_GATHER; APPLY_BQSR_SCATTER; APPLY_BQSR_GATHER; GET_PILEUP_SUMMARIES } from "../modules/alignment_and_preprocessing.nf"
 include { SORT_BAM } from "../modules/utilities.nf"
-include { SAMTOOLS_FLAGSTAT; SAMTOOLS_COVERAGE } from "../modules/qc.nf"
+include { SAMTOOLS_FLAGSTAT; SAMTOOLS_COVERAGE; SAMTOOLS_IDXSTATS } from "../modules/qc.nf"
+
+
+workflow BWA_INDEX {
+    
+    take:
+        reference_genome
+        bwa_index
+
+    main:
+        if ( bwa_index ) {
+           bwa_index_ch = Channel.fromPath("${bwa_index}/*").collect()
+        } else {
+            bwa_index_ch = CREATE_BWA_INDEX(reference_genome)
+        }
+
+
+    emit:
+        bwa_index = bwa_index_ch
+
+}
+
+
+workflow PREPARE_REFERENCE_FASTA {
+    
+    take:
+        fasta
+    main:
+        
+        fasta_proc = PREPARE_FASTA(fasta)
+        fasta_plus_fai = INDEX_FASTA(fasta_proc)
+        fasta_fai_dict = MAKE_FASTA_DICT(fasta_plus_fai)
+
+    emit:
+        reference = fasta_fai_dict
+        
+}
+
 
 workflow DNA_ALIGN_AND_PREPROC {
 
@@ -14,23 +51,13 @@ workflow DNA_ALIGN_AND_PREPROC {
         known_indels // (vcf, vcf_index)
         mills // (vcf, vcf_index)
         common_germline // (vcf, vcf_index)
-        intervals // interval files created from the SPLIT_INTERVALS process
+        intervals // (kit name, tuple(interval_files)) interval files created from the SPLIT_INTERVALS process
         num_intervals // Integer for how many intervals are present
         
     main:
         
-        println "bwa = $bwa_index"
-        // If bwq_index is null (not explicitly defined as a param), then generate a bew index using the supplied reference genome
-        if ( bwa_index ) {
-           bwa_index_ch = Channel.fromPath(bwa_index)
-        } else {
-            bwa_index_ch = CREATE_BWA_INDEX(reference_genome)
-        }
-        bwa_index_ch.view()
-        
         // Map with BWA-mem2
-        bwa_sam = BWA_MAP(fastqs, reference_genome, bwa_index_ch)
-
+        bwa_sam = BWA_MAP(fastqs, reference_genome, bwa_index)
 
         // **********************************************************
         // GATK PRE-PROCESSING BEST PRACTICES
@@ -40,30 +67,50 @@ workflow DNA_ALIGN_AND_PREPROC {
        
         // BASE RECALIBRATION
         // Call BaseRecalibrator on each interval
-        base_recal_input = mark_dup.combine(intervals)
+        markdup_kit = mark_dup.map{meta, bam, bai ->
+            tuple(meta.capture_kit, meta, bam, bai)
+        }
+        
+        intervals_map = intervals.flatMap{ kit, interval_list ->
+            interval_list.collect { interval ->
+                tuple(kit, interval)
+            }
+        }
+
+
+
+        base_recal_input = markdup_kit.combine(intervals_map, by: 0).map{kit, meta, bam, bai, interval -> tuple(meta, bam, bai, interval)}
         base_recal = BASE_RECALIBRATOR_SCATTER(
             base_recal_input,
             reference_genome,
             known_sites_dbsnp,
             known_sites_1000g_snps,
             known_indels,
-            mills,
+            mills
         )
         base_recal_gather_input = base_recal.groupTuple(size: num_intervals)
         base_recal_gathered = BASE_RECALIBRATOR_GATHER(base_recal_gather_input)
         
         // Scatter BQSR calls
-        bqsr_input = mark_dup.join(base_recal_gathered).combine(intervals)
+        bqsr_input = mark_dup.join(base_recal_gathered)
+        .map{meta, bam, bai, bqsr ->
+            tuple(meta.capture_kit, meta, bam, bai, bqsr)
+        }
+        .combine(intervals_map, by:0 )
+        .map{kit, meta, bam, bai, bqsr, interval -> tuple(meta, bam, bai, bqsr, interval) }
+
         bqsr = APPLY_BQSR_SCATTER(bqsr_input, reference_genome)
         bqsr_scattered = bqsr.groupTuple(size: num_intervals)
         bqsr_gather = APPLY_BQSR_GATHER(bqsr_scattered) // Get final BQSR bams
         bqsr_sort = SORT_BAM(bqsr_gather)
 
-        pileup_summaries = GET_PILEUP_SUMMARIES(bqsr_gather, common_germline)
-
+        pileup_summaries = GET_PILEUP_SUMMARIES(bqsr_sort, common_germline)
+        
         flagstat = SAMTOOLS_FLAGSTAT(mark_dup)
         coverage = SAMTOOLS_COVERAGE(mark_dup)
+        idxstats = SAMTOOLS_IDXSTATS(mark_dup)
 
+        
     emit:
         preproc_bams = bqsr_sort // For somatic calling
         markdup_bams = mark_dup // Non-recalibrated BAMS for callers like Strelka that don't expect recalibrated scores
@@ -71,6 +118,8 @@ workflow DNA_ALIGN_AND_PREPROC {
         pileup_summaries = pileup_summaries
         flagstat = flagstat
         coverage = coverage
+        idxstats = idxstats
 
+        
 }
 

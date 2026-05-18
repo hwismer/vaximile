@@ -19,16 +19,16 @@ process PVACSEQ {
 
     */
 
-    cpus 12
-    memory "128GB"
+    cpus 16
+    memory "64GB"
 
     container "griffithlab/pvactools:6.0.3"
 
-    publishDir "${params.outdir}/${somatic_meta.somatic_name}/pvactools/", mode: "copy"
-
     input:
-        tuple val(somatic_name), val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index),
-            path(phased_vcf), path(phased_vcf_index), path(hla_meta), path(hla_pvac_input)
+        tuple val(somatic_name), 
+            val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index),
+            path(phased_vcf), path(phased_vcf_index), 
+            val(hla_meta), path(hla_pvac_input)
         path(human_ref_peptides)
     output:
         path("${somatic_meta.somatic_name}_pvacseq"), emit: pvacseq_dir
@@ -59,28 +59,26 @@ process PVACSEQ {
 
 process PVACFUSE {
     
-    cpus 12
-    memory "128GB"
+    cpus 8
+    memory "64GB"
 
     container "griffithlab/pvactools:6.0.3"
 
-    publishDir "${params.outdir}/${sample_meta.somatic_sample}/pvactools/", mode: "copy"
-
     input:
-        tuple val(sample_meta), path(arriba_fusions), path(hla_pvac_input), path(starfusion_calls)
+        tuple val(somatic_name), val(sample_meta), path(arriba_fusions), path(starfusion_calls), path(hla_pvac_input)
         path human_ref_peptides
 
     output:
-        path("${sample_meta.somatic_sample}_pvacfuse"), emit: pvacfuse_dir
+        path("${somatic_name}_pvacfuse"), emit: pvacfuse_dir
     
     script:
         """
         pvacfuse run \
             $arriba_fusions \
-            "${sample_meta.somatic_sample}" \
+            "${somatic_name}" \
             \$(head $hla_pvac_input -n 1) \
             all \
-            "${sample_meta.somatic_sample}_pvacfuse" \
+            "${somatic_name}_pvacfuse" \
             --starfusion-file $starfusion_calls \
             -e1 8,9,10,11 \
             -e2 12,13,14,15,16,17,18 \

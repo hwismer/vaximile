@@ -95,13 +95,13 @@ process HAPLOTYPE_CALLER_GATHER_SELECT_VARIANTS {
     memory "8GB"
     container "broadinstitute/gatk:4.6.1.0"
 
-    tag "Select variants from ${sample_meta.sample_name} within ${interval_index}"
+    tag "Select variants from ${sample_meta.sample_name} within ${interval_shard}"
 
     input:
-        tuple val(sample_meta), path(vcf), path(vcf_index), val(interval_index), path(interval_shard)
+        tuple val(sample_meta), path(vcf), path(vcf_index), path(interval_shard)
 
     output:
-        tuple val(sample_meta), path("${sample_meta.sample_name}_${interval_index}.vcf.gz")
+        tuple val(sample_meta), path("${sample_meta.sample_name}_${interval_shard}.vcf.gz")
 
     script:
     
@@ -109,7 +109,7 @@ process HAPLOTYPE_CALLER_GATHER_SELECT_VARIANTS {
     gatk SelectVariants \
         -V $vcf \
         -L $interval_shard \
-        -O "${sample_meta.sample_name}_${interval_index}.vcf.gz"
+        -O "${sample_meta.sample_name}_${interval_shard}.vcf.gz"
     """
 }
 
@@ -127,15 +127,15 @@ process HAPLOTYPE_CALLER_SCATTER {
 
     container "broadinstitute/gatk:4.3.0.0"
 
-    tag "Calling germline variants on ${meta.sample_name} on ${interval_index}"
+    tag "Calling germline variants on ${meta.sample_name} on ${interval_shard}"
 
     input:
-        tuple val(meta), path(bam), path(bai), val(interval_index), path(interval_shard)
+        tuple val(meta), path(bam), path(bai), path(interval_shard)
         tuple path(reference_fa), path(reference_index), path(reference_dict)
         val(interval_padding)
 
     output:
-        tuple val(meta), path("${meta.sample_name}_${interval_index}.vcf.gz"), path("${meta.sample_name}_${interval_index}.vcf.gz.tbi"), val(interval_index), path(interval_shard)
+        tuple val(meta), path("${meta.sample_name}_${interval_shard}.vcf.gz"), path("${meta.sample_name}_${interval_shard}.vcf.gz.tbi"),  path(interval_shard)
 
     script:
         """
@@ -143,7 +143,7 @@ process HAPLOTYPE_CALLER_SCATTER {
             -R $reference_fa \
             -I $bam \
             -L $interval_shard \
-            -O "${meta.sample_name}_${interval_index}.vcf.gz" \
+            -O "${meta.sample_name}_${interval_shard}.vcf.gz" \
             -ERC NONE \
             --native-pair-hmm-threads $task.cpus \
             -ip $interval_padding \
@@ -164,15 +164,15 @@ process HAPLOTYPE_CALLER_CNN_SCORE_VARIANTS {
 
     container "broadinstitute/gatk:4.3.0.0"
 
-    tag "Scoring variants from ${meta.sample_name} on ${interval_index}"
+    tag "Scoring variants from ${meta.sample_name} on ${interval_shard}"
 
     input:
-        tuple val(meta), path(vcf), path(vcf_index),val(interval_index), path(interval_shard)
+        tuple val(meta), path(vcf), path(vcf_index), path(interval_shard)
         tuple path(reference_fa), path(reference_index), path(reference_dict)
         val(interval_padding)
 
     output:
-        tuple val(meta), path("${meta.sample_name}_${interval_index}_CNN.vcf.gz"), path("${meta.sample_name}_${interval_index}_CNN.vcf.gz.tbi"), val(interval_index), path(interval_shard)
+        tuple val(meta), path("${meta.sample_name}_${interval_shard}_CNN.vcf.gz"), path("${meta.sample_name}_${interval_shard}_CNN.vcf.gz.tbi"), path(interval_shard)
 
     script:
         """
@@ -182,7 +182,7 @@ process HAPLOTYPE_CALLER_CNN_SCORE_VARIANTS {
             -ip $interval_padding \
             -R $reference_fa \
             --create-output-variant-index \
-            -O "${meta.sample_name}_${interval_index}_CNN.vcf.gz"
+            -O "${meta.sample_name}_${interval_shard}_CNN.vcf.gz"
         """
 }
 

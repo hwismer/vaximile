@@ -1,0 +1,70 @@
+
+process DEEPSOMATIC {
+
+    cpus 18
+    memory "48GB"
+
+    container "google/deepsomatic:1.10.0"
+
+    input:
+        tuple val(somatic_meta), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai), path(bed_regions)
+        tuple path(reference_fa), path(reference_index), path(reference_dict)
+
+
+    output:
+        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_deepsomatic.vcf.gz"), path("${somatic_meta.somatic_name}_deepsomatic.vcf.gz.tbi")
+
+
+    script:
+
+	def model_map = [
+        exome      : 'WES',
+        genome     : 'WGS',
+        exome_ffpe : 'FFPE_WES',
+        genome_ffpe: 'FFPE_WGS'
+    ]
+
+	def model = model_map[somatic_meta.tumor_meta.sequencing_type]
+    """
+    run_deepsomatic \
+        --model_type=$model \
+        --ref=$reference_fa \
+        --reads_normal=$normal_bam \
+        --reads_tumor=$tumor_bam \
+        --output_vcf=${somatic_meta.somatic_name}_deepsomatic.vcf.gz \
+        --output_gvcf=${somatic_meta.somatic_name}_deepsomatic.gvcf.gz \
+        --sample_name_tumor=${somatic_meta.tumor_meta.sample_name} \
+        --sample_name_normal=${somatic_meta.normal_meta.sample_name}\
+        --num_shards=$task.cpus \
+        --logging_dir=./logs \
+        --vcf_stats_report=true \
+        --use_default_pon_filtering=true \
+        --regions=$bed_regions
+
+    """
+
+}
+
+workflow DEEPSOMATIC_WF {
+
+    take:
+        somatic_pairs // (somatic metamap, tumor_bam, tumor_bai, normal_bam, normal_bai)
+        reference_genome // (fasta, fasta.fai, dict)
+        capture_kits
+
+    main:
+        
+
+        somatic_pairs_kit = somatic_pairs.map{ meta, tumor_bam, tumor_bai, normal_bam, normal_bai ->
+            tuple(meta.capture_kit, meta, tumor_bam, tumor_bai, normal_bam, normal_bai)
+        }
+        .combine(capture_kits, by:0)
+        .map { kit, meta, tb, tbai, nbam, nbai, bed -> tuple(meta, tb, tbai, nbam, nbai, bed)
+        }
+
+        deepsomatic = DEEPSOMATIC(somatic_pairs_kit, reference_genome)
+
+    emit:
+        deepsomatic_vcf = deepsomatic
+}
+

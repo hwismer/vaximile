@@ -19,8 +19,19 @@ workflow MUTECT2 {
         pon // (vcf, tbi)
 
     main:
-        
-        somatic_pair_interval = somatic_pairs.combine(intervals)
+       
+        intervals_map = intervals.flatMap{ kit, interval_list ->
+            interval_list.collect { interval ->
+                tuple(kit, interval)
+            }
+        }
+
+        somatic_pairs_kit = somatic_pairs.map{ meta, tumor_bam, tumor_bai, normal_bam, normal_bai ->
+            tuple(meta.capture_kit, meta, tumor_bam, tumor_bai, normal_bam, normal_bai)
+        }
+
+
+        somatic_pair_interval = somatic_pairs_kit.combine(intervals_map, by:0).map{kit, meta, tb, tbai, nb, nbai, interval -> tuple(meta, tb, tbai, nb, nbai, interval) }
         mutect2_scatter = MUTECT2_SCATTER(somatic_pair_interval, reference_genome, gnomad, pon, interval_padding)
 
         mutect_vcfs = mutect2_scatter.vcf

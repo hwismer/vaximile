@@ -15,6 +15,7 @@ workflow FUSION_CALLING {
         arriba = ARRIBA_FUSION(star_bam, reference_genome, gtf, arriba_resources)
     emit:
         arriba_fusion = arriba.arriba_fusions
+        star_fusion = star_fusion.fusion_preds
 
 }
 
