@@ -92,7 +92,7 @@ process CREATE_STAR_INDEX {
     publishDir "./resources/star/", mode: "copy"
 
     input:
-        tuple path(reference_fa), path(reference_index), path(reference_dict)
+        tuple path(reference_fa), path(reference_index)
         path(gtf)
 
     output:
@@ -291,7 +291,7 @@ process CREATE_SALMON_INDEX {
 }
 process SALMON_QUANT {
 
-    cpus 8
+    cpus 12
     memory "32GB"
 
     conda "bioconda::salmon=1.11.4"
@@ -303,7 +303,7 @@ process SALMON_QUANT {
         path(salmon_index)
 
     output:
-        tuple val(meta), path("${meta.sample_name}_salmon_quant"), emit: quant
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_salmon_quant"), emit: quant
 
     script:
     """
@@ -314,7 +314,7 @@ process SALMON_QUANT {
         -2 $fastq2 \
         --validateMappings \
         -p $task.cpus \
-        -o "${meta.sample_name}_salmon_quant"
+        -o "${meta.sample_name}_${meta.molecule}_salmon_quant"
     """
 
 }

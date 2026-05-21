@@ -15,7 +15,7 @@ process BAMREADCOUNT {
 
     input:
         tuple val(somatic_name), val(somatic_meta), path(vcf), val(sample_meta), path(bam), path(bai)
-        tuple path(reference_fa), path(reference_index), path(reference_dict)
+        tuple path(reference_fa), path(reference_index)
 
     output:
 
@@ -90,7 +90,7 @@ process VEP_ANNOTATE {
 
     input:
         tuple val(somatic_meta), path(vcf)
-        tuple path(reference_fa), path(reference_index), path(reference_dict)
+        tuple path(reference_fa), path(reference_index)
         path vep_cache
         path vep_plugins
 

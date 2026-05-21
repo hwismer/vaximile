@@ -9,15 +9,15 @@ process PHASE_VCF_SELECT_VARIANTS {
 
     cpus 2
     memory "32GB"
-    cache "lenient"
-
-
     container "broadinstitute/gatk:4.6.1.0"
+
+    tag "Extracting tumor sample from $somatic_vcf"
 
     input:
 
         tuple val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index)
-        tuple path(reference_fa), path(reference_fai), path(reference_dict)
+        tuple path(reference_fa), path(reference_fai)
+        path reference_dict
 
     output:
         tuple val(somatic_meta), path("${somatic_meta.tumor_meta.sample_name}_tumor_only.vcf.gz"), path("${somatic_meta.tumor_meta.sample_name}_tumor_only.vcf.gz.tbi")
@@ -46,12 +46,14 @@ process PHASE_VCF_COMBINE_VARIANTS {
 
     cpus 2
     memory "16GB"
-
     container "broadinstitute/gatk3:3.6-0"
+
+    tag "Combining somatic $tumor_only_vcf and germline $germline_vcf variants"
 
     input:
         tuple val(somatic_meta), path(tumor_only_vcf), path(tumor_only_index), path(germline_vcf), path(germline_index)  
-        tuple path(reference_fa), path(reference_fai), path(reference_dict)
+        tuple path(reference_fa), path(reference_fai)
+        path reference_dict
 
 
     output:
@@ -81,12 +83,14 @@ process PHASE_VCF_SORT_VCF {
 
     cpus 2
     memory "32GB"
-
     container 'broadinstitute/picard:3.4.0'
+
+    tag "Sorting VCF ${combined_vcf}"
 
     input:
         tuple val(somatic_meta), path(combined_vcf)
-        tuple path(reference_fa), path(reference_fai), path(reference_dict)
+        tuple path(reference_fa), path(reference_fai)
+        path(reference_dict)
 
     output:
         tuple val(somatic_meta), path("${somatic_meta.tumor_meta.sample_name}_combined.sorted.vcf"), emit: sorted_vcf
@@ -114,8 +118,9 @@ process PHASE_VCF_RENAME {
 
     cpus 2
     memory "16GB"
-
     container "staphb/bcftools:1.23.1" 
+
+    tag "Renaming germline sample ${normal_meta.sample_name} to ${somatic_meta.tumor_meta.sample_name}"
 
     input:
         tuple val(normal_meta), val(somatic_meta), path(germline_vcf), path(germline_vcf_index)
@@ -152,13 +157,14 @@ process PHASE_VCF_RBPHASING {
 
     cpus 4
     memory "32GB"
-
-
     container "broadinstitute/gatk3:3.6-0"
+
+    tag "ReadBacked Phasing for ${somatic_meta.somatic_name}"
 
     input:
         tuple val(tumor_meta), val(somatic_meta), path(combined_sorted_vcf), path(tumor_reads), path(tumor_reads_index)
-        tuple path(reference_fa), path(reference_index), path(reference_dict)
+        tuple path(reference_fa), path(reference_index)
+        path reference_dict
 
     output:
         tuple val(somatic_meta), path("${somatic_meta.somatic_name}_phased.vcf")
@@ -186,9 +192,9 @@ process PHASE_VCF_VEP {
     */
     cpus 8
     memory "32GB"
-
-
     container "ensemblorg/ensembl-vep:release_115.0"
+
+    tag "VEP on phased vcf $phased_vcf"
 
     input:
         tuple val(meta), path(phased_vcf)
@@ -227,8 +233,9 @@ process PHASE_VCF_INDEX {
 
     cpus 1
     memory "16GB"
-
     conda "bioconda::tabix=0.2.6"
+
+    tag "Indexing phased vcf $phased_vcf"
 
     input:
         tuple val(meta), path(phased_vcf)

@@ -1,15 +1,15 @@
 process STAR_FUSION {
 
     /*
-        NOT IMPLEMENTED YET
         Run star-fusion to detect RNA fusion events.
 
     */
 
-    cpus 8
+    cpus 12
     memory "64GB"
-
     container "trinityctat/starfusion:1.15.0"
+
+    tag "Running STARfusion on ${meta.sample_name}"
 
     input:
         tuple val(meta), path(chimeric_out), path(fastq1), path(fastq2)
@@ -37,12 +37,13 @@ process ARRIBA_FUSION {
 
     cpus 8
     memory "64GB"
-
     conda "bioconda::arriba=2.5.1"
+
+    tag "Running Arriba fusion calling on ${meta.sample_name}"
 
     input:
         tuple val(meta), path(star_bam), path(star_bam_index)
-        tuple path(reference_fa), path(reference_index), path(reference_dict)
+        tuple path(reference_fa), path(reference_index)
         path gtf
         tuple path(arriba_blacklist), path(arriba_known_fusions), path(arriba_protein_domains)
 

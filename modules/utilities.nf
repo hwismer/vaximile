@@ -1,46 +1,77 @@
 process MULTIQC {
 
+    /*
+    Runs MultiQC on gathered files on a per-patient basis.
+    Currently also imports HLA-HD calls into table format.
+
+    Replaces sample names with sample names from metadat and merged samples that start with Merge
+    */
+
     cpus 2
     memory "16GB"
     conda "bioconda::multiqc=1.34-0"
 
-    tag "Running MultiQC on ${somatic_name}"
+    tag "Running MultiQC on ${patient}"
 
-    
     input:
-        tuple val(somatic_name), val(sample_names), path(files)
+        tuple val(patient), val(somatic_names), val(sample_names), path(files)
 
     output:
-        tuple val(somatic_name), path("${somatic_name}_multiqc_report.html")
+        tuple val(patient), path("${patient}_report.html")
 
     script:
     
     def clean_sample_names = sample_names.findAll { it != null }.unique().sort { -it.size() }
-    
-    def rename_tsv = (clean_sample_names)
-            .unique()
-            .collect { s -> "^${s}.*\t${s}" }
-            .plus("^Merged.*\t${somatic_name}")
-            .join('\n')
+    def clean_somatic_names = somatic_names.findAll { it != null }.unique().sort { -it.size() }
 
+    def rename_tsv = (clean_sample_names)
+        .collect { s -> "^${s}.*\t${s}" }
+        .join('\n')
 
     """
-    printf '%s\n' "${rename_tsv}" > ${somatic_name}_rename.tsv
-    cat ${somatic_name}_rename.tsv
+    printf '%s\n' "${rename_tsv}" > ${patient}_rename.tsv
+   
+   cat > multiqc_config.yaml <<EOF
+custom_data:
+  hla_calls:
+    file_format: tsv
+    section_name: "HLA-HD"
+    description: "HLA Allele Calls"
+    plot_type: table
+    pconfig:
+      id: "hla_calls"
+      title: "HLA-HD Calls"
+
+sp:
+  hla_calls:
+    fn: "*_hlahd.tsv"
+
+sample_names_replace_regex: true
+EOF
+    
+    cat multiqc_config.yaml
+    
     multiqc \
-        -n ${somatic_name}_multiqc_report.html \
-		--replace-names ${somatic_name}_rename.tsv \
-        --cl-config "sample_names_replace_regex: true" \
+        -n ${patient}_report.html \
+        --replace-names ${patient}_rename.tsv \
+        -c multiqc_config.yaml \
+        -i "${patient} - UCSF Custom Immunoprofiler CustomVax Pipeline Metrics" \
+		-b "Info | Patient: ${patient} \n | VEP Outputs: Germline (normal sample name) and Somatic (tumor/normal pair, e.g. Patient1_T1_N1)" \
         .
     """
 }
 
 process MERGE_BAMS {
+
+    /*
+    Merges an arbitrary number of bam files with the same metadata.
+    */
     
     cpus 6
     memory "18GB"
     conda "bioconda::samtools=1.23.1 bioconda::bedtools=2.31.1 bioconda::htslib=1.23.1"
 
+    tag "Merging Bams from ${meta.sample_name}"
     input:
         tuple val(meta), path(bams), path(bais)
 
@@ -66,6 +97,8 @@ process MERGE_BAMS {
 
 
 process COMBINE_FASTQS {
+        
+    // Combines FASTQS
 
     cpus 2
     memory "8GB"
@@ -87,39 +120,11 @@ process COMBINE_FASTQS {
 
 }
 
-process SORT_BAM {
 
-    /*
-
-        Index the BAM file from a star process.
-
-    */
-
-    cpus 8
-    memory "24GB"
-
-    conda "bioconda::samtools=1.23.1 bioconda::htslib=1.23.1"
-
-    tag "Sorting ${meta.sample_name}"
-
-    input:
-        tuple val(meta), path(bam)
-
-    output:
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_sorted.bam"), path("${meta.sample_name}_${meta.molecule}_sorted.bam.bai")
-
-    script:
-        """
-        samtools sort --threads $task.cpus  $bam -o "${meta.sample_name}_${meta.molecule}_sorted.bam"
-        samtools index -@ $task.cpus  "${meta.sample_name}_${meta.molecule}_sorted.bam"
-        """
-
-}
 process SPLIT_INTERVALS {
 
     /*
-
-        Given a file of genomic intervals, split into scatter_count number of shards.
+        Takes a file of genomic intervals such as a picard interval file or BED file splits into scatter_count number of shards for parallel processing.
 
     */
 
@@ -132,7 +137,8 @@ process SPLIT_INTERVALS {
     container "broadinstitute/gatk:4.6.1.0"
 
     input:
-        tuple path(reference_fa), path(reference_fa_index), path(reference_dict)
+        tuple path(reference_fa), path(reference_fa_index)
+        path reference_dict
         tuple val(capture_kit), path(intervals_file)
         val scatter_count
         val interval_padding
@@ -152,8 +158,12 @@ process SPLIT_INTERVALS {
     """
 }
 
+//***************************************************************************************************************************
+// RESOURCE PULLING FROM WEB SOURCES
 
 process PULL_ARRIBA_RESOURCES {
+
+    // Pulls arribra resources from release 2.5.1. Runs locally incase job nodes don't have internet.
 
     cpus 1
     memory "4GB"
@@ -167,6 +177,8 @@ process PULL_ARRIBA_RESOURCES {
             path("./arriba_v2.5.1/database/protein_domains_hg38_GRCh38_v2.5.1.gff3"), emit: resources
     
     script:
+
+        
     """
         wget https://github.com/suhrig/arriba/releases/download/v2.5.1/arriba_v2.5.1.tar.gz
         ls
@@ -179,6 +191,8 @@ process PULL_ARRIBA_RESOURCES {
 }
 
 process PULL_VEP_PVAC_PLUGINS {
+
+    // Pulls the VEP plugins necessary to run pvactools. Runs locally to ensure internet connection.
 
     cpus 1
     memory "4GB"
@@ -203,6 +217,8 @@ process PULL_VEP_PVAC_PLUGINS {
 
 process PULL_CTAT_RESOURCE_BUNDLE {
 
+    // Pulls the hg38 CTAT resource bundle needed for STARfusion and other tools.
+
     cpus 1
     memory "8GB"
     executor "local"
@@ -221,21 +237,24 @@ process PULL_CTAT_RESOURCE_BUNDLE {
 
 }
 
+
+//***************************************************************************************************************************
+// FILE INDEXING OPERATIONS
+
 process INDEX_VCF {
-    /*
+    
+    // TBI index a vcf file
 
-    tabix index a vcf file
-
-    */
 
     cpus 2
     memory "8GB"
-    
     container "staphb/bcftools:1.23"
 
+    tag "Indexing $vcf"
+
     input:
-        tuple val(vcf_name), val(meta), path(vcf)
-        val(filename_suffix)
+        tuple val(vcf_name), val(meta), path(vcf) // vcf name should be a string that corresponds to the file name ie. Sample1
+        val(filename_suffix) // suffix corresponds to name after vcf_name ie somatic_variants -> Sample1_somatic_variants.vcf.gz
 
     output:
         tuple val(meta), path("${vcf_name}_${filename_suffix}.vcf.gz"), path("${vcf_name}_${filename_suffix}.vcf.gz.tbi")
@@ -248,12 +267,42 @@ process INDEX_VCF {
 
 }
 
+process SORT_BAM {
+
+    /*
+    Sorts a BAM file and indexes it.
+    */
+
+    cpus 8
+    memory "24GB"
+
+    conda "bioconda::samtools=1.23.1 bioconda::htslib=1.23.1"
+
+    tag "Sorting ${meta.sample_name}"
+
+    input:
+        tuple val(meta), path(bam)
+
+    output:
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_sorted.bam"), path("${meta.sample_name}_${meta.molecule}_sorted.bam.bai")
+
+    script:
+        """
+        samtools sort --threads $task.cpus  $bam -o "${meta.sample_name}_${meta.molecule}_sorted.bam"
+        samtools index -@ $task.cpus  "${meta.sample_name}_${meta.molecule}_sorted.bam"
+        """
+
+}
 process CAPTURE_KIT_BED_PROCESS {
+
+    // Tools like Strelka require a bgzipped and tbi indexes BED file when running with specified regions.
+    // Take a BED file and bgzip and TBI index it
 
     cpus 2
     memory "8GB"
-
     conda "bioconda::samtools=1.23.1 bioconda::bedtools=2.31.1 bioconda::htslib=1.23.1"
+
+    tag "Preprocessing $kit BED file $bed"
 
     input:
         tuple val(kit), path(bed)
@@ -269,3 +318,87 @@ process CAPTURE_KIT_BED_PROCESS {
     """
 
 }
+
+//*******************************************************************************************************************
+// REFERENCE FASTA PREPARATION
+
+process PREPARE_FASTA {
+
+    // Unzips a fasta.gz or fa.gz or otherwise renames to a standard name
+
+	cpus 2
+	memory "8GB"
+
+    tag "Preprocessing $fasta"
+
+    input:
+    	path fasta
+
+    output:
+    	path "*_prc.fa", emit: fasta
+
+    script:
+
+    	def is_gz = fasta.name.endsWith('.gz')
+        def prefix = fasta.name.replaceFirst(/\.(fasta|fa)(\.gz)?$/, '')
+
+    	"""
+    	set -euo pipefail
+
+    	if ${is_gz}; then
+        	gunzip -c ${fasta} > ${prefix}_prc.fa
+    	else
+        	cp ${fasta} ${prefix}_prc.fa
+    	fi
+    	"""
+}
+
+process INDEX_FASTA {
+
+    // Indexes a fasta file with samtools faidx
+
+    cpus 4
+    memory "16GB"
+    conda "bioconda::samtools=1.23.1 bioconda::bedtools=2.31.1 bioconda::htslib=1.23.1"
+
+    tag "Indexing $fasta"
+
+    input:
+    	path fasta
+
+    output:
+    	tuple path(fasta), path("${fasta}.fai"), emit: fai
+
+    script:
+        """
+        set -euo pipefail
+    	samtools faidx $fasta
+        """
+}
+
+process MAKE_FASTA_DICT {
+
+    // Generate picard fasta.dict file for use with GATK tools
+
+    cpus 4
+    memory "16GB"
+    container "broadinstitute/gatk:4.6.1.0"
+
+    tag "Creating reference dict for $fasta"
+
+    input:
+        tuple path(fasta), path(fai)
+
+    output:
+        path("${fasta.baseName}.dict"), emit: dict
+
+    script:
+    """
+    gatk CreateSequenceDictionary \
+        R=${fasta} \
+        O=${fasta.baseName}.dict
+    """
+}
+
+//*******************************************************************************************************************
+

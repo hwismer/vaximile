@@ -2,13 +2,13 @@
 process DEEPSOMATIC {
 
     cpus 18
-    memory "48GB"
-
+    memory "32GB"
     container "google/deepsomatic:1.10.0"
-
+    
+    tag "DeepSomatic on ${somatic_meta.somatic_name}"
     input:
         tuple val(somatic_meta), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai), path(bed_regions)
-        tuple path(reference_fa), path(reference_index), path(reference_dict)
+        tuple path(reference_fa), path(reference_index)
 
 
     output:
@@ -45,15 +45,14 @@ process DEEPSOMATIC {
 
 }
 
-workflow DEEPSOMATIC_WF {
+workflow DEEPSOMATIC_WORKFLOW {
 
     take:
         somatic_pairs // (somatic metamap, tumor_bam, tumor_bai, normal_bam, normal_bai)
         reference_genome // (fasta, fasta.fai, dict)
-        capture_kits
+        capture_kits // (kit_name, bed file)
 
     main:
-        
 
         somatic_pairs_kit = somatic_pairs.map{ meta, tumor_bam, tumor_bai, normal_bam, normal_bai ->
             tuple(meta.capture_kit, meta, tumor_bam, tumor_bai, normal_bam, normal_bai)

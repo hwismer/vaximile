@@ -2,12 +2,14 @@ process MUTECT2_FILTER_MUTECT_CALLS {
     
     cpus 2
     memory "16GB"
-    
     container "broadinstitute/gatk:4.6.1.0"
+
+    tag "Filtering Mutect calls for ${somatic_meta.somatic_name}"
 
     input:
         tuple val(somatic_meta), path(unfiltered_vcf), path(orientation_model), path(stats), path(contamination_table)
-        tuple path(reference_fa), path(reference_index), path(reference_dict)
+        tuple path(reference_fa), path(reference_index)
+        path reference_dict
 
     output:
         tuple val(somatic_meta), path("${somatic_meta.somatic_name}_mutect_filtered.vcf.gz"), path("${somatic_meta.somatic_name}_mutect_filtered.vcf.gz.tbi"), emit: filtered_vcf
@@ -30,8 +32,9 @@ process MUTECT2_MERGE_STATS {
     
     cpus 2
     memory "8GB"
-    
     container "broadinstitute/gatk:4.6.1.0"
+    
+    tag "Merging Mutect stats for ${somatic_meta.somatic_name}"
 
     input:
         tuple val(somatic_meta), path(stats)
@@ -55,9 +58,10 @@ process MUTECT2_MERGE_STATS {
 process MUTECT2_LEARN_READ_ORIENTATION {
     
     cpus 4
-    memory "8GB"
-    
+    memory "12GB"
     container "broadinstitute/gatk:4.6.1.0"
+
+    tag "Learning read orientation for ${somatic_meta.somatic_name}"
 
     input:
         tuple val(somatic_meta), path(f1r2s)
@@ -82,8 +86,9 @@ process MUTECT2_CALCULATE_CONTAMINATION {
 
     cpus 4
     memory "8GB"
-    
     container "broadinstitute/gatk:4.6.1.0"
+
+    tag "Calculalting contamination for ${somatic_meta.somatic_name}"
 
     input:
         tuple val(somatic_meta), path(tumor_pileups), path(normal_pileups)
@@ -108,8 +113,9 @@ process MUTECT2_GATHER_VCFS {
 
     cpus 2
     memory "8GB"
-    
     container "broadinstitute/gatk:4.6.1.0"
+    
+    tag "Gathering Mutect VCFs from ${somatic_meta.somatic_name}"
 
     input:
         tuple val(somatic_meta), path(vcfs)
@@ -138,6 +144,8 @@ process MUTECT2_GATHER_SELECT_VARIANTS {
     cpus 2
     memory "8GB"
     container "broadinstitute/gatk:4.6.1.0"
+
+    tag "Selecting Variants within interval for ${somatic_meta.somatic_name} in $interval_shard"
 
     input:
         tuple val(somatic_meta), path(vcf), path(vcf_index),  path(interval_shard)
@@ -169,13 +177,14 @@ process MUTECT2_SCATTER {
 
     cpus 4
     memory "12GB"
-    cache "lenient"
-
     container "broadinstitute/gatk:4.6.1.0"
+
+    tag "Running Mutect2 scatter on ${somatic_meta.somatic_name} at $interval_shard"
 
     input:
         tuple val(somatic_meta), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai), path(interval_shard)
-        tuple path(reference_fa), path(reference_index), path(reference_dict)
+        tuple path(reference_fa), path(reference_index)
+        path reference_dict
         tuple path(germline_resource), path(germline_resource_index)
         tuple path(pon), path(pon_index)
         val interval_padding

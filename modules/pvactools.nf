@@ -21,9 +21,9 @@ process PVACSEQ {
 
     cpus 16
     memory "64GB"
-
     container "griffithlab/pvactools:6.0.3"
 
+    tag "pVACseq on ${somatic_name}"
     input:
         tuple val(somatic_name), 
             val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index),
@@ -31,7 +31,7 @@ process PVACSEQ {
             val(hla_meta), path(hla_pvac_input)
         path(human_ref_peptides)
     output:
-        path("${somatic_meta.somatic_name}_pvacseq"), emit: pvacseq_dir
+        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_pvacseq"), emit: pvacseq_dir
 
     script:
         """
@@ -61,15 +61,16 @@ process PVACFUSE {
     
     cpus 8
     memory "64GB"
-
     container "griffithlab/pvactools:6.0.3"
 
+    
+    tag "pVACfuse on ${somatic_name}"
     input:
-        tuple val(somatic_name), val(sample_meta), path(arriba_fusions), path(starfusion_calls), path(hla_pvac_input)
+        tuple val(somatic_name), val(arriba_meta), path(arriba_fusions), val(star_meta), path(starfusion_calls), val(hla_meta), path(hla_pvac_input)
         path human_ref_peptides
 
     output:
-        path("${somatic_name}_pvacfuse"), emit: pvacfuse_dir
+        tuple val(star_meta), path("${somatic_name}_pvacfuse"), emit: pvacfuse_dir
     
     script:
         """

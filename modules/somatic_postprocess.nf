@@ -7,8 +7,9 @@ process INDEX_FINAL_VCF {
 
     cpus 2
     memory "8GB"
-
     conda "bioconda::tabix=0.2.6"
+
+    tag "Indexing final vcf $vcf"
 
     input:
         tuple val(meta), path(vcf)
@@ -27,10 +28,12 @@ process INDEX_FINAL_VCF {
 
 
 process VCF_TO_TABLE {
+
     cpus 1
     memory "8GB"
-
     container "broadinstitute/gatk:4.6.1.0"
+
+    tag "Exporint $vcf to tsv table"
 
     input:
         tuple val(meta), path(vcf), path(vcf_index)
@@ -62,16 +65,17 @@ process MERGE_SOMATIC_VCFS {
 
     cpus 4
     memory "16GB"
-    
     container "broadinstitute/gatk3:3.6-0"
+
+    tag "Merge 3 somatic vcfs from $vcf1 $vcf2 $vcf3"
 
     input:
         tuple val(somatic_meta), 
             val(vcf1_caller), path(vcf1), path(vcf1_index), 
             val(vcf2_caller), path(vcf2), path(vcf2_index),
             val(vcf3_caller), path(vcf3), path(vcf3_index)
-        tuple path(reference_fa), path(reference_index), path(reference_dict)
-    
+        tuple path(reference_fa), path(reference_index)
+        path(reference_dict)
     output:
         tuple val(somatic_meta), path("${somatic_meta.somatic_name}_variants.vcf.gz")
 
@@ -104,8 +108,9 @@ process FILTER_VCF {
     
     cpus 4
     memory "16GB"
-   
     container "staphb/bcftools:1.23"
+
+    tag "Filtering non-passing variants from $caller $somatic_vcf"
     
     
     input:
@@ -136,8 +141,9 @@ process ADD_VCF_GT_FIELD {
 
     cpus 2
     memory "16GB"
-    
     container "griffithlab/vatools:5.2.0"
+
+    tag "Adding 0/1 default GT to variants $somatic_vcf"
 
     input:
         tuple val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index)
@@ -167,10 +173,9 @@ process VEP_FILTER {
 
     cpus 2
     memory "16GB"
-    cache "lenient"
-
-
     container "ensemblorg/ensembl-vep:release_115.0"
+
+    tag "Filtering $vep_vcf with VEP based on population frequencies"
 
     input:
         tuple val(meta), path(vep_vcf)
@@ -202,13 +207,13 @@ process POSTPROCESS_VCF {
 
     cpus 4
     memory "16GB"
-    cache "lenient"
-
     container "staphb/bcftools:1.23"
+
+    tag "Normalizing $somatic_vcf"
 
     input:
         tuple val(meta), val(caller), path(somatic_vcf), path(somatic_vcf_index)
-        tuple path(reference_fa), path(reference_index_dir), path(reference_dict)
+        tuple path(reference_fa), path(reference_index_dir)
 
     output:
         tuple val(meta), val(caller),

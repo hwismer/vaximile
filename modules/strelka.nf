@@ -64,7 +64,7 @@ process MANTA {
 
    input:
         tuple val(somatic_meta), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai), path(bed), path(bed_index)
-        tuple path(reference_fa), path(reference_fai), path(reference_dict)
+        tuple path(reference_fa), path(reference_fai)
     output:
         tuple val(somatic_meta), path("./${somatic_meta.somatic_name}_manta")
 
@@ -102,7 +102,7 @@ process STRELKA {
 
    input:
         tuple val(somatic_meta), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai), path(manta_dir), path(bed), path(bed_index)
-        tuple path(reference_fa), path(reference_fai), path(reference_dict)
+        tuple path(reference_fa), path(reference_fai)
 
     output:
         tuple val(somatic_meta), 

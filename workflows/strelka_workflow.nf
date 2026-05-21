@@ -6,10 +6,9 @@ workflow STRELKA_WORKFLOW {
     take:
         somatic_pairs // (somatic metamap, tumor_bam, tumor_bai, normal_bam, normal_bai)
         reference_genome // (fasta, fasta.fai, dict)
-        capture_kits
+        strelka_bed
 
     main:
-        strelka_bed = CAPTURE_KIT_BED_PROCESS(capture_kits)
         
         somatic_pairs_kit = somatic_pairs.map{ meta, tumor_bam, tumor_bai, normal_bam, normal_bai ->
             tuple(meta.capture_kit, meta, tumor_bam, tumor_bai, normal_bam, normal_bai)

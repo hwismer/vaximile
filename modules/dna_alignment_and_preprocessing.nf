@@ -4,22 +4,19 @@ process BWA_MAP {
     /*
         Map fastq files using BWA. Outputs a sorted BAM file and its index
         Reads groups are created using metadata information and currently are basically just the same name.
-
+        Creates read group solely based on provided metadata from samplesheet. Any readgroup information
+        present in the FASTQs is ignored.
     */
 
     cpus 8
     memory "32GB"
-    cache "lenient"
-
-    clusterOptions '--gres=scratch:250G'
-
     container "iarcbioinfo/bwa-mem2-tools:v1.0"
     
     tag "BWA Alignment on ${meta.sample_name}"
 
     input:
         tuple val(meta), path(fastq1), path(fastq2)
-        tuple path(reference_fa), path(reference_index), path(reference_dict)
+        tuple path(reference_fa), path(reference_index)
         path bwa_index
 
     output:
@@ -42,7 +39,6 @@ process CREATE_BWA_INDEX {
 
     cpus 8
     memory "80GB"
-
     container "iarcbioinfo/bwa-mem2-tools:v1.0"
 
     tag "Creating BWA index for $reference_fa"
@@ -52,7 +48,7 @@ process CREATE_BWA_INDEX {
     cache 'lenient'
 
     input:
-        tuple path(reference_fa), path(reference_index), path(reference_dict)
+        tuple path(reference_fa), path(reference_index)
 
     output:
         path "*{.bwt.2bit.64,.sa,.pac,.amb,.ann,.0123}", emit: bwa_index
@@ -66,7 +62,12 @@ process CREATE_BWA_INDEX {
 
 process MARK_DUPLICATES_SPARK {
 
-    cpus 8
+    /*
+    Par of GATK pre-processing best practices. Takes an aligned bam or sam file and outputrdinate-sorted
+    BAM file with duplicates marked.
+    */
+
+    cpus 16
     memory "32GB"
     container "broadinstitute/gatk:4.6.1.0"
     clusterOptions '--gres=scratch:600G'
@@ -99,6 +100,11 @@ process MARK_DUPLICATES_SPARK {
 
 process BASE_RECALIBRATOR_SCATTER {
 
+    /*
+    Scatters calls to BaseRecalibrator over the provided interval. Per GATK best practices.
+    Returns the recalibration table for that interval.
+    */
+
     cpus 2
     memory "12GB"
     container "broadinstitute/gatk:4.6.1.0"
@@ -107,7 +113,8 @@ process BASE_RECALIBRATOR_SCATTER {
 
     input:
         tuple val(meta), path(markdup_bam), path(markdup_bam_bai), path(interval_shard)
-        tuple path(reference_fa), path(reference_index), path(reference_dict)
+        tuple path(reference_fa), path(reference_index)
+        path(reference_dict)
         tuple path(known_sites_dbsnp), path(known_sites_dbsnp_index)
         tuple path(known_sites_1000g_snps), path(known_sites_1000g_snps_index)
         tuple path(known_indels), path(known_indels_index)
@@ -132,6 +139,10 @@ process BASE_RECALIBRATOR_SCATTER {
 }
 
 process BASE_RECALIBRATOR_GATHER {
+
+    /*
+    Gathers scattered BaseRecalibrator recal tables from separate intervals and outputs the final table.
+    */
     
     cpus 2
     memory "8GB"
@@ -157,6 +168,10 @@ process BASE_RECALIBRATOR_GATHER {
 
 
 process APPLY_BQSR_SCATTER {
+
+    /*
+    Apply base quality score recalibration on a provided interval.
+    */
     
     cpus 4
     memory "12GB"
@@ -166,7 +181,8 @@ process APPLY_BQSR_SCATTER {
 
     input:
         tuple val(meta), path(markdup_bam), path(markdup_bam_bai), path(recal_table), path(interval_shard)
-        tuple path(reference_fa), path(reference_index), path(reference_dict)
+        tuple path(reference_fa), path(reference_index)
+        path reference_dict
 
     output:
         tuple val(meta), path("${meta.sample_name}_${meta.molecule}_${interval_shard}_bqsr.bam")
@@ -183,6 +199,10 @@ process APPLY_BQSR_SCATTER {
 }
 
 process APPLY_BQSR_GATHER {
+
+    /*
+    Gathers all bqsr games to create a final merged bam with adjusted base quality scores.
+    */
 
     cpus 4
     memory "16GB"
@@ -206,6 +226,10 @@ process APPLY_BQSR_GATHER {
 }
 
 process GET_PILEUP_SUMMARIES {
+
+    /*
+    Takes a merged post-bqsr bam and a vcf of common germline sites and gets pileup summaries at provided sites
+    */
     
     cpus 4
     memory "16GB"
@@ -236,39 +260,45 @@ process GET_PILEUP_SUMMARIES {
 
 process PREPARE_FASTA {
     
+    // Unzips a fasta.gz or fa.gz or otherwise renames to a standard name
+
 	cpus 2
 	memory "8GB"
-	
-	publishDir "./resources/references/", mode: 'copy', overwrite: true
 
+    tag "Preprocessing $fasta"
+	
     input:
     	path fasta
 
     output:
-    	path "reference.fa", emit: fasta
+    	path "*_prc.fa", emit: fasta
 
     script:
+
     	def is_gz = fasta.name.endsWith('.gz')
+        def prefix = fasta.name.replaceFirst(/\.(fasta|fa)(\.gz)?$/, '')
 
     	"""
     	set -euo pipefail
 
     	if ${is_gz}; then
-        	gunzip -c ${fasta} > reference.fa
+        	gunzip -c ${fasta} > ${prefix}_prc.fa
     	else
-        	cp ${fasta} reference.fa
+        	cp ${fasta} ${prefix}_prc.fa
     	fi
     	"""
 }
 
 process INDEX_FASTA {
 
+    // Indexes a fasta file with samtools faidx
 
     cpus 4
     memory "16GB"
     conda "bioconda::samtools=1.23.1 bioconda::bedtools=2.31.1 bioconda::htslib=1.23.1"
     
-    publishDir "./resources/", mode: 'copy', overwrite: true
+    tag "Indexing $fasta"
+
     input:
     	path fasta
 
@@ -284,17 +314,19 @@ process INDEX_FASTA {
 
 process MAKE_FASTA_DICT {
 
+    // Generate picard fasta.dict file for use with GATK tools
+
     cpus 4
     memory "16GB"
     container "broadinstitute/gatk:4.6.1.0"
 
-    publishDir "./resources", mode: 'copy', overwrite: true
+    tag "Creating reference dict for $fasta"
 
     input:
         tuple path(fasta), path(fai)
 
     output:
-        tuple path(fasta), path(fai), path("${fasta.baseName}.dict"), emit: dict
+        path("${fasta.baseName}.dict"), emit: dict
 
     script:
     """

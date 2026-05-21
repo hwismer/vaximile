@@ -1,5 +1,5 @@
-include { BWA_MAP;  CREATE_BWA_INDEX; PREPARE_FASTA; INDEX_FASTA; MAKE_FASTA_DICT } from "../modules/alignment_and_preprocessing.nf"
-include { MARK_DUPLICATES_SPARK; BASE_RECALIBRATOR_SCATTER; BASE_RECALIBRATOR_GATHER; APPLY_BQSR_SCATTER; APPLY_BQSR_GATHER; GET_PILEUP_SUMMARIES } from "../modules/alignment_and_preprocessing.nf"
+include { BWA_MAP;  CREATE_BWA_INDEX; PREPARE_FASTA; INDEX_FASTA; MAKE_FASTA_DICT } from "../modules/dna_alignment_and_preprocessing.nf"
+include { MARK_DUPLICATES_SPARK; BASE_RECALIBRATOR_SCATTER; BASE_RECALIBRATOR_GATHER; APPLY_BQSR_SCATTER; APPLY_BQSR_GATHER; GET_PILEUP_SUMMARIES } from "../modules/dna_alignment_and_preprocessing.nf"
 include { SORT_BAM } from "../modules/utilities.nf"
 include { SAMTOOLS_FLAGSTAT; SAMTOOLS_COVERAGE; SAMTOOLS_IDXSTATS } from "../modules/qc.nf"
 
@@ -31,11 +31,12 @@ workflow PREPARE_REFERENCE_FASTA {
     main:
         
         fasta_proc = PREPARE_FASTA(fasta)
-        fasta_plus_fai = INDEX_FASTA(fasta_proc)
-        fasta_fai_dict = MAKE_FASTA_DICT(fasta_plus_fai)
+        fasta_plus_fai = INDEX_FASTA(fasta_proc).fai
+        dict = MAKE_FASTA_DICT(fasta_plus_fai).dict
 
     emit:
-        reference = fasta_fai_dict
+        fa_fai_pair = fasta_plus_fai
+        dict  = dict
         
 }
 
@@ -44,7 +45,8 @@ workflow DNA_ALIGN_AND_PREPROC {
 
     take:
         fastqs // (metamap, fastq1, fastq2)
-        reference_genome // (reference fasta, reference fasta index, reference dict)
+        reference_genome // (reference fasta, reference fasta index)
+        reference_dict // reference_dict file
         bwa_index // Either null if not supplied in main workflow or path to bwa index files
         known_sites_dbsnp // (vcf, vcf index)
         known_sites_1000g_snps // (vcf, vcf_index)
@@ -83,6 +85,7 @@ workflow DNA_ALIGN_AND_PREPROC {
         base_recal = BASE_RECALIBRATOR_SCATTER(
             base_recal_input,
             reference_genome,
+            reference_dict,
             known_sites_dbsnp,
             known_sites_1000g_snps,
             known_indels,
@@ -99,7 +102,7 @@ workflow DNA_ALIGN_AND_PREPROC {
         .combine(intervals_map, by:0 )
         .map{kit, meta, bam, bai, bqsr, interval -> tuple(meta, bam, bai, bqsr, interval) }
 
-        bqsr = APPLY_BQSR_SCATTER(bqsr_input, reference_genome)
+        bqsr = APPLY_BQSR_SCATTER(bqsr_input, reference_genome, reference_dict)
         bqsr_scattered = bqsr.groupTuple(size: num_intervals)
         bqsr_gather = APPLY_BQSR_GATHER(bqsr_scattered) // Get final BQSR bams
         bqsr_sort = SORT_BAM(bqsr_gather)
