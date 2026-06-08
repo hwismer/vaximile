@@ -1,12 +1,14 @@
 include { HAPLOTYPE_CALLER_SCATTER; HAPLOTYPE_CALLER_CNN_SCORE_VARIANTS; 
     HAPLOTYPE_CALLER_GATHER_SELECT_VARIANTS; HAPLOTYPE_CALLER_GATHER_VCFS; 
-    HAPLOTYPE_CALLER_FILTER_VARIANTS;  } from "../modules/germline.nf"
+    HAPLOTYPE_CALLER_FILTER_VARIANTS;  } from "../modules/germline_variant_calling.nf"
 
-include { DEEPVARIANT; STRELKA_GERMLINE } from "../modules/germline.nf"
+include { DEEPVARIANT; STRELKA_GERMLINE } from "../modules/germline_variant_calling.nf"
 
-include { POSTPROCESS_VCF; MERGE_GERMLINE_VCFS; FILTER_VCF; VEP_ANNOTATE } from "../modules/germline.nf"
+include { POSTPROCESS_VCF; MERGE_GERMLINE_VCFS; FILTER_VCF; VEP_ANNOTATE } from "../modules/germline_variant_calling.nf"
 
 include { INDEX_VCF; } from "../modules/utilities.nf"
+
+include { VCF_TO_TABLE } from "../modules/vcf_postprocessing.nf"
 
 
 
@@ -111,9 +113,13 @@ workflow GERMLINE_WORKFLOW {
         }
         merged_vcf_indexed = INDEX_VCF(merged_vcf_input, "germline")
 
+        vcf_table_name = merged_vcf_indexed.map{ meta, vcf, tbi -> tuple(meta, meta.sample_name + "_germline", vcf, tbi) }
+        vcf_table = VCF_TO_TABLE(vcf_table_name)
+
     
     emit:
         germline_vcf = merged_vcf_indexed
+        germline_vcf_table = vcf_table
         germline_vep = vep_report
 
 }

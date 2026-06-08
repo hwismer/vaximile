@@ -1,5 +1,5 @@
-include { FASTP } from "../modules/qc.nf"
-include { SOMALIER_EXTRACT; SOMALIER_RELATE } from "../modules/qc.nf"
+include { FASTP } from "../modules/quality_control.nf"
+include { SOMALIER_EXTRACT; SOMALIER_RELATE } from "../modules/quality_control.nf"
 
 workflow DNA_QC_WORKFLOW {
 

@@ -4,7 +4,7 @@ include { MUTECT2_SCATTER;
     MUTECT2_CALCULATE_CONTAMINATION; 
     MUTECT2_LEARN_READ_ORIENTATION; 
     MUTECT2_MERGE_STATS;
-    MUTECT2_FILTER_MUTECT_CALLS } from "../modules/mutect.nf"
+    MUTECT2_FILTER_MUTECT_CALLS } from "../modules/mutect2_somatic.nf"
 
 workflow MUTECT2 {
 

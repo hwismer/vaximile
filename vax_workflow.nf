@@ -41,8 +41,9 @@ params.somalier_sites = "https://github.com/brentp/somalier/files/3412456/sites.
 
 //**************************************************************************************************************************************
 // Helper processes used in the main workflow
-include { SPLIT_INTERVALS; COMBINE_FASTQS; MULTIQC; MERGE_BAMS; CAPTURE_KIT_BED_PROCESS } from "./modules/utilities.nf"
+include { SPLIT_INTERVALS; COMBINE_FASTQS; MERGE_BAMS; CAPTURE_KIT_BED_PROCESS } from "./modules/utilities.nf"
 include { PULL_VEP_PVAC_PLUGINS; PULL_CTAT_RESOURCE_BUNDLE; PULL_ARRIBA_RESOURCES } from "./modules/utilities.nf"
+include { MULTIQC } from "./modules/quality_control.nf"
 
 // Subworkflows
 include { DNA_QC_WORKFLOW; RNA_QC_WORKFLOW; SOMALIER } from "./workflows/qc_workflow.nf"
@@ -281,6 +282,7 @@ workflow {
 
     germline_vcf = germline.germline_vcf
     germline_vep_report = germline.germline_vep
+    germline_table = germline.germline_vcf_table
 
     
     //**************************************************************************************************************************************
@@ -416,6 +418,7 @@ workflow {
     )
 
     somatic_vcf = pvac_input.somatic_vcf
+    somatic_vcf_table = pvac_input.somatic_vcf_table
     phased_vcf = pvac_input.phased_vcf
     vep_report = pvac_input.vep_report
     
@@ -494,6 +497,7 @@ workflow {
     publish:
         multiqc_reports = multiqc
         somatic_vcf = somatic_vcf
+        somatic_vcf_table = somatic_vcf_table
         germline_vcf = germline_vcf
         optitype_calls = optitype 
         hlahd_calls =  hlahd
@@ -509,6 +513,9 @@ output {
     }
     somatic_vcf {
         path { meta, vcf, vcf_index -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/variants" }
+    }
+    somatic_vcf_table {
+        path { meta, table -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/variants" }
     }
     optitype_calls {
         path { meta, tsv, pdf -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/hla/optitype/" }

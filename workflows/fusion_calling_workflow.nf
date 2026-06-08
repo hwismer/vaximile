@@ -1,4 +1,4 @@
-include { STAR_FUSION; ARRIBA_FUSION } from "../modules/fusion_calling.nf"
+include { STAR_FUSION; ARRIBA_FUSION } from "../modules/rna_fusion_calling.nf"
 
 workflow FUSION_CALLING {
 

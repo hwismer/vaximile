@@ -96,7 +96,7 @@ process HLAHD_TO_TSV {
     
     import pandas as pd
     
-    test = pd.read_csv("${hlahd_result}", sep = "\\t", header = None)
+    test = pd.read_csv("${hlahd_result}", sep = "\\t", header = None, names=range(10))
     test = test.rename(columns = {0:"locus"})
     test.insert(0, "sample", "${meta.sample_name}")
     test["calls"] = test.iloc[:, 2:].apply(

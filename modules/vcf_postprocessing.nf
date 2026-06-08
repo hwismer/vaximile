@@ -29,17 +29,17 @@ process INDEX_FINAL_VCF {
 
 process VCF_TO_TABLE {
 
-    cpus 1
+    cpus 2
     memory "8GB"
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "Exporint $vcf to tsv table"
 
     input:
-        tuple val(meta), path(vcf), path(vcf_index)
+        tuple val(meta), val(file_name), path(vcf), path(vcf_index)
 
     output:
-        path "${meta.somatic_name}_variants.tsv"
+        tuple val(meta), path("${file_name}.tsv")
 
     script:
         """
@@ -48,8 +48,7 @@ process VCF_TO_TABLE {
             -F CHROM -F POS -F ID -F REF -F ALT -F QUAL -F AC -F AF -F set -F FILTER -F CSQ \
             -GF AD -GF DP -GF GT -GF AF \
             -GF RDP -GF RAF -GF RAD -GF RADF -GF RADR -GF TX -GF GX \
-            -O "${meta.somatic_name}_variants.tsv"
-
+            -O "${file_name}.tsv"
         """
 
 

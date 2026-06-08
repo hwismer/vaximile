@@ -2,10 +2,9 @@
 process {
     executor = "slurm"
     time = 14.d
-    //cache = "lenient"
     scratch = true
-    queue = "krummellab"
-    clusterOptions = '--gres=scratch:250G --nodelist=c4-n18,c4-n35 --exclude=c4-n1,c4-n2,c4-n4'
+    queue = "krummellab,common"
+    clusterOptions = '--gres=scratch:250G'
     errorStrategy = 'ignore'
     maxRetries = 2
 }
@@ -24,6 +23,11 @@ executor {
 
 plugins {
     id 'nf-google'
+}
+workflow {
+    output {
+        mode = "copy"
+    }
 }
 conda.enabled = true
 

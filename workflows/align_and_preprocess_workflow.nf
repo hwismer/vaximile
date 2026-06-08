@@ -1,7 +1,8 @@
-include { BWA_MAP;  CREATE_BWA_INDEX; PREPARE_FASTA; INDEX_FASTA; MAKE_FASTA_DICT } from "../modules/dna_alignment_and_preprocessing.nf"
-include { MARK_DUPLICATES_SPARK; BASE_RECALIBRATOR_SCATTER; BASE_RECALIBRATOR_GATHER; APPLY_BQSR_SCATTER; APPLY_BQSR_GATHER; GET_PILEUP_SUMMARIES } from "../modules/dna_alignment_and_preprocessing.nf"
+include { BWA_MAP;  CREATE_BWA_INDEX;  } from "../modules/dna_processing.nf"
+include { PREPARE_FASTA; INDEX_FASTA; MAKE_FASTA_DICT } from "../modules/utilities.nf"
+include { MARK_DUPLICATES_SPARK; BASE_RECALIBRATOR_SCATTER; BASE_RECALIBRATOR_GATHER; APPLY_BQSR_SCATTER; APPLY_BQSR_GATHER; GET_PILEUP_SUMMARIES } from "../modules/dna_processing.nf"
 include { SORT_BAM } from "../modules/utilities.nf"
-include { SAMTOOLS_FLAGSTAT; SAMTOOLS_COVERAGE; SAMTOOLS_IDXSTATS } from "../modules/qc.nf"
+include { SAMTOOLS_FLAGSTAT; SAMTOOLS_COVERAGE; SAMTOOLS_IDXSTATS } from "../modules/quality_control.nf"
 
 
 workflow BWA_INDEX {

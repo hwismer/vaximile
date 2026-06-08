@@ -1,12 +1,13 @@
-include { ADD_VCF_GT_FIELD; MERGE_SOMATIC_VCFS; FILTER_VCF; POSTPROCESS_VCF } from "../modules/somatic_postprocess.nf"
+include { ADD_VCF_GT_FIELD; MERGE_SOMATIC_VCFS; FILTER_VCF; POSTPROCESS_VCF; VCF_TO_TABLE } from "../modules/vcf_postprocessing.nf"
 
-include { VEP_ANNOTATE; VEP_POPULATION_FILTER; BAMREADCOUNT; ANNOTATE_VCF_TRANSCRIPT_EXPRESSION; ANNOTATE_VCF_GENE_EXPRESSION } from "../modules/pvactools_vcf_prep.nf"
+include { VEP_ANNOTATE; VEP_POPULATION_FILTER; BAMREADCOUNT; ANNOTATE_VCF_TRANSCRIPT_EXPRESSION; ANNOTATE_VCF_GENE_EXPRESSION } from "../modules/vcf_preparation_pvactools.nf"
 
 include {
     ANNOTATE_VCF_COVERAGE as ANNOTATE_VCF_COVERAGE_TUMOR_DNA; 
     ANNOTATE_VCF_COVERAGE as ANNOTATE_VCF_COVERAGE_NORMAL_DNA;
     ANNOTATE_VCF_COVERAGE as ANNOTATE_VCF_COVERAGE_TUMOR_RNA
-} from "../modules/pvactools_vcf_prep.nf"
+} from "../modules/vcf_preparation_pvactools.nf"
+
 include { INDEX_VCF } from "../modules/utilities.nf"
 
 include { 
@@ -17,9 +18,8 @@ include {
     PHASE_VCF_RBPHASING;
     PHASE_VCF_VEP;
     PHASE_VCF_INDEX;
-} from "../modules/pvactools_vcf_phasing.nf"
+} from "../modules/vcf_germline_phasing.nf"
 
-        
 
 
 
@@ -93,7 +93,9 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
     index_input = gene_vcf.map{meta, vcf ->
         tuple(meta.somatic_name, meta, vcf)
     }
-    final_vcf = INDEX_VCF(index_input, "variants") 
+    final_vcf = INDEX_VCF(index_input, "variants")
+    final_vcf_table_input = final_vcf.map { meta, vcf, tbi -> tuple(meta, meta.somatic_name + "_somatic_variants", vcf, tbi) }
+    final_vcf_table = VCF_TO_TABLE(final_vcf_table_input)
 
 
     // CREATE PHASED VCF 
@@ -117,6 +119,7 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
 
     emit:
         somatic_vcf = final_vcf
+        somatic_vcf_table = final_vcf_table
         phased_vcf = phased_vcf_final
         vep_report = vep.report
 }
