@@ -1,4 +1,0 @@
-somatic_name,patient,sample_name,sample_type,sequencing_type,capture_kit,fastqr1,fastqr2
-IPISRC045_T1_N1,IPISRC045,IPISRC045_T1,Tumor,exome,agilent_v7,/krummellab/data1/hwismer/vax_data/IPISRC045/DNA/FASTQ/TL-26-0DB5D1XSXI_T_DSQ2_1.fastq.gz,/krummellab/data1/hwismer/vax_data/IPISRC045/DNA/FASTQ/TL-26-0DB5D1XSXI_T_DSQ2_2.fastq.gz
-IPISRC045_T1_N1,IPISRC045,IPISRC045_N1,Normal,exome,agilent_v7,/krummellab/data1/hwismer/vax_data/IPISRC045/DNA/FASTQ/TL-26-0DB5D1XSXI_N_DSQ1_1.fastq.gz,/krummellab/data1/hwismer/vax_data/IPISRC045/DNA/FASTQ/TL-26-0DB5D1XSXI_N_DSQ1_2.fastq.gz
-IPISRC045_T1_N1,IPISRC045,IPISRC045_T1,Tumor,rna,,/krummellab/data1/hwismer/vax_data/IPISRC045/RNA/FASTQ/TL-26-0DB5D1XSXI_T_RSQ1_1.fastq.gz,/krummellab/data1/hwismer/vax_data/IPISRC045/RNA/FASTQ/TL-26-0DB5D1XSXI_T_RSQ1_3.fastq.gz

@@ -3,4 +3,13 @@
     "capture_kits" : "/krummellab/data1/hwismer/UCSF-Custom-Immunoprofiler-Vaccine-Pipeline/aux_files/capture_kits.csv",
     "outdir" : "cIPI_vax_out",
     "vep_cache" : "/c4/home/hwismer/0_execs/vep/vep_data/"
+
+
+
+    "gtf" : "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.annotation.gtf.gz",
+    "transcriptome_reference": "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.pc_transcripts.fa.gz",
+
+    "scatter_count" : 30,
+    "intervals_file" : "gs://gcp-public-data--broad-references/hg38/v0/wgs_calling_regions.hg38.interval_list",
+    "interval_padding":100
 }
