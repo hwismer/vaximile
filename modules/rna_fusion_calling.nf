@@ -6,7 +6,7 @@ process STAR_FUSION {
     */
 
     cpus 12
-    memory "64GB"
+    memory "90GB"
     container "trinityctat/starfusion:1.15.0"
 
     tag "Running STARfusion on ${meta.sample_name}"
@@ -35,8 +35,8 @@ process STAR_FUSION {
 
 process ARRIBA_FUSION {
 
-    cpus 8
-    memory "64GB"
+    cpus 6
+    memory "350GB"
     conda "bioconda::arriba=2.5.1"
 
     tag "Running Arriba fusion calling on ${meta.sample_name}"

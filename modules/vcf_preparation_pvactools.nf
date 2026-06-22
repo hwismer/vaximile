@@ -8,7 +8,7 @@ process BAMREADCOUNT {
     */
 
     cpus 4
-    memory "32GB"
+    memory "48GB"
     cache "lenient"
 
     container "mgibio/bam_readcount_helper-cwl:1.2.1"

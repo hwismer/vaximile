@@ -446,10 +446,10 @@ workflow {
 
     pvacfuse_input = arriba_fusion_somatic_name.join(star_fusion_somatic_name).join(combined_hla_somatic_name)
 
-    pvactools = PVACTOOLS_WORKFLOW(pvacseq_input, pvacfuse_input, human_ref_peptides)
+    //pvactools = PVACTOOLS_WORKFLOW(pvacseq_input, pvacfuse_input, human_ref_peptides)
 
-    pvacseq = pvactools.pvacseq
-    pvacfuse = pvactools.pvacfuse
+    //pvacseq = pvactools.pvacseq
+    //pvacfuse = pvactools.pvacfuse
 
 
     somalier = SOMALIER(markdup_bams, reference_genome, somalier_sites)
@@ -502,8 +502,8 @@ workflow {
         optitype_calls = optitype 
         hlahd_calls =  hlahd
         hla_pvac_input = hla_pvac_input
-        pvacseq = pvacseq
-        pvacfuse = pvacfuse
+        //pvacseq = pvacseq
+        //pvacfuse = pvacfuse
         kallisto_gene = kallisto_gene
 }
 
@@ -526,12 +526,14 @@ output {
     hla_pvac_input {
         path { meta, calls -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/hla/" }
     }
-    pvacseq {
-        path { meta, pvacseq_dir -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/pvactools/" }
-    }
+    //pvacseq {
+    //    path { meta, pvacseq_dir -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/pvactools/" }
+    //}
+    /*
     pvacfuse {
         path { meta, pvacfuse_dir -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/pvactools" }
     }
+    */
     germline_vcf {
         path { meta, vcf, tbi -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/germline/" }
     }
