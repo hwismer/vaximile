@@ -1,5 +1,0 @@
-somatic_name,sample_name,sample_type,sequencing_type,fastqr1,fastqr2
-IPIMEL576_M4_vs_B1,IPIMEL576_M4,Tumor,exome,/krummellab/data1/hwismer/IPIMEL576/IPIMEL576_M4_WES/IPIMEL576_M4_WES_R1.fastq.gz,/krummellab/data1/hwismer/IPIMEL576/IPIMEL576_M4_WES/IPIMEL576_M4_WES_R2.fastq.gz
-IPIMEL576_M4_vs_B1,IPIMEL576_B1,Normal,exome,/krummellab/data1/hwismer/IPIMEL576/IPIMEL576_B1_WES/IPIMEL576_B1_WES_R1.fastq.gz,/krummellab/data1/hwismer/IPIMEL576/IPIMEL576_B1_WES/IPIMEL576_B1_WES_R2.fastq.gz
-IPIMEL577_M4_vs_N5,IPIMEL577_M4,Tumor,exome,/c4/home/hwismer/IPIMEL577_data/IPIMEL577_M4_WES/IPIMEL577_M4_wes_R1.fastq.gz,/c4/home/hwismer/IPIMEL577_data/IPIMEL577_M4_WES/IPIMEL577_M4_wes_R2.fastq.gz
-IPIMEL577_M4_vs_N5,IPIMEL577_N5,Normal,exome,/c4/home/hwismer/IPIMEL577_data/IPIMEL577_N5_WES/IPIMEL577_N5_wes_R1.fastq.gz,/c4/home/hwismer/IPIMEL577_data/IPIMEL577_N5_WES/IPIMEL577_N5_wes_R2.fastq.gz

@@ -21,7 +21,7 @@ process PVACSEQ {
 
     cpus 16
     memory "64GB"
-    container "griffithlab/pvactools:6.0.3"
+    container "griffithlab/pvactools:7.0.1"
 
     tag "pVACseq on ${somatic_name}"
     input:
@@ -48,8 +48,9 @@ process PVACSEQ {
             --iedb-install-directory /opt/iedb \
             --pass-only \
             --run-reference-proteome-similarity \
+            --run-ml-predictions \
+            --top-score-metric2 'combined_percentile','ic50' \
             --peptide-fasta $human_ref_peptides \
-            -m2 percentile \
             -m median \
             -a sample_name \
             --problematic-amino-acids P:-2 \
@@ -61,7 +62,7 @@ process PVACFUSE {
     
     cpus 8
     memory "64GB"
-    container "griffithlab/pvactools:6.0.3"
+    container "griffithlab/pvactools:7.0.1"
 
     
     tag "pVACfuse on ${somatic_name}"
@@ -87,7 +88,7 @@ process PVACFUSE {
             --run-reference-proteome-similarity \
             --peptide-fasta $human_ref_peptides \
             -m median \
-            -m2 percentile \
+            --top-score-metric2 'combined_percentile','ic50' \
             -t $task.cpus
         """
 

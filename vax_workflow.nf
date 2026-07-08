@@ -82,7 +82,11 @@ workflow {
     reference_dict = prepared_reference.dict.first()
 
     bwa_index_input = params.bwa_index
-    bwa_index = BWA_INDEX(reference_genome, bwa_index_input)
+    if (bwa_index_input  == null) {
+        bwa_index = BWA_INDEX(reference_genome, bwa_index_input)
+    } else {
+        bwa_index = Channel.fromPath("${params.bwa_index}/*.{amb,ann,bwt,pac,sa}", checkIfExists: true).collect()
+    }
 
     transcriptome_reference = Channel.fromPath(params.transcriptome_reference).first()
     gtf = Channel.fromPath(file(params.gtf)).first()
@@ -178,6 +182,13 @@ workflow {
 
     // DO WGS/WES ALIGNMENT AND GATK BEST PRACTICES PREPROCESSING
     // ****************************************************************
+    
+    reference_genome.view()
+
+    reference_dict.view()
+
+    bwa_index.view()
+
 
     preproc_bam_workflow = DNA_ALIGN_AND_PREPROC(
         dna_fastqs,
@@ -446,10 +457,10 @@ workflow {
 
     pvacfuse_input = arriba_fusion_somatic_name.join(star_fusion_somatic_name).join(combined_hla_somatic_name)
 
-    //pvactools = PVACTOOLS_WORKFLOW(pvacseq_input, pvacfuse_input, human_ref_peptides)
+    pvactools = PVACTOOLS_WORKFLOW(pvacseq_input, pvacfuse_input, human_ref_peptides)
 
-    //pvacseq = pvactools.pvacseq
-    //pvacfuse = pvactools.pvacfuse
+    pvacseq = pvactools.pvacseq
+    pvacfuse = pvactools.pvacfuse
 
 
     somalier = SOMALIER(markdup_bams, reference_genome, somalier_sites)
@@ -502,8 +513,8 @@ workflow {
         optitype_calls = optitype 
         hlahd_calls =  hlahd
         hla_pvac_input = hla_pvac_input
-        //pvacseq = pvacseq
-        //pvacfuse = pvacfuse
+        pvacseq = pvacseq
+        pvacfuse = pvacfuse
         kallisto_gene = kallisto_gene
 }
 
@@ -526,25 +537,19 @@ output {
     hla_pvac_input {
         path { meta, calls -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/hla/" }
     }
-    //pvacseq {
-    //    path { meta, pvacseq_dir -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/pvactools/" }
-    //}
-    /*
+    pvacseq {
+        path { meta, pvacseq_dir -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/pvactools/" }
+    }
+    
     pvacfuse {
         path { meta, pvacfuse_dir -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/pvactools" }
     }
-    */
+    
     germline_vcf {
         path { meta, vcf, tbi -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/germline/" }
     }
     kallisto_gene {
         path { meta, gene_abundance -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/kallisto" }
     }
-
-    
-    // Fusion results
-    // RNA expression
-    // Bams
-    // somalier
 
 }
