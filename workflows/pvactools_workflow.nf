@@ -1,4 +1,4 @@
-include { PVACSEQ; PVACFUSE } from "../modules/pvactools.nf"
+include { PVACSEQ; PVACFUSE; COMBINE_PVACSEQ_AGGREGATED_REPORT} from "../modules/pvactools.nf"
 
 workflow PVACTOOLS_WORKFLOW {
 
@@ -12,9 +12,13 @@ workflow PVACTOOLS_WORKFLOW {
     pvacseq = PVACSEQ(pvacseq_input, proteome_reference)
     pvacfuse = PVACFUSE(pvacfuse_input, proteome_reference)
 
+    pvacseq_patient = pvacseq.pvaseq_mhc_i_aggr.map{meta, report -> tuple(meta.patient, report)}.groupTuple()
+    combined_report = COMBINE_PVACSEQ_AGGREGATED_REPORT(pvacseq_patient)
+
 
     emit:
-        pvacseq = pvacseq
+        pvacseq = pvacseq.pvacseq_dir
+        pvacseq_mhc_i_combined = combined_report
         pvacfuse = pvacfuse
 
 }

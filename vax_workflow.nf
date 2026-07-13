@@ -460,6 +460,7 @@ workflow {
     pvactools = PVACTOOLS_WORKFLOW(pvacseq_input, pvacfuse_input, human_ref_peptides)
 
     pvacseq = pvactools.pvacseq
+    pvacseq_mhc_i_combined = pvactools.pvacseq_mhc_i_combined
     pvacfuse = pvactools.pvacfuse
 
 
@@ -514,6 +515,7 @@ workflow {
         hlahd_calls =  hlahd
         hla_pvac_input = hla_pvac_input
         pvacseq = pvacseq
+        pvacseq_mhc_i_combined = pvacseq_mhc_i_combined
         pvacfuse = pvacfuse
         kallisto_gene = kallisto_gene
 }
@@ -540,7 +542,9 @@ output {
     pvacseq {
         path { meta, pvacseq_dir -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/pvactools/" }
     }
-    
+    pvacseq_mhc_i_combined {
+        path { patient, report -> "${params.outdir}/${patient}/pvactools_report" }
+    }
     pvacfuse {
         path { meta, pvacfuse_dir -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/pvactools" }
     }

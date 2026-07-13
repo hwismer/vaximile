@@ -32,6 +32,7 @@ process PVACSEQ {
         path(human_ref_peptides)
     output:
         tuple val(somatic_meta), path("${somatic_meta.somatic_name}_pvacseq"), emit: pvacseq_dir
+        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_pvacseq/MHC_Class_I/*MHC_I.all_epitopes.aggregated.tsv"), emit: pvaseq_mhc_i_aggr
 
     script:
         """
@@ -56,6 +57,56 @@ process PVACSEQ {
             --problematic-amino-acids P:-2 \
             -t $task.cpus
         """
+}
+
+process COMBINE_PVACSEQ_AGGREGATED_REPORT {
+
+    cpus 2
+    memory "16GB"
+    conda "python=3.10 pandas=2.1"
+    
+    tag "Combing pVACseq reports for ${patient}"
+
+    input:
+        tuple val(patient), path(reports)
+
+    output:
+        tuple val(patient), path("${patient}_pvacseq_reports.tsv")
+
+    script:
+
+    def file_list = reports.collect { "'${it.name}'" }.join(", ")
+
+    """
+    #!/usr/bin/env python3
+    
+    import pandas as pd
+    
+    files = [${file_list}]
+    
+    # CREATING MERGED DATAFRAME
+    df = None
+    for f in files:
+        if df is None:
+            df = pd.read_csv(f, sep = "\\t")
+            df["sample"] = f.split(".")[0]
+        else:
+            new_df = pd.read_csv(f, sep = "\\t")
+            new_df["sample"] = f.split(".")[0]
+            df = pd.concat([df,new_df])
+            
+    # SORTING
+    tier_order = ["Pass", "PoorBinder", "PoorImmunogenicity", "PoorPresentation", "RefMatch", "PoorTranscript", 
+        "LowExpr", "Anchor", "Subclonal", "ProbPos", "Poor", "NoExpr"]
+    
+    df["Tier"] = pd.Categorical(df["Tier"], categories=tier_order, ordered=True)
+    
+    df["sum_rank"] = (df["Allele Expr"].rank(method="min") + df["%ile MT"].rank(method="min") + df["IC50 MT"].rank(method="min"))
+    
+    df = df.sort_values(["Tier", "sum_rank", "IC50 MT", "Gene", "AA Change"],kind="mergesort").drop(columns="sum_rank").reset_index()
+    df.to_csv("${patient}_pvacseq_reports.tsv", sep = "\\t", index = False)
+    """
+
 }
 
 process PVACFUSE {

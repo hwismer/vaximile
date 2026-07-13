@@ -1,7 +1,7 @@
 #!/bin/bash
 
-nextflow -C ./aux_files/vax_config.nf run \
+nextflow -C ./inputs/vax_config.nf run \
     vax_workflow.nf \
-    -params-file ./aux_files/params.json \
+    -params-file ./inputs/params.json \
     -resume \
     -ansi-log true
