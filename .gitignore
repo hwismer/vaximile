@@ -1,0 +1,9 @@
+samplesheet.csv
+params.json
+vax_config.csv
+catpure_kits.csv
+inputs/
+run_vax_wf.sh
+work/
+resources/
+*out
