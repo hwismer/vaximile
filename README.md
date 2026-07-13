@@ -1,4 +1,4 @@
-# UCSF Custom Immunoprofiler - Tumor Neoantigen Vaccine Pipeline
+# Vaxsimile - Tumor Neoantigen Vaccine Pipeline
 
 ## Prerequisites
 
