@@ -1,4 +1,4 @@
-![vaxsimile](misc/vaxsimile_logo.png)
+<img src="images/forest.jpg" alt="forest" width="256" height="256">
 # Vaxsimile - Tumor Neoantigen Vaccine Pipeline
 
 ## Prerequisites
