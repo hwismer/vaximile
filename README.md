@@ -1,3 +1,4 @@
+![vaxsimile](misc/vaxsimile_logo.png)
 # Vaxsimile - Tumor Neoantigen Vaccine Pipeline
 
 ## Prerequisites
