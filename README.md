@@ -2,7 +2,7 @@
 
 <img src="misc/vaxsimile_logo.png" alt="vaxsimile" align="right" width="128" height="128">
 
-### Tumor Neoantigen Vaccine Pipeline
+## Tumor Neoantigen Discovery Using Paired Tumor-Normal bulk DNA and RNA Sequencing
 
 
 ## Prerequisites
@@ -22,7 +22,7 @@
 
 ## Install
     1. Clone the repository
-    2. Install Nextflow,
+    2. Install Nextflow
     3. Prepare required input files and optional parameters
     4. Prepare capture kit samplesheet
     4. Prepare patient samplesheet
