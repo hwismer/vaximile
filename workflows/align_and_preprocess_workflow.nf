@@ -124,6 +124,5 @@ workflow DNA_ALIGN_AND_PREPROC {
         coverage = coverage
         idxstats = idxstats
 
-        
 }
 

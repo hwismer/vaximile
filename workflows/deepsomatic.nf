@@ -1,8 +1,8 @@
 
 process DEEPSOMATIC {
 
-    cpus 18
-    memory "32GB"
+    cpus 32
+    memory "64GB"
     container "google/deepsomatic:1.10.0"
     
     tag "DeepSomatic on ${somatic_meta.somatic_name}"

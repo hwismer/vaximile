@@ -1,7 +1,7 @@
 process FASTP {
 
     cpus 8
-    memory "16GB"
+    memory "32GB"
     conda "bioconda::fastp=1.0.1"
 
     tag "FastP on ${meta.sample_name} w/ ${meta.molecule}"
@@ -24,6 +24,7 @@ process FASTP {
               -R "${meta.sample_name}_${meta.molecule}_fastp_report" \
               -h "${meta.sample_name}_${meta.molecule}.html" \
               -j "${meta.sample_name}_${meta.molecule}.json" \
+              --detect_adapter_for_pe
 
         """
 }

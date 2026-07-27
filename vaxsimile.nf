@@ -58,7 +58,6 @@ include { PVAC_INPUT_PREP_WORKFLOW } from "./workflows/pvac_vcf_preparation.nf"
 include { PVACTOOLS_WORKFLOW } from "./workflows/pvactools_workflow.nf"
 include { DEEPSOMATIC_WORKFLOW } from "./workflows/deepsomatic.nf"
 
-
 //**************************************************************************************************************************************
 
 // Make a (vcf, vcf index) channel automatically given a vcf path. Tbi must also exist
@@ -101,7 +100,7 @@ workflow {
     pon = make_vcf_channel(params.pon)
     hapmap = make_vcf_channel(params.hapmap)
     
-    somalier_sites = params.somalier_sites
+    somalier_sites = Channel.fromPath(params.somalier_sites).first()
 
     //**************************************************************************************************************************************
     // Pull Resources
@@ -183,13 +182,6 @@ workflow {
     // DO WGS/WES ALIGNMENT AND GATK BEST PRACTICES PREPROCESSING
     // ****************************************************************
     
-    reference_genome.view()
-
-    reference_dict.view()
-
-    bwa_index.view()
-
-
     preproc_bam_workflow = DNA_ALIGN_AND_PREPROC(
         dna_fastqs,
         reference_genome,
@@ -434,7 +426,7 @@ workflow {
     vep_report = pvac_input.vep_report
     
     //**************************************************************************************************************************************
-    // PVACtools Neoantigen Prediction - Somatic Variants / RNA Fusions / (Future: Splicing?)
+    // PVACtools Neoantigen Prediction - Somatic Variants / RNA Fusions /
 
     hla_branched = hla_pvac_input.branch{meta, calls ->
         merged: meta.sample_type == "Merged"
