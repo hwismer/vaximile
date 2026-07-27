@@ -1,6 +1,6 @@
-<img src="misc/vaxsimile_logo.png" alt="vaxsimile" width="128" height="128">
-
 # Vaxsimile - Tumor Neoantigen Vaccine Pipeline
+
+<img src="misc/vaxsimile_logo.png" alt="vaxsimile" align="right" width="128" height="128">
 
 ## Prerequisites
 
