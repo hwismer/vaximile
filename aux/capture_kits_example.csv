@@ -1,4 +1,3 @@
 kit,bed
-agilent_v7,/krummellab/data1/hwismer/resources/beds/AGV7_GRCh38_chr.bed
-twist_2,/krummellab/data1/hwismer/resources/beds/TwistExome_GRCh38_chr.bed
-ucsc_exome,/krummellab/data1/hwismer/resources/beds/ucsc_exome_g49_hg38_filt.bed
+agilent_v7,/beds/AGV7_GRCh38_chr.bed
+twist_2,/beds/TwistExome_GRCh38_chr.bed
