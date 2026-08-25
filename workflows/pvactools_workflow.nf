@@ -1,4 +1,4 @@
-include { PVACSEQ; PVACFUSE; COMBINE_PVACSEQ_AGGREGATED_REPORT} from "../modules/pvactools.nf"
+include { PVACSEQ; PVACFUSE; COMBINE_PVACSEQ_AGGREGATED_REPORT} from "../modules/local/pvactools.nf"
 
 workflow PVACTOOLS_WORKFLOW {
 

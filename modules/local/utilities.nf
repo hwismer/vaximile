@@ -105,6 +105,8 @@ process SPLIT_INTERVALS {
 
 process PULL_ARRIBA_RESOURCES {
 
+    storeDir './vaximile_resources/arriba_hg38'
+
     // Pulls arribra resources from release 2.5.1. Runs locally incase job nodes don't have internet.
 
     cpus 1
@@ -134,6 +136,8 @@ process PULL_ARRIBA_RESOURCES {
 
 process PULL_VEP_PVAC_PLUGINS {
 
+    storeDir './vaximile_resources/vep_pvac_plugins'
+
     // Pulls the VEP plugins necessary to run pvactools. Runs locally to ensure internet connection.
 
     cpus 1
@@ -158,6 +162,8 @@ process PULL_VEP_PVAC_PLUGINS {
 }
 
 process PULL_CTAT_RESOURCE_BUNDLE {
+
+    storeDir './vaximile_resources/ctat_resource_dir'
 
     // Pulls the hg38 CTAT resource bundle needed for STARfusion and other tools.
 

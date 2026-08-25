@@ -1,5 +1,5 @@
-include { MANTA; STRELKA; POSTPROCESS_STRELKA } from "../modules/strelka_somatic.nf"
-include { CAPTURE_KIT_BED_PROCESS } from "../modules/utilities.nf"
+include { MANTA; STRELKA; POSTPROCESS_STRELKA } from "../modules/local/strelka_somatic.nf"
+include { CAPTURE_KIT_BED_PROCESS } from "../modules/local/utilities.nf"
 
 workflow STRELKA_WORKFLOW {
 

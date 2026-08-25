@@ -1,4 +1,4 @@
-include { OPTITYPE; HLAHD; HLA_CALLS_PVAC; EXTRACT_MHC_REGION; BAM_TO_FASTQ; MHC_REGION_FASTQS; HLAHD_TO_TSV }  from "../modules/hla_typing.nf"
+include { OPTITYPE; HLAHD; HLA_CALLS_PVAC; EXTRACT_MHC_REGION; BAM_TO_FASTQ; MHC_REGION_FASTQS; HLAHD_TO_TSV }  from "../modules/local/hla_typing.nf"
 
 workflow HLA_TYPING_WORKFLOW {
 

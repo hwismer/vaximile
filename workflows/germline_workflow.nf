@@ -1,14 +1,14 @@
 include { HAPLOTYPE_CALLER_SCATTER; HAPLOTYPE_CALLER_CNN_SCORE_VARIANTS; 
     HAPLOTYPE_CALLER_GATHER_SELECT_VARIANTS; HAPLOTYPE_CALLER_GATHER_VCFS; 
-    HAPLOTYPE_CALLER_FILTER_VARIANTS;  } from "../modules/germline_variant_calling.nf"
+    HAPLOTYPE_CALLER_FILTER_VARIANTS;  } from "../modules/local/germline_variant_calling.nf"
 
-include { DEEPVARIANT; STRELKA_GERMLINE } from "../modules/germline_variant_calling.nf"
+include { DEEPVARIANT; STRELKA_GERMLINE } from "../modules/local/germline_variant_calling.nf"
 
-include { POSTPROCESS_VCF; MERGE_GERMLINE_VCFS; FILTER_VCF; VEP_ANNOTATE } from "../modules/germline_variant_calling.nf"
+include { POSTPROCESS_VCF; MERGE_GERMLINE_VCFS; FILTER_VCF; VEP_ANNOTATE } from "../modules/local/germline_variant_calling.nf"
 
-include { INDEX_VCF; } from "../modules/utilities.nf"
+include { INDEX_VCF; } from "../modules/local/utilities.nf"
 
-include { VCF_TO_TABLE } from "../modules/vcf_postprocessing.nf"
+include { VCF_TO_TABLE } from "../modules/local/vcf_postprocessing.nf"
 
 
 

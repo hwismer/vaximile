@@ -1,14 +1,14 @@
-include { ADD_VCF_GT_FIELD; MERGE_SOMATIC_VCFS; FILTER_VCF; POSTPROCESS_VCF; VCF_TO_TABLE } from "../modules/vcf_postprocessing.nf"
+include { ADD_VCF_GT_FIELD; MERGE_SOMATIC_VCFS; FILTER_VCF; POSTPROCESS_VCF; VCF_TO_TABLE } from "../modules/local/vcf_postprocessing.nf"
 
-include { VEP_ANNOTATE; VEP_POPULATION_FILTER; BAMREADCOUNT; ANNOTATE_VCF_TRANSCRIPT_EXPRESSION; ANNOTATE_VCF_GENE_EXPRESSION } from "../modules/vcf_preparation_pvactools.nf"
+include { VEP_ANNOTATE; VEP_POPULATION_FILTER; BAMREADCOUNT; ANNOTATE_VCF_TRANSCRIPT_EXPRESSION; ANNOTATE_VCF_GENE_EXPRESSION } from "../modules/local/vcf_preparation_pvactools.nf"
 
 include {
     ANNOTATE_VCF_COVERAGE as ANNOTATE_VCF_COVERAGE_TUMOR_DNA; 
     ANNOTATE_VCF_COVERAGE as ANNOTATE_VCF_COVERAGE_NORMAL_DNA;
     ANNOTATE_VCF_COVERAGE as ANNOTATE_VCF_COVERAGE_TUMOR_RNA
-} from "../modules/vcf_preparation_pvactools.nf"
+} from "../modules/local/vcf_preparation_pvactools.nf"
 
-include { INDEX_VCF } from "../modules/utilities.nf"
+include { INDEX_VCF } from "../modules/local/utilities.nf"
 
 include { 
     PHASE_VCF_SELECT_VARIANTS;
@@ -18,7 +18,7 @@ include {
     PHASE_VCF_RBPHASING;
     PHASE_VCF_VEP;
     PHASE_VCF_INDEX;
-} from "../modules/vcf_germline_phasing.nf"
+} from "../modules/local/vcf_germline_phasing.nf"
 
 
 
