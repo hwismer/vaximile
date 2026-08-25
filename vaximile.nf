@@ -2,7 +2,7 @@
 // REQUIRED PARAMETERS
 //**************************************************************************************************************************************
 // Define default input and output files
-params.outdir = "./neoantigen_vax_pipeline_out/"
+params.outdir = "./vaximile_out"
 params.samplesheet =  null
 params.capture_kits = null
 params.vep_cache =  null
@@ -41,9 +41,10 @@ params.somalier_sites = "https://github.com/brentp/somalier/files/3412456/sites.
 
 //**************************************************************************************************************************************
 // Helper processes used in the main workflow
-include { SPLIT_INTERVALS; COMBINE_FASTQS; MERGE_BAMS; CAPTURE_KIT_BED_PROCESS } from "./modules/utilities.nf"
-include { PULL_VEP_PVAC_PLUGINS; PULL_CTAT_RESOURCE_BUNDLE; PULL_ARRIBA_RESOURCES } from "./modules/utilities.nf"
-include { MULTIQC } from "./modules/quality_control.nf"
+include { SPLIT_INTERVALS; COMBINE_FASTQS; MERGE_BAMS; CAPTURE_KIT_BED_PROCESS } from "./modules/local/utilities.nf"
+include { PULL_VEP_PVAC_PLUGINS; PULL_CTAT_RESOURCE_BUNDLE; PULL_ARRIBA_RESOURCES } from "./modules/local/utilities.nf"
+include { MULTIQC } from "./modules/local/quality_control.nf"
+include { ASCAT } from './modules/nf-core/ascat/main'
 
 // Subworkflows
 include { DNA_QC_WORKFLOW; RNA_QC_WORKFLOW; SOMALIER } from "./workflows/qc_workflow.nf"
@@ -540,7 +541,6 @@ output {
     pvacfuse {
         path { meta, pvacfuse_dir -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/pvactools" }
     }
-    
     germline_vcf {
         path { meta, vcf, tbi -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/germline/" }
     }
