@@ -1,0 +1,64 @@
+name: mhcflow
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.12
+  - pip=24.2
+  - samtools=1.21
+  - pip:
+      - mhcflow==0.2.3
+
+# NOTE: novoalign and novoindex are also required at runtime but are NOT
+# installable here — see the notes below.
+#
+# ---------------------------------------------------------------------------
+# Usage
+# ---------------------------------------------------------------------------
+#   Standalone:
+#     conda env create -f environment.yml
+#     conda activate mhcflow
+#
+#   Nextflow (file must end in .yml or .yaml or it won't be recognised):
+#     conda "${moduleDir}/environment.yml"
+#
+# ---------------------------------------------------------------------------
+# Why pip is listed twice
+# ---------------------------------------------------------------------------
+# `- pip=24.2` installs the pip binary into the environment. `- pip:` is the
+# nested key handing packages to it. Omit the first and conda may fall back to
+# a system pip that installs into the wrong prefix.
+#
+# mhcflow's own Python deps (mhctyper, tinyscibio, pyahocorasick, pyfaidx) are
+# resolved by pip automatically — no need to list them unless you want to pin
+# them, in which case add them under the pip: block with == pins.
+#
+# ---------------------------------------------------------------------------
+# THE NOVOALIGN PROBLEM
+# ---------------------------------------------------------------------------
+# From mhcflow's install docs, verbatim:
+#
+#   "mhcflow implicitly requires samtools, novoalign, and novoindex binaries
+#    to be available in your environment. Currently, mhcflow does not check
+#    for the presence of these binaries."
+#
+# novoalign is commercial and cannot be freely redistributed, so it cannot be
+# pinned in this file the way samtools can. You must supply it yourself and put
+# it on PATH. In a Nextflow process:
+#
+#   process MHCFLOW {
+#       conda "${moduleDir}/environment.yml"
+#       containerOptions "--bind /path/to/novocraft:/opt/novocraft"
+#       script:
+#       """
+#       export PATH=/path/to/novocraft:\$PATH
+#       export NOVOALIGN_LICENSE=/path/to/novoalign.lic
+#       mhcflow ...
+#       """
+#   }
+#
+# The "does not check for the presence of these binaries" part matters: a
+# missing novoalign will surface as a confusing downstream error rather than a
+# clean "command not found". Verify before running:
+#
+#   which samtools novoalign novoindex

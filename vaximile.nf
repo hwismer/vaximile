@@ -28,6 +28,11 @@ params.intervals_file = "gs://gcp-public-data--broad-references/hg38/v0/wgs_call
 params.interval_padding = 100
 params.scatter_count = 30
 
+params.hla_fasta = "https://raw.githubusercontent.com/jason-weirather/hla-polysolver/master/data/abc_complete.fasta"
+params.hla_fasta_fai = "https://raw.githubusercontent.com/jason-weirather/hla-polysolver/master/data/abc_complete.fasta.fai"
+params.hla_kmers = "https://github.com/jason-weirather/hla-polysolver/blob/master/data/abc_v14.uniq"
+params.hla_freq = "https://github.com/jason-weirather/hla-polysolver/blob/master/data/HLA_FREQ.txt"
+
 //**************************************************************************************************************************************
 // GATK RESOURCE VCFS USED FOR MUTECT2, HAPLOTYPECALLER, DATA PRE-PROCESSING
 params.common_germline = "gs://gatk-best-practices/somatic-hg38/small_exac_common_3.hg38.vcf.gz"
@@ -105,6 +110,15 @@ workflow {
     hapmap = make_vcf_channel(params.hapmap)
     
     somalier_sites = Channel.fromPath(params.somalier_sites).first()
+    
+    hla_fasta = Channel.fromPath(params.hla_fasta).first()
+    hla_fasta_fai = Channel.fromPath(params.hla_fasta_fai).first()
+    hla_reference = hla_fasta.combine(hla_fasta_fai)
+    hla_kmers = Channel.fromPath(params.hla_kmers).first()
+    hla_freq = Channel.fromPath(params.hla_freq).first()
+    
+
+
 
     //**************************************************************************************************************************************
     // Pull Resources
@@ -234,14 +248,14 @@ workflow {
 
     // Call HLA alleles on individual samples AND merged samples
     hla_input = markdup_bams.mix(combined_bams)
-    hla_workflow = HLA_TYPING_WORKFLOW(hla_input)
+    hla_workflow = HLA_TYPING_WORKFLOW(hla_input, params.reference_includes_chr_prefix,
+        hla_reference, hla_kmers, hla_freq)
     
     // Typing output
     optitype = hla_workflow.optitype
     hlahd = hla_workflow.hlahd
     hlahd_tsv = hla_workflow.hlahd_tsv
     hla_pvac_input = hla_workflow.pvac_input
-
 
     //**************************************************************************************************************************************
     // bulkRNAseq Processing

@@ -1,3 +1,76 @@
+
+process HLA_BED {
+    
+    cpus 1
+    memory "2GB"
+
+    conda "conda-forge::coreutils=9.3"
+
+    input:
+    val chr_prefix
+
+    output:
+    path "hla_region.bed", emit: bed
+    
+    script:
+    def contig = chr_prefix ? 'chr6' : '6'
+    def start = 28510119
+    def end = 33480577
+    """
+    printf '%s\\t%d\\t%d\\t%s\\n' '${contig}' ${start} ${end} 'MHC' > hla_region.bed
+    """
+}
+
+process NOVOALIGN_HLA_FASTA {
+
+    cpus 32
+    memory "32GB"
+
+    conda "bioconda::novoalign=4.03.04"
+
+    input:
+        tuple path(hla_fasta), path(hla_fai)
+
+    output:
+        tuple path(hla_fasta), path(hla_fai)
+
+    script:
+    """
+
+    """
+}
+
+process MHCFLOW {
+
+    cpus 32
+    memory "64GB"
+
+    conda "./envs/mhcflow.yml"
+
+    input:
+        tuple val(meta), path(bam), path(bai)
+        tuple path(hla_fasta), path(hla_fai)
+        path hla_bed
+        path hla_kmers
+        path hla_freqs
+
+    output:
+        tuple path(meta), path("${meta.sample_name}")
+
+    script:
+    """
+    mhcflow --bam $bam \
+        --ref $hla_fasta \
+        --bed $hla_bed \
+        --tag $hla_kmers \
+        --freq $hla_freqs \
+        --nproc $task.cpus \
+        --min-ecnt 1 \
+        --outdir ${meta.sample_name}
+	ls
+    """
+}
+
 process MHC_REGION_FASTQS {
     
     cpus 4
