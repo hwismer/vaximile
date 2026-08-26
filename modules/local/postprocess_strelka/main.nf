@@ -9,6 +9,7 @@ process POSTPROCESS_STRELKA {
 
     label 'process_medium'
 
+    conda "bioconda::bcftools=1.23.1"
     container "staphb/bcftools:1.23.1" 
 
     input:

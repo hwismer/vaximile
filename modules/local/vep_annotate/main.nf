@@ -10,6 +10,7 @@ process VEP_ANNOTATE {
 
     label 'process_medium'
 
+    conda "bioconda::ensembl-vep=115"
     container "ensemblorg/ensembl-vep:release_115.0"
 
     input:

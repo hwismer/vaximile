@@ -4,6 +4,7 @@ process INDEX_VCF {
 
 
     label 'process_low'
+    conda "bioconda::bcftools=1.23"
     container "staphb/bcftools:1.23"
 
     tag "Indexing $vcf"

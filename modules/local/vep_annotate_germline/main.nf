@@ -9,6 +9,7 @@ process VEP_ANNOTATE {
     */
 
     label 'process_high'
+    conda "bioconda::ensembl-vep=115"
     container "ensemblorg/ensembl-vep:release_115.0"
 
     tag "VEP on ${sample_meta.sample_name}"

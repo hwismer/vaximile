@@ -1,6 +1,7 @@
 process MUTECT2_CALCULATE_CONTAMINATION {
 
     label 'process_medium'
+    conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "Calculalting contamination for ${somatic_meta.somatic_name}"

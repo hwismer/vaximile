@@ -8,6 +8,7 @@ process HAPLOTYPE_CALLER_CNN_SCORE_VARIANTS {
 
     label 'process_medium'
 
+    conda "bioconda::gatk4=4.3.0.0"
     container "broadinstitute/gatk:4.3.0.0"
 
     tag "Scoring haplotypecaller variants from ${meta.sample_name} on ${interval_shard}"

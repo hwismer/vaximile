@@ -1,6 +1,7 @@
 process VCF_TO_TABLE {
 
     label 'process_low'
+    conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "Exporint $vcf to tsv table"

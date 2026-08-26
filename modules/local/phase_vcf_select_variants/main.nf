@@ -8,6 +8,7 @@ process PHASE_VCF_SELECT_VARIANTS {
     */
 
     label 'process_medium'
+    conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "Extracting tumor sample from $somatic_vcf"

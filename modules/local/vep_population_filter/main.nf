@@ -12,6 +12,7 @@ process VEP_POPULATION_FILTER {
     cache "lenient"
 
 
+    conda "bioconda::ensembl-vep=115"
     container "ensemblorg/ensembl-vep:release_115.0"
 
     input:

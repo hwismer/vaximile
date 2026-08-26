@@ -10,6 +10,7 @@ process SPLIT_INTERVALS {
     
     tag "Splitting ${intervals_file} into ${scatter_count} shards w/ ${interval_padding} bp padding"
 
+    conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
 
     input:

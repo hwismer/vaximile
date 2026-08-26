@@ -1,6 +1,7 @@
 process HAPLOTYPE_CALLER_FILTER_VARIANTS {
     
     label 'process_medium'
+    conda "bioconda::gatk4=4.3.0.0"
     container "broadinstitute/gatk:4.3.0.0"
 
     tag "Filtering germline variants in ${meta.sample_name}"

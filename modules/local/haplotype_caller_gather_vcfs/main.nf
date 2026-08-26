@@ -1,6 +1,7 @@
 process HAPLOTYPE_CALLER_GATHER_VCFS {
 
     label 'process_low'
+    conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "Gathering haplotype caller VCFs for ${sample_meta.sample_name}"

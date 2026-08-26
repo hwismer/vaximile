@@ -9,6 +9,7 @@ process VEP_FILTER {
     */
 
     label 'process_low'
+    conda "bioconda::ensembl-vep=115"
     container "ensemblorg/ensembl-vep:release_115.0"
 
     tag "Filtering $vep_vcf with VEP based on population frequencies"

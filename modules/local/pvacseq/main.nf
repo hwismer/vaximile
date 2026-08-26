@@ -20,6 +20,7 @@ process PVACSEQ {
     */
 
     label 'process_very_high'
+    conda "bioconda::pvactools=7.0.1"
     container "griffithlab/pvactools:7.0.1"
 
     tag "pVACseq on ${somatic_name}"

@@ -1,6 +1,7 @@
 process PVACFUSE {
     
     label 'process_high_memory'
+    conda "bioconda::pvactools=7.0.1"
     container "griffithlab/pvactools:7.0.1"
 
     

@@ -58,12 +58,12 @@ Nothing below breaks the pipeline; each is a step toward `nf-core lint` passing.
    table in the MultiQC report.
 3. **No `meta.yml` or `environment.yml` per local module.** Conda specs are still inline
    `conda "bioconda::tool=version"` strings, except `mhcflow`.
-4. **Software provisioning is split, so no single profile covers the pipeline.** 59 local
-   modules declare only a `container`, 31 declare only `conda`, 4 declare neither, and
-   none declare both. `-profile conda` therefore cannot resolve the 59, and the container
-   profiles cannot resolve the 31; the pipeline has in practice been run with conda and a
-   container engine enabled simultaneously. nf-core modules declare both, which is what
-   would make the profiles independently usable. The four with neither
+4. **Software provisioning is still split, though less so.** 39 modules now declare both
+   `conda` and `container`, 31 declare only `conda`, 20 only a `container`, and 4 neither.
+   `-profile conda` covers 70 of 94. The remaining 20 have real blockers — licensed jars
+   (GATK3), absent bioconda packages (DeepSomatic, HLA-HD), major version gaps (VAtools,
+   Manta), and absolute container paths baked into scripts (Strelka, DeepVariant). They
+   are tabulated with reasons in [docs/usage.md](usage.md). The four with neither
    (`combine_fastqs`, `prepare_fasta`, `pull_arriba_resources`,
    `pull_ctat_resource_bundle`) depend on host `PATH`.
 5. **`conf/test.config` is a stub.** It points at the example samplesheet, which references

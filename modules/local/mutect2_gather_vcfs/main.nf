@@ -1,6 +1,7 @@
 process MUTECT2_GATHER_VCFS {
 
     label 'process_low'
+    conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
     
     tag "Gathering Mutect VCFs from ${somatic_meta.somatic_name}"

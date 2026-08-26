@@ -1,6 +1,7 @@
 process HAPLOTYPE_CALLER_GATHER_SELECT_VARIANTS {
 
     label 'process_low'
+    conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "Select variants from ${sample_meta.sample_name} within ${interval_shard}"

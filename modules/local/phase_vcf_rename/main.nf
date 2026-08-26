@@ -9,6 +9,7 @@ process PHASE_VCF_RENAME {
     */
 
     label 'process_low'
+    conda "bioconda::bcftools=1.23.1"
     container "staphb/bcftools:1.23.1"
 
     tag "Renaming germline sample ${normal_meta.sample_name} to ${somatic_meta.tumor_meta.sample_name}"

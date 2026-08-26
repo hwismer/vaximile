@@ -7,6 +7,7 @@ process FILTER_VCF {
     */
     
     label 'process_medium'
+    conda "bioconda::bcftools=1.23"
     container "staphb/bcftools:1.23"
 
     tag "Filtering non-passing variants from $caller $somatic_vcf"

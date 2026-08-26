@@ -8,6 +8,7 @@ process POSTPROCESS_VCF {
     */
 
     label 'process_medium'
+    conda "bioconda::bcftools=1.23"
     container "staphb/bcftools:1.23"
 
     tag "Normalizing $somatic_vcf"

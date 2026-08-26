@@ -7,6 +7,7 @@ process HAPLOTYPE_CALLER_SCATTER {
     */
 
     label 'process_medium'
+    conda "bioconda::gatk4=4.3.0.0"
     container "broadinstitute/gatk:4.3.0.0"
 
     tag "Haplotype Caller on ${meta.sample_name} on ${interval_shard}"

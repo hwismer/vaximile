@@ -93,28 +93,50 @@ produces empty extractions rather than an error.
 Use `-profile` to select a software provisioning method. Multiple profiles are
 comma-separated and later entries override earlier ones.
 
-Software provisioning is currently **mixed**, and no single profile covers the whole
-pipeline. Of the 94 local modules:
+Software provisioning is **mixed**, and no single profile yet covers the whole pipeline.
+Of the 94 local modules:
 
 | Provisioning declared     | Modules |
 | ------------------------- | ------- |
-| `container` only          | 59      |
+| Both `conda` and `container` | 39   |
 | `conda` only              | 31      |
+| `container` only          | 20      |
 | Neither                   | 4       |
-| Both                      | 0       |
 
-So `-profile conda` cannot resolve software for the 59 container-only modules, and
-`-profile singularity` (or `docker`/`apptainer`) cannot resolve it for the 31 conda-only
-ones. In practice the pipeline has been run with **both** conda and a container engine
-enabled at once, which is what `conf/ucsf_krummellab.config` does.
+`-profile conda` now resolves software for 70 of 94 modules. The 20 container-only ones
+still need a container engine, so a run today wants **both** conda and a container engine
+enabled, which is what `conf/ucsf_krummellab.config` does.
+
+Every conda spec was checked against bioconda with `conda search` and pins the same
+version the container provides, with two exceptions noted below.
 
 The four modules with neither — `combine_fastqs`, `prepare_fasta`,
-`pull_arriba_resources`, `pull_ctat_resource_bundle` — rely on tools being present on the
-host `PATH`.
+`pull_arriba_resources`, `pull_ctat_resource_bundle` — rely on tools on the host `PATH`.
 
-Giving every module both a conda spec and a container is the change that would make the
-individual profiles meaningful; see
-[docs/nf-core-migration.md](nf-core-migration.md).
+### Why the remaining 20 are still container-only
+
+| Modules | Blocker |
+| ------- | ------- |
+| 4 × GATK3 (`merge_*_vcfs`, `phase_vcf_combine_variants`, `phase_vcf_rbphasing`) | bioconda's `gatk` 3.6 is a wrapper that needs the licensed jar registered manually; it cannot install unattended |
+| 4 × VAtools | bioconda only has 6.0.1; the container pins 5.2.0, a major-version gap |
+| 2 × STAR | bioconda only has 2.7.11b; the container pins 2.7.10a. STAR indices are version-sensitive, so switching would invalidate a prebuilt `--star_index` |
+| 2 × Strelka, 1 × Manta | scripts call `configure*Workflow.py` by absolute container path, and Manta's bioconda floor (1.28) is far above the pinned 1.6.0 |
+| `deepvariant` | bioconda has an exact 1.10.0, but the script hardcodes `/opt/deepvariant/bin/run_deepvariant`. Convertible with a one-line script change |
+| `deepsomatic`, `hlahd` | not packaged in bioconda (HLA-HD is licence-restricted) |
+| `optitype` | needs a `config.ini` and an ILP solver that the container supplies |
+| `bamreadcount` | runs `bam_readcount_helper.py`, a script that exists only in the CWL image |
+| `pull_vep_pvac_plugins` | bioconda has no pVACtools 6.0.3 |
+| `phase_vcf_sort_vcf` | runs `java -jar /usr/picard/picard.jar`; bioconda `picard` 3.4.0 exists but needs the call rewritten to `picard SortVcf` |
+
+### Two conda pins that are not exact
+
+- **`bwa-mem2=2.2.1`** — the container tag (`iarcbioinfo/bwa-mem2-tools:v1.0`) names the
+  toolset, not bwa-mem2, so the bundled version is unstated. 2.2.1 is the long-standing
+  stable release and is the most likely match, but it is inferred rather than verified.
+  Confirm before trusting conda and container to produce identical alignments.
+- **`ensembl-vep=115`** — the container is `release_115.0`; bioconda publishes this as
+  `115` (plus patches `115.1`, `115.2`). Same VEP release, and it matches a release-115
+  cache.
 
 - `test` — minimal settings for a smoke test; see `conf/test.config`.
 

@@ -6,6 +6,7 @@ process MARK_DUPLICATES_SPARK {
     */
 
     label 'process_very_high'
+    conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
     clusterOptions '--gres=scratch:600G'
 

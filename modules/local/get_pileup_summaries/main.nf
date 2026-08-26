@@ -5,6 +5,7 @@ process GET_PILEUP_SUMMARIES {
     */
     
     label 'process_medium'
+    conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "GetPileupSummaries on ${meta.sample_name}"

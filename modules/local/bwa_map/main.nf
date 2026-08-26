@@ -8,6 +8,7 @@ process BWA_MAP {
     */
 
     label 'process_high'
+    conda "bioconda::bwa-mem2=2.2.1"
     container "iarcbioinfo/bwa-mem2-tools:v1.0"
     
     tag "BWA Alignment on ${meta.sample_name}"

@@ -13,6 +13,14 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `nextflow.config` and `nextflow_schema.json`. Process bodies are unchanged. See
   [docs/nf-core-migration.md](docs/nf-core-migration.md) for what remains.
 
+- Added verified conda specs to 39 container-only modules, so `-profile conda` now covers
+  70 of 94 local modules instead of 31. Containers are retained; every spec was checked
+  against bioconda with `conda search` and pins the container's version (exceptions:
+  `bwa-mem2=2.2.1`, inferred because the container tag does not state a version, and
+  `ensembl-vep=115`, which is how bioconda publishes release 115.0). The 20 still
+  container-only have real blockers — GATK3's licensed jar, unpackaged DeepSomatic and
+  HLA-HD, major version gaps, and absolute container paths in scripts — tabulated in
+  docs/usage.md.
 - Converted all 94 local modules to nf-core process conventions. Each now carries a
   `process_*` label instead of its own `cpus`/`memory` (tiers in `conf/base.config`), 67
   support `task.ext.prefix`, and 19 read `task.ext.args` from `conf/modules.config`.

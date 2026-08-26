@@ -6,6 +6,7 @@ process BASE_RECALIBRATOR_SCATTER {
     */
 
     label 'process_low'
+    conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "BaseRecalibrator on ${meta.sample_name} ${interval_shard}"

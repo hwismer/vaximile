@@ -5,6 +5,7 @@ process BASE_RECALIBRATOR_GATHER {
     */
     
     label 'process_low'
+    conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "GatherBQSRReports on ${meta.sample_name}"

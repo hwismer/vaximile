@@ -6,6 +6,7 @@ process PHASE_VCF_VEP {
 
     */
     label 'process_high'
+    conda "bioconda::ensembl-vep=115"
     container "ensemblorg/ensembl-vep:release_115.0"
 
     tag "VEP on phased vcf $phased_vcf"

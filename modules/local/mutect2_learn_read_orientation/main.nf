@@ -1,6 +1,7 @@
 process MUTECT2_LEARN_READ_ORIENTATION {
     
     label 'process_medium'
+    conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "Learning read orientation for ${somatic_meta.somatic_name}"

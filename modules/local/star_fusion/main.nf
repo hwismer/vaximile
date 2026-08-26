@@ -6,6 +6,7 @@ process STAR_FUSION {
     */
 
     label 'process_very_high'
+    conda "bioconda::star-fusion=1.15.0"
     container "trinityctat/starfusion:1.15.0"
 
     tag "Running STARfusion on ${meta.sample_name}"

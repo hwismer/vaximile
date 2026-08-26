@@ -5,6 +5,7 @@ process APPLY_BQSR_SCATTER {
     */
     
     label 'process_medium'
+    conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "ApplyBQSR on ${meta.sample_name} ${interval_shard}"

@@ -5,6 +5,7 @@ process CREATE_BWA_INDEX {
     */
 
     label 'process_high_memory'
+    conda "bioconda::bwa-mem2=2.2.1"
     container "iarcbioinfo/bwa-mem2-tools:v1.0"
 
     tag "Creating BWA index for $reference_fa"
