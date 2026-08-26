@@ -67,7 +67,7 @@ workflow DNA_ALIGN_AND_PREPROC {
 
         // MarkDuplicatesSpark
         mark_dup = MARK_DUPLICATES_SPARK(bwa_sam)
-       
+
         // BASE RECALIBRATION
         // Call BaseRecalibrator on each interval
         markdup_kit = mark_dup.map{meta, bam, bai ->
@@ -79,10 +79,10 @@ workflow DNA_ALIGN_AND_PREPROC {
                 tuple(kit, interval)
             }
         }
-
-
+        
 
         base_recal_input = markdup_kit.combine(intervals_map, by: 0).map{kit, meta, bam, bai, interval -> tuple(meta, bam, bai, interval)}
+    
         base_recal = BASE_RECALIBRATOR_SCATTER(
             base_recal_input,
             reference_genome,

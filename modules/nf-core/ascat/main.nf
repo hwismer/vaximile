@@ -1,5 +1,5 @@
 process ASCAT {
-    tag "${meta.id}"
+    tag "${meta.somatic_name}"
     label 'process_medium'
 
     conda "${moduleDir}/environment.yml"
@@ -8,11 +8,11 @@ process ASCAT {
         : 'community.wave.seqera.io/library/ascat_cancerit-allelecount:c3e8749fa4af0e99'}"
 
     input:
-    tuple val(meta), path(input_normal), path(index_normal), path(input_tumor), path(index_tumor)
+    tuple val(meta), val(sex), path(input_normal), path(index_normal), path(input_tumor), path(index_tumor), path(bed_file)
     path allele_files
     path loci_files
-    path bed_file
-    path fasta
+    //path bed_file
+    tuple path(fasta), path(fai)
     path gc_file
     path rt_file
 
@@ -32,11 +32,13 @@ process ASCAT {
     task.ext.when == null || task.ext.when
 
     script:
-    def args = task.ext.args ?: ''
-    def prefix = task.ext.prefix ?: "${meta.id}"
+    def args = task.ext.args instanceof Map ? task.ext.args : [:]
+    //def args = task.ext.args ?: ''
+    def prefix = task.ext.prefix ?: meta.somatic_name ?: meta.id
+    //def prefix = task.ext.prefix ?: "${meta.somatic_sample}"
 
-    def gender        = args.gender        ? "${args.gender}"        : "NULL"
-    def genomeVersion = args.genomeVersion ? "${args.genomeVersion}" : "NULL"
+    def gender        = args.gender        ? "${args.gender}"        : sex
+    def genomeVersion = args.genomeVersion ? "${args.genomeVersion}" : "hg38"
     def purity        = args.purity        ? "${args.purity}"        : "NULL"
     def ploidy        = args.ploidy        ? "${args.ploidy}"        : "NULL"
     def gc_input      = gc_file            ? "${gc_file}"            : "NULL"

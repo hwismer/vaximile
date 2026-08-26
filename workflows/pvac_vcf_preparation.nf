@@ -51,7 +51,7 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
     vcfs = mutect.mix(deepsomatic).mix(strelka)
     vcfs_filtered = FILTER_VCF(vcfs).filtered_vcf
     vcfs_normalized = POSTPROCESS_VCF(vcfs_filtered, reference_genome)
-
+    
     callers = vcfs_normalized.branch{ meta, caller, vcf, tbi ->
         mutect: caller == "mutect"
         strelka: caller == "strelka"
@@ -60,27 +60,30 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
     
     merged_callers = callers.mutect.join(callers.deepsomatic).join(callers.strelka)
 
+
     merged_vcf = MERGE_SOMATIC_VCFS(merged_callers, reference_genome, reference_dict)
     vep = VEP_ANNOTATE(merged_vcf, reference_genome, vep_cache, vep_plugins)
     vep_filtered = VEP_POPULATION_FILTER(vep.vcf, vep_cache, vep_plugins)
 
     vep_filtered_somatic_name = vep_filtered.map {meta, vcf -> tuple(meta.somatic_name, meta, vcf) }
     all_samples_somatic_name = preproc_bams.mix(star_bam).map {meta, bam, bai -> tuple(meta.somatic_name, meta, bam,bai)}
-
+    
 
     bamreadcount_helper_input = vep_filtered_somatic_name.combine(all_samples_somatic_name, by:0)
 
     brc_helper = BAMREADCOUNT(bamreadcount_helper_input, reference_genome)
     
     brc_helper_branched = brc_helper.branch { somatic_meta, sample_meta, indels, snvs ->
-        tumor_dna: sample_meta.sample_type == "Tumor" && sample_meta.molecule == "DNA"
-        normal_dna: sample_meta.sample_type == "Normal" && sample_meta.molecule == "DNA"
-        tumor_rna: sample_meta.sample_type == "Tumor" && sample_meta.molecule == "RNA"
+        tumor_dna: sample_meta.sample_type == "TUMOR" && sample_meta.molecule == "DNA"
+        normal_dna: sample_meta.sample_type == "NORMAL" && sample_meta.molecule == "DNA"
+        tumor_rna: sample_meta.sample_type == "TUMOR" && sample_meta.molecule == "RNA"
     }
     
+
     tumor_dna = ANNOTATE_VCF_COVERAGE_TUMOR_DNA(brc_helper_branched.tumor_dna.join(vep_filtered))
     normal_dna_tdna = ANNOTATE_VCF_COVERAGE_NORMAL_DNA(brc_helper_branched.normal_dna.join(tumor_dna)) 
     tumor_rna_ndna_tdna = ANNOTATE_VCF_COVERAGE_TUMOR_RNA(brc_helper_branched.tumor_rna.join(normal_dna_tdna))
+
 
     somatic_name_vcf_coverage = tumor_rna_ndna_tdna.map{meta, vcf -> tuple(meta.somatic_name, meta, vcf) }
     somatic_name_tx = kallisto_tx_abundance.map{meta, tx -> tuple(meta.somatic_name, meta, tx) }
@@ -100,8 +103,8 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
 
     // CREATE PHASED VCF 
     tumor_normal_samples = preproc_bams.branch {meta, bam, bai ->
-        tumor:meta.sample_type == "Tumor"
-        normal:meta.sample_type == "Normal"
+        tumor:meta.sample_type == "TUMOR"
+        normal:meta.sample_type == "NORMAL"
     }
     
     // Phase with germline calls

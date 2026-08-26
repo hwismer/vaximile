@@ -17,6 +17,7 @@ params.bwa_index = null
 //**************************************************************************************************************************************
 // Default reference genome, GTF, transcriptome for rnaseq, human reference proteome peptides for pvactools
 params.reference_fa = "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/GRCh38.primary_assembly.genome.fa.gz"
+params.reference_includes_chr_prefix = true
 params.gtf = "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.annotation.gtf.gz"
 params.transcriptome_reference = "https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz"
 params.human_ref_peptides = "https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz"
@@ -42,7 +43,7 @@ params.somalier_sites = "https://github.com/brentp/somalier/files/3412456/sites.
 //**************************************************************************************************************************************
 // Helper processes used in the main workflow
 include { SPLIT_INTERVALS; COMBINE_FASTQS; MERGE_BAMS; CAPTURE_KIT_BED_PROCESS } from "./modules/local/utilities.nf"
-include { PULL_VEP_PVAC_PLUGINS; PULL_CTAT_RESOURCE_BUNDLE; PULL_ARRIBA_RESOURCES } from "./modules/local/utilities.nf"
+include { PULL_VEP_PVAC_PLUGINS; PULL_CTAT_RESOURCE_BUNDLE; PULL_ARRIBA_RESOURCES; PULL_ASCAT_RESOURCES } from "./modules/local/utilities.nf"
 include { MULTIQC } from "./modules/local/quality_control.nf"
 include { ASCAT } from './modules/nf-core/ascat/main'
 
@@ -80,14 +81,16 @@ workflow {
     prepared_reference = PREPARE_REFERENCE_FASTA(reference_fa)
     reference_genome = prepared_reference.fa_fai_pair.first()
     reference_dict = prepared_reference.dict.first()
+    
 
     bwa_index_input = params.bwa_index
     if (bwa_index_input  == null) {
         bwa_index = BWA_INDEX(reference_genome, bwa_index_input)
     } else {
-        bwa_index = Channel.fromPath("${params.bwa_index}/*.{amb,ann,bwt,pac,sa}", checkIfExists: true).collect()
+        // THIS DOESNT BEHAVE WELL FOR SOME REASON
+        bwa_index = Channel.fromPath("${params.bwa_index}/*", checkIfExists: true, hidden: true)
     }
-
+    
     transcriptome_reference = Channel.fromPath(params.transcriptome_reference).first()
     gtf = Channel.fromPath(file(params.gtf)).first()
     human_ref_peptides = Channel.fromPath(file(params.human_ref_peptides)).first()
@@ -109,6 +112,7 @@ workflow {
     ctat_bundle = PULL_CTAT_RESOURCE_BUNDLE().ctat_resource_dir
     arriba_resources = PULL_ARRIBA_RESOURCES().resources
     vep_plugins = PULL_VEP_PVAC_PLUGINS().plugins
+    ascat_resources = PULL_ASCAT_RESOURCES(params.reference_includes_chr_prefix)
 
 
     //**************************************************************************************************************************************
@@ -135,7 +139,8 @@ workflow {
                     somatic_name: row.somatic_name,
                     patient: row.patient,
                     sample_name: row.sample_name,
-                    sample_type: row.sample_type,
+                    sex: row.sex,
+                    sample_type: row.sample_type.toUpperCase(),
                     sequencing_type: row.sequencing_type,
                     capture_kit: row.capture_kit,
                     molecule: molecule
@@ -156,9 +161,9 @@ workflow {
         dna: meta.molecule == "DNA"
         rna: meta.molecule == "RNA"
     }
+
     dna_inputs = samples_branched.dna
     rna_inputs = samples_branched.rna
-
 
     //**************************************************************************************************************************************
     // Perform QC on DNA and RNA samples
@@ -263,8 +268,8 @@ workflow {
     
     // Branch to get only normal samples
     normal_tumor_split_bams = preproc_bams.branch { meta, bam, bai ->
-        tumor: meta.sample_type == "Tumor"
-        normal: meta.sample_type == "Normal"
+        tumor: meta.sample_type == "TUMOR"
+        normal: meta.sample_type == "NORMAL"
     }
 
     // Run Haplotype Caller
@@ -292,14 +297,13 @@ workflow {
     //**************************************************************************************************************************************
     // Mutect2 - Somatic Variant Calling
 
-     
     // Groups samples into the form (somatic metamap, tumor bam, tumor bai, normal bam, normal bai)
     preproc_bams_type_branched = preproc_bams.map{meta, bam, bai ->
         tuple(meta.somatic_name, meta, bam, bai)
     }
     .branch {somatic_name, meta, bam, bai ->
-        tumor: meta.sample_type == "Tumor"
-        normal: meta.sample_type == "Normal"
+        tumor: meta.sample_type == "TUMOR"
+        normal: meta.sample_type == "NORMAL"
     }
 
     paired_samples = preproc_bams_type_branched.tumor.join(preproc_bams_type_branched.normal)
@@ -319,8 +323,8 @@ workflow {
         tuple(meta.somatic_name, meta, pileup_table)
     }
     .branch {somatic_name, meta, pileup_table ->
-        tumor: meta.sample_type == "Tumor"
-        normal: meta.sample_type == "Normal"
+        tumor: meta.sample_type == "TUMOR"
+        normal: meta.sample_type == "NORMAL"
     }
     paired_pileups = type_pileups.tumor.join(type_pileups.normal)
 
@@ -359,8 +363,8 @@ workflow {
         tuple(meta.somatic_name, meta, bam, bai)
     }
     .branch {somatic_name, meta, bam, bai ->
-        tumor: meta.sample_type == "Tumor"
-        normal: meta.sample_type == "Normal"
+        tumor: meta.sample_type == "TUMOR"
+        normal: meta.sample_type == "NORMAL"
     }
 
     markdup_paired_samples = markdup_bams_type_branched.tumor.join(markdup_bams_type_branched.normal)
@@ -375,7 +379,7 @@ workflow {
         ]
         tuple(somatic_meta, tumor_bam, tumor_bai, normal_bam, normal_bai)
     }
-
+    
     // Get vcf of strelka called snvs and indels
     strelka = STRELKA_WORKFLOW(markdup_somatic_samples, reference_genome, processed_regions)
     strelka_vcf = strelka.strelka_vcf
@@ -386,6 +390,32 @@ workflow {
 
     deepsomatic = DEEPSOMATIC_WORKFLOW(markdup_somatic_samples, reference_genome, capture_kits)
     deepsomatic_vcf = deepsomatic.deepsomatic_vcf
+    
+
+    
+    //**************************************************************************************************************************************
+    // ASCAT CNV ANALYSIS
+    
+    somatic_samples_bed = markdup_somatic_samples
+        .map{meta, tumor_bam, tumor_bai, normal_bam, normal_bai -> 
+            tuple(meta.capture_kit, meta, tumor_bam, tumor_bai, normal_bam, normal_bai) 
+        }
+        .combine(capture_kits, by:0)
+        .map { kit, meta, tbam, tbai, nbam, nbai, bed ->
+                tuple(meta, meta.tumor_meta.sex, nbam, nbai, tbam, tbai, bed)
+        }
+
+    
+    ascat = ASCAT(somatic_samples_bed, 
+        ascat_resources.alleles, 
+        ascat_resources.loci, 
+        reference_genome,
+        ascat_resources.GC, 
+        ascat_resources.RT,
+    )
+
+
+
 
     //**************************************************************************************************************************************
     // Fusion calling with bulkRNAseq using Arriba and STARfusion
@@ -405,6 +435,7 @@ workflow {
     
     //**************************************************************************************************************************************
     // PVACtools Input Preparation
+   
 
     pvac_input = PVAC_INPUT_PREP_WORKFLOW(
         mutect2_vcf,
@@ -421,6 +452,7 @@ workflow {
         germline_vcf
     )
 
+
     somatic_vcf = pvac_input.somatic_vcf
     somatic_vcf_table = pvac_input.somatic_vcf_table
     phased_vcf = pvac_input.phased_vcf
@@ -431,8 +463,8 @@ workflow {
 
     hla_branched = hla_pvac_input.branch{meta, calls ->
         merged: meta.sample_type == "Merged"
-        tumor: meta.sample_type == "Tumor"
-        normal: meta.sample_type == "Normal"
+        tumor: meta.sample_type == "TUMOR"
+        normal: meta.sample_type == "NORMAL"
     }
 
     combined_hla_somatic_name = hla_branched.merged.map{meta, calls ->
