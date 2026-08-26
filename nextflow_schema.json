@@ -1,0 +1,214 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/hwismer/vaximile/main/nextflow_schema.json",
+    "title": "vaximile pipeline parameters",
+    "description": "Tumor neoantigen discovery using paired tumour-normal bulk DNA and RNA sequencing",
+    "type": "object",
+    "$defs": {
+        "input_output_options": {
+            "title": "Input/output options",
+            "type": "object",
+            "fa_icon": "fas fa-terminal",
+            "description": "Define where the pipeline should find input data and save output data.",
+            "required": ["samplesheet", "capture_kits", "vep_cache", "outdir"],
+            "properties": {
+                "samplesheet": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "schema": "assets/schema_input.json",
+                    "mimetype": "text/csv",
+                    "pattern": "^\\S+\\.csv$",
+                    "description": "Path to comma-separated file describing the patients, samples and FastQ files.",
+                    "fa_icon": "fas fa-file-csv"
+                },
+                "capture_kits": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "schema": "assets/schema_capture_kits.json",
+                    "mimetype": "text/csv",
+                    "pattern": "^\\S+\\.csv$",
+                    "description": "Path to comma-separated file mapping capture kit names to their BED target files.",
+                    "fa_icon": "fas fa-file-csv"
+                },
+                "vep_cache": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Path to a local Ensembl VEP cache directory matching the chosen reference genome.",
+                    "help_text": "Download from https://ftp.ensembl.org/pub/release-115/variation/indexed_vep_cache/",
+                    "fa_icon": "fas fa-folder-open"
+                },
+                "outdir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "The output directory where the results will be saved.",
+                    "default": "./vaximile_out",
+                    "fa_icon": "fas fa-folder-open"
+                }
+            }
+        },
+        "reference_genome_options": {
+            "title": "Reference genome options",
+            "type": "object",
+            "fa_icon": "fas fa-dna",
+            "description": "Reference genome, annotation and transcriptome files.",
+            "properties": {
+                "reference_fa": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Reference genome FASTA. Gzipped input is decompressed and indexed automatically.",
+                    "fa_icon": "fas fa-file"
+                },
+                "reference_includes_chr_prefix": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Set to false when the reference contigs are named without a 'chr' prefix.",
+                    "fa_icon": "fas fa-tag"
+                },
+                "gtf": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Gene annotation GTF used for RNA alignment, quantification and fusion calling.",
+                    "fa_icon": "fas fa-file"
+                },
+                "transcriptome_reference": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Transcriptome FASTA used to build the kallisto and salmon indices.",
+                    "fa_icon": "fas fa-file"
+                },
+                "human_ref_peptides": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Reference proteome peptide FASTA used by pVACtools for reference proteome similarity.",
+                    "fa_icon": "fas fa-file"
+                }
+            }
+        },
+        "alignment_index_options": {
+            "title": "Alignment index options",
+            "type": "object",
+            "fa_icon": "fas fa-database",
+            "description": "Prebuilt indices. Any left unset are built from the reference during the run.",
+            "properties": {
+                "bwa_index": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Directory containing a prebuilt bwa-mem2 index.",
+                    "fa_icon": "fas fa-folder-open"
+                },
+                "star_index": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Directory containing a prebuilt STAR 2.7.10 index.",
+                    "fa_icon": "fas fa-folder-open"
+                },
+                "kallisto_index": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Prebuilt kallisto index.",
+                    "fa_icon": "fas fa-file"
+                },
+                "salmon_index": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Directory containing a prebuilt salmon index.",
+                    "fa_icon": "fas fa-folder-open"
+                }
+            }
+        },
+        "variant_calling_options": {
+            "title": "Variant calling options",
+            "type": "object",
+            "fa_icon": "fas fa-cut",
+            "description": "Interval scattering behaviour for the GATK-based callers.",
+            "properties": {
+                "intervals_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Interval list restricting variant calling. Defaults to the GATK hg38 WGS calling regions.",
+                    "fa_icon": "fas fa-file"
+                },
+                "interval_padding": {
+                    "type": "integer",
+                    "default": 100,
+                    "description": "Bases of padding added around each calling interval.",
+                    "fa_icon": "fas fa-arrows-alt-h"
+                },
+                "scatter_count": {
+                    "type": "integer",
+                    "default": 30,
+                    "description": "Number of interval shards to scatter variant calling across.",
+                    "fa_icon": "fas fa-th"
+                }
+            }
+        },
+        "hla_typing_options": {
+            "title": "HLA typing options",
+            "type": "object",
+            "fa_icon": "fas fa-shield-virus",
+            "description": "Reference data for MHC region extraction and HLA allele calling.",
+            "properties": {
+                "hla_fasta": { "type": "string", "format": "file-path", "description": "HLA class I reference FASTA." },
+                "hla_fasta_fai": { "type": "string", "format": "file-path", "description": "Index for the HLA reference FASTA." },
+                "hla_kmers": { "type": "string", "format": "file-path", "description": "Unique HLA k-mer file used by the typing tools." },
+                "hla_freq": { "type": "string", "format": "file-path", "description": "HLA allele population frequency table." }
+            }
+        },
+        "gatk_resource_options": {
+            "title": "GATK resource bundle options",
+            "type": "object",
+            "fa_icon": "fas fa-archive",
+            "description": "Known-sites VCFs used for BQSR, contamination estimation and somatic filtering. Each must have a matching .tbi.",
+            "properties": {
+                "common_germline": { "type": "string", "format": "file-path", "description": "Common germline biallelic SNP sites for contamination estimation." },
+                "known_sites_dbsnp": { "type": "string", "format": "file-path", "description": "dbSNP known sites VCF for BQSR." },
+                "known_sites_1000g_snps": { "type": "string", "format": "file-path", "description": "1000 Genomes high-confidence SNPs for BQSR." },
+                "known_indels": { "type": "string", "format": "file-path", "description": "Known indels VCF for BQSR." },
+                "gnomad": { "type": "string", "format": "file-path", "description": "gnomAD allele-frequency-only VCF for Mutect2." },
+                "pon": { "type": "string", "format": "file-path", "description": "Panel of normals VCF for Mutect2." },
+                "hapmap": { "type": "string", "format": "file-path", "description": "HapMap VCF for germline variant recalibration." },
+                "mills": { "type": "string", "format": "file-path", "description": "Mills gold standard indels VCF." },
+                "somalier_sites": { "type": "string", "format": "file-path", "description": "Sites VCF used by somalier for relatedness checks." }
+            }
+        },
+        "generic_options": {
+            "title": "Generic options",
+            "type": "object",
+            "fa_icon": "fas fa-file-import",
+            "description": "Less common options for the pipeline, typically set in a config file.",
+            "properties": {
+                "publish_dir_mode": {
+                    "type": "string",
+                    "default": "copy",
+                    "description": "Method used to save pipeline results to output directory.",
+                    "enum": ["symlink", "rellink", "link", "copy", "copyNoFollow", "move"],
+                    "hidden": true,
+                    "fa_icon": "fas fa-copy"
+                },
+                "version": {
+                    "type": "boolean",
+                    "description": "Display version and exit.",
+                    "hidden": true,
+                    "fa_icon": "fas fa-question-circle"
+                },
+                "help": {
+                    "type": "boolean",
+                    "description": "Display help text.",
+                    "hidden": true,
+                    "fa_icon": "fas fa-question-circle"
+                }
+            }
+        }
+    },
+    "allOf": [
+        { "$ref": "#/$defs/input_output_options" },
+        { "$ref": "#/$defs/reference_genome_options" },
+        { "$ref": "#/$defs/alignment_index_options" },
+        { "$ref": "#/$defs/variant_calling_options" },
+        { "$ref": "#/$defs/hla_typing_options" },
+        { "$ref": "#/$defs/gatk_resource_options" },
+        { "$ref": "#/$defs/generic_options" }
+    ]
+}

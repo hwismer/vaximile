@@ -1,0 +1,39 @@
+process SPLIT_INTERVALS {
+
+    /*
+        Takes a file of genomic intervals such as a picard interval file or BED file splits into scatter_count number of shards for parallel processing.
+
+    */
+
+    cpus 2
+    memory "8GB"
+    cache "lenient"
+    
+    tag "Splitting ${intervals_file} into ${scatter_count} shards w/ ${interval_padding} bp padding"
+
+    container "broadinstitute/gatk:4.6.1.0"
+
+    input:
+        tuple path(reference_fa), path(reference_fa_index)
+        path reference_dict
+        tuple val(capture_kit), path(intervals_file)
+        val scatter_count
+        val interval_padding
+
+    output:
+         tuple val(capture_kit), path("*-scattered.interval_list"), emit: interval_shards
+
+    script:
+    """
+    gatk SplitIntervals \
+        -R $reference_fa \
+        -L $intervals_file \
+        --scatter-count $scatter_count \
+        --interval-padding $interval_padding \
+        -O .
+
+    """
+}
+
+//***************************************************************************************************************************
+// RESOURCE PULLING FROM WEB SOURCES

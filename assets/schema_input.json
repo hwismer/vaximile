@@ -1,0 +1,76 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/hwismer/vaximile/main/assets/schema_input.json",
+    "title": "vaximile pipeline - params.samplesheet schema",
+    "description": "Schema for the file provided with params.samplesheet",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "patient": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Patient identifier must be provided and cannot contain spaces",
+                "meta": ["patient"]
+            },
+            "somatic_name": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Somatic (tumour/normal pairing) identifier must be provided and cannot contain spaces",
+                "meta": ["somatic_name"]
+            },
+            "sample_name": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Sample name must be provided and cannot contain spaces",
+                "meta": ["sample_name"]
+            },
+            "sample_type": {
+                "type": "string",
+                "enum": ["Tumor", "Normal", "TUMOR", "NORMAL", "tumor", "normal"],
+                "errorMessage": "Sample type must be one of 'Tumor' or 'Normal'",
+                "meta": ["sample_type"]
+            },
+            "sequencing_type": {
+                "type": "string",
+                "enum": ["exome", "genome", "exome_FFPE", "genome_FFPE", "rna"],
+                "errorMessage": "Sequencing type must be one of 'exome', 'genome', 'exome_FFPE', 'genome_FFPE' or 'rna'",
+                "meta": ["sequencing_type"]
+            },
+            "sex": {
+                "type": "string",
+                "enum": ["XX", "XY", ""],
+                "errorMessage": "Sex must be 'XX' or 'XY', or left blank",
+                "meta": ["sex"]
+            },
+            "capture_kit": {
+                "type": "string",
+                "errorMessage": "Capture kit must match a 'kit' entry in the capture kit sheet. Leave blank for RNA rows.",
+                "meta": ["capture_kit"]
+            },
+            "fastqr1": {
+                "type": "string",
+                "format": "file-path",
+                "exists": true,
+                "pattern": "^\\S+\\.f(ast)?q\\.gz$",
+                "errorMessage": "FastQ file for read 1 must be provided, cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
+            },
+            "fastqr2": {
+                "type": "string",
+                "format": "file-path",
+                "exists": true,
+                "pattern": "^\\S+\\.f(ast)?q\\.gz$",
+                "errorMessage": "FastQ file for read 2 must be provided, cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
+            }
+        },
+        "required": [
+            "patient",
+            "somatic_name",
+            "sample_name",
+            "sample_type",
+            "sequencing_type",
+            "fastqr1",
+            "fastqr2"
+        ]
+    }
+}

@@ -1,0 +1,25 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/hwismer/vaximile/main/assets/schema_capture_kits.json",
+    "title": "vaximile pipeline - params.capture_kits schema",
+    "description": "Schema for the file provided with params.capture_kits",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "kit": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Capture kit name must be provided and cannot contain spaces"
+            },
+            "bed": {
+                "type": "string",
+                "format": "file-path",
+                "exists": true,
+                "pattern": "^\\S+\\.bed$",
+                "errorMessage": "Capture kit target file must be a BED file ending in '.bed'"
+            }
+        },
+        "required": ["kit", "bed"]
+    }
+}

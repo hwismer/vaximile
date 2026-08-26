@@ -4,6 +4,17 @@ vax_config.csv
 catpure_kits.csv
 inputs/
 run_vax_wf.sh
-work/
 resources/
 *out
+
+# Nextflow
+work/
+.nextflow*
+results/
+testing/
+testing*
+*.pyc
+null/
+
+# macOS
+.DS_Store

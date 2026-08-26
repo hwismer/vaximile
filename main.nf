@@ -1,0 +1,85 @@
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    VAXIMILE
+    Tumor neoantigen discovery from paired tumour-normal bulk DNA and RNA sequencing
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+include { VAXIMILE } from './workflows/vaximile'
+include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_vaximile_pipeline'
+include { PIPELINE_COMPLETION } from './subworkflows/local/utils_nfcore_vaximile_pipeline'
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    RUN MAIN WORKFLOW
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+workflow {
+
+    main:
+
+    PIPELINE_INITIALISATION(
+        params.samplesheet,
+        params.capture_kits
+    )
+
+    VAXIMILE(
+        PIPELINE_INITIALISATION.out.samplesheet,
+        PIPELINE_INITIALISATION.out.capture_kits
+    )
+
+    PIPELINE_COMPLETION(
+        VAXIMILE.out.multiqc_reports
+    )
+
+    publish:
+    multiqc_reports = VAXIMILE.out.multiqc_reports
+    somatic_vcf = VAXIMILE.out.somatic_vcf
+    somatic_vcf_table = VAXIMILE.out.somatic_vcf_table
+    germline_vcf = VAXIMILE.out.germline_vcf
+    optitype_calls = VAXIMILE.out.optitype_calls
+    hlahd_calls = VAXIMILE.out.hlahd_calls
+    hla_pvac_input = VAXIMILE.out.hla_pvac_input
+    pvacseq = VAXIMILE.out.pvacseq
+    pvacseq_mhc_i_combined = VAXIMILE.out.pvacseq_mhc_i_combined
+    pvacfuse = VAXIMILE.out.pvacfuse
+    kallisto_gene = VAXIMILE.out.kallisto_gene
+}
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    PUBLISH TARGETS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+output {
+    multiqc_reports {
+        path { patient, report -> "${params.outdir}/${patient}/multiqc/" }
+    }
+    somatic_vcf {
+        path { meta, vcf, vcf_index -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/variants" }
+    }
+    somatic_vcf_table {
+        path { meta, table -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/variants" }
+    }
+    optitype_calls {
+        path { meta, tsv, pdf -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/hla/optitype/" }
+    }
+    hlahd_calls {
+        path { meta, calls -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/hla/hlahd/" }
+    }
+    hla_pvac_input {
+        path { meta, calls -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/hla/" }
+    }
+    pvacseq {
+        path { meta, pvacseq_dir -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/pvactools/" }
+    }
+    pvacseq_mhc_i_combined {
+        path { patient, report -> "${params.outdir}/${patient}/pvactools_report" }
+    }
+    pvacfuse {
+        path { meta, pvacfuse_dir -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/pvactools" }
+    }
+    germline_vcf {
+        path { meta, vcf, tbi -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/germline/" }
+    }
+    kallisto_gene {
+        path { meta, gene_abundance -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/kallisto" }
+    }
+
+}
