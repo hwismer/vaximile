@@ -76,6 +76,28 @@ Nothing below breaks the pipeline; each is a step toward `nf-core lint` passing.
    modules pass `nextflow lint`, but no pipeline run has reached the point of validating
    real parameters against `nextflow_schema.json`.
 
+## Argument order is not checked by anything
+
+Hoisting flags into `ext.args` collapses them into one place on the command line. When
+the hoisted flags were **not adjacent** in the original script, this silently reorders
+the command.
+
+That broke `SALMON_QUANT`: `--libType A` was argument 2 and `--validateMappings` was
+argument 5, with `-1/-2` between them. Both moved into a single `$args` after the read
+files, and salmon refuses a library type that appears after its inputs. The module now
+places `$args` ahead of `-1/-2` and says so in a comment.
+
+10 of the other 18 `ext.args` modules also have non-contiguous hoisted flags. They are
+fine only because their tools do not care about order — VEP uses `Getopt::Long`, GATK and
+GATK3 parse Java-style arguments, bcftools and DeepVariant/DeepSomatic take only
+`--flag=value` options, and pVACseq/pVACfuse place `$args` after all five of their
+positional arguments.
+
+Before hoisting anything else, check whether the flags were adjacent, and whether the
+tool has positional arguments or documents an ordering requirement. Neither `nextflow
+lint` nor the conversion's own verification pass catches this — they check directives,
+output arity, `emit:` names, globs and prefix/args definitions, not semantics.
+
 ## Modules that cannot use ext.prefix
 
 nf-core modules declare outputs as globs (`path("*.bam")`) so that `ext.prefix` can
