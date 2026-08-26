@@ -25,6 +25,14 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `SALMON_QUANT` passed `--libType` after `-1/-2`, which salmon rejects outright
+  ("The (--libType/-l) option must precede the input files"). Introduced when
+  `--libType A` and `--validateMappings` — which sat on opposite sides of the read
+  files — were collapsed into a single `$args` placed after them. `$args` now precedes
+  `-1/-2`. The other 18 modules using `ext.args` were audited for the same reordering;
+  10 also had non-contiguous flags but all are order-insensitive option-only CLIs
+  (VEP, GATK, bcftools, DeepVariant/DeepSomatic) or place `$args` after every
+  positional (pVACseq, pVACfuse).
 - Disabled `timeline`, `report` and `trace` in `nextflow.config`. Enabling them makes
   Nextflow inject `command -v ps || exit 1` into every task wrapper, which killed tasks
   running in containers without `procps` (STAR, DeepVariant, DeepSomatic, bcftools) before
