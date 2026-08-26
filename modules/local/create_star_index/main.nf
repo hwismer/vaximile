@@ -6,8 +6,7 @@ process CREATE_STAR_INDEX {
 
     */
 
-    cpus 24
-    memory "64GB"
+    label 'process_max'
     cache 'lenient'
 
     container "alexdobin/star:2.7.10a_alpha_220506"

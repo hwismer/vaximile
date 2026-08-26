@@ -4,8 +4,7 @@ process APPLY_BQSR_SCATTER {
     Apply base quality score recalibration on a provided interval.
     */
     
-    cpus 4
-    memory "12GB"
+    label 'process_medium'
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "ApplyBQSR on ${meta.sample_name} ${interval_shard}"
@@ -16,15 +15,16 @@ process APPLY_BQSR_SCATTER {
         path reference_dict
 
     output:
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_${interval_shard}_bqsr.bam")
+        tuple val(meta), path("*_bqsr.bam")
     script:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}_${interval_shard}"
     """
     gatk ApplyBQSR \
         -R $reference_fa \
         -I $markdup_bam \
         -L $interval_shard \
         --bqsr-recal-file $recal_table \
-        -O "${meta.sample_name}_${meta.molecule}_${interval_shard}_bqsr.bam"
+        -O "${prefix}_bqsr.bam"
     """
 
 }

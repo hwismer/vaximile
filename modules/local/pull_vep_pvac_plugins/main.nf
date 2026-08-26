@@ -4,8 +4,7 @@ process PULL_VEP_PVAC_PLUGINS {
 
     // Pulls the VEP plugins necessary to run pvactools. Runs locally to ensure internet connection.
 
-    cpus 1
-    memory "4GB"
+    label 'process_single'
     executor "local"
 
     container "griffithlab/pvactools:6.0.3"

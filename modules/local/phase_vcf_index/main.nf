@@ -6,8 +6,7 @@ process PHASE_VCF_INDEX {
 
     */
 
-    cpus 1
-    memory "16GB"
+    label 'process_low'
     conda "bioconda::tabix=0.2.6"
 
     tag "Indexing phased vcf $phased_vcf"
@@ -16,15 +15,16 @@ process PHASE_VCF_INDEX {
         tuple val(meta), path(phased_vcf)
 
     output:
-        tuple val(meta), path("${meta.somatic_name}_phased_annotated.vcf.gz"), path("${meta.somatic_name}_phased_annotated.vcf.gz.tbi"), emit: phased_vcf
+        tuple val(meta), path("*_phased_annotated.vcf.gz"), path("*_phased_annotated.vcf.gz.tbi"), emit: phased_vcf
 
 
     script:
+        def prefix = task.ext.prefix ?: "${meta.somatic_name}"
         """
         echo ${meta.somatic_name}
-        bgzip -c $phased_vcf > ${meta.somatic_name}_phased_annotated.vcf.gz
+        bgzip -c $phased_vcf > ${prefix}_phased_annotated.vcf.gz
 
-        tabix -p vcf ${meta.somatic_name}_phased_annotated.vcf.gz
+        tabix -p vcf ${prefix}_phased_annotated.vcf.gz
         """
 
 }

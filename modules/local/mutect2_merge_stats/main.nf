@@ -1,7 +1,6 @@
 process MUTECT2_MERGE_STATS {
     
-    cpus 2
-    memory "8GB"
+    label 'process_low'
     container "broadinstitute/gatk:4.6.1.0"
     
     tag "Merging Mutect stats for ${somatic_meta.somatic_name}"
@@ -10,17 +9,18 @@ process MUTECT2_MERGE_STATS {
         tuple val(somatic_meta), path(stats)
 
     output:
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_merged.stats")
+        tuple val(somatic_meta), path("*_merged.stats")
 
     script:
-    
+
     def stat_as_input = stats.collect {stat ->
             "-stats ${stat}"
         }.join(' ')
+    def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
 
     """
      gatk MergeMutectStats \
         $stat_as_input \
-        -O "${somatic_meta.somatic_name}_merged.stats"
+        -O "${prefix}_merged.stats"
     """
 }

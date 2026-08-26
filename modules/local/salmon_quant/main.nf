@@ -1,7 +1,6 @@
 process SALMON_QUANT {
 
-    cpus 12
-    memory "32GB"
+    label 'process_very_high'
 
     conda "bioconda::salmon=1.11.4"
 
@@ -12,18 +11,19 @@ process SALMON_QUANT {
         path(salmon_index)
 
     output:
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_salmon_quant"), emit: quant
+        tuple val(meta), path("*_salmon_quant"), emit: quant
 
     script:
+    def args = task.ext.args ?: ''
+    def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
     """
     salmon quant \
         -i $salmon_index \
-        --libType A \
         -1 $fastq1 \
         -2 $fastq2 \
-        --validateMappings \
+        $args \
         -p $task.cpus \
-        -o "${meta.sample_name}_${meta.molecule}_salmon_quant"
+        -o "${prefix}_salmon_quant"
     """
 
 }

@@ -4,8 +4,7 @@ process MERGE_BAMS {
     Merges an arbitrary number of bam files with the same metadata.
     */
     
-    cpus 6
-    memory "18GB"
+    label 'process_high'
     conda "bioconda::samtools=1.23.1 bioconda::bedtools=2.31.1 bioconda::htslib=1.23.1"
 
     tag "Merging Bams from ${meta.sample_name}"

@@ -1,7 +1,6 @@
 process HLA_CALLS_PVAC {
 
-    cpus 2
-    memory "4GB"
+    label 'process_low'
 
     conda "python=3.10 pandas=2.1"
 
@@ -11,9 +10,10 @@ process HLA_CALLS_PVAC {
         tuple val(meta), path(optitype_result), path(optitype_pdf), path(hlahd_result)
 
     output:
-		tuple val(meta), path("${meta.sample_name}_hla_calls.csv"), emit: pvac_calls
+		tuple val(meta), path("*_hla_calls.csv"), emit: pvac_calls
 
     script:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}"
     """
     #!/usr/bin/env python3
     
@@ -88,7 +88,7 @@ process HLA_CALLS_PVAC {
         for a in allele_set:
             alleles.append(a)
             
-    with open("${meta.sample_name}_hla_calls.csv", "w", newline="",encoding="utf-8") as f:
+    with open("${prefix}_hla_calls.csv", "w", newline="",encoding="utf-8") as f:
         writer = csv.writer(f,lineterminator="\\n")
         writer.writerow(alleles)
 

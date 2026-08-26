@@ -6,8 +6,7 @@ process FILTER_VCF {
 
     */
 
-    cpus 4
-    memory "16GB"
+    label 'process_medium'
     container "staphb/bcftools:1.23"
     
     tag "Filtering VCF $vcf"
@@ -16,13 +15,14 @@ process FILTER_VCF {
         tuple val(meta), val(caller), path(vcf), path(tbi)
 
     output:
-        tuple val(meta), val(caller), path("${meta.sample_name}_${caller}_filtered_variants.vcf.gz"), path("${meta.sample_name}_${caller}_filtered_variants.vcf.gz.tbi"), emit: filtered_vcf
+        tuple val(meta), val(caller), path("*_filtered_variants.vcf.gz"), path("*_filtered_variants.vcf.gz.tbi"), emit: filtered_vcf
 
 
     script:
+        def prefix = task.ext.prefix ?: "${meta.sample_name}_${caller}"
         """
-        bcftools view -f PASS -Oz -o "${meta.sample_name}_${caller}_filtered_variants.vcf.gz" $vcf
-        bcftools index -t "${meta.sample_name}_${caller}_filtered_variants.vcf.gz"
+        bcftools view -f PASS -Oz -o "${prefix}_filtered_variants.vcf.gz" $vcf
+        bcftools index -t "${prefix}_filtered_variants.vcf.gz"
         """
 
 

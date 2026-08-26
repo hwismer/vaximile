@@ -1,7 +1,6 @@
 process PULL_ASCAT_RESOURCES {
 
-    cpus 1
-    memory "4GB"
+    label 'process_single'
     executor "local"
 
     tag "Pulling ASCAT resources"

@@ -4,8 +4,7 @@ process APPLY_BQSR_GATHER {
     Gathers all bqsr games to create a final merged bam with adjusted base quality scores.
     */
 
-    cpus 4
-    memory "16GB"
+    label 'process_medium'
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "GatherBams on ${meta.sample_name}"

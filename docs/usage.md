@@ -93,10 +93,29 @@ produces empty extractions rather than an error.
 Use `-profile` to select a software provisioning method. Multiple profiles are
 comma-separated and later entries override earlier ones.
 
-- `conda` — the only fully supported option today. Every local module declares a conda spec.
-- `docker`, `singularity`, `apptainer` — the vendored nf-core `ascat` module carries a
-  container, but the local modules do not, so these profiles do not yet run the whole
-  pipeline on their own.
+Software provisioning is currently **mixed**, and no single profile covers the whole
+pipeline. Of the 94 local modules:
+
+| Provisioning declared     | Modules |
+| ------------------------- | ------- |
+| `container` only          | 59      |
+| `conda` only              | 31      |
+| Neither                   | 4       |
+| Both                      | 0       |
+
+So `-profile conda` cannot resolve software for the 59 container-only modules, and
+`-profile singularity` (or `docker`/`apptainer`) cannot resolve it for the 31 conda-only
+ones. In practice the pipeline has been run with **both** conda and a container engine
+enabled at once, which is what `conf/ucsf_krummellab.config` does.
+
+The four modules with neither — `combine_fastqs`, `prepare_fasta`,
+`pull_arriba_resources`, `pull_ctat_resource_bundle` — rely on tools being present on the
+host `PATH`.
+
+Giving every module both a conda spec and a container is the change that would make the
+individual profiles meaningful; see
+[docs/nf-core-migration.md](nf-core-migration.md).
+
 - `test` — minimal settings for a smoke test; see `conf/test.config`.
 
 ### Institutional configuration

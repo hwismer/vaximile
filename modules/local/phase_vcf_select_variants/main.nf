@@ -7,8 +7,7 @@ process PHASE_VCF_SELECT_VARIANTS {
 
     */
 
-    cpus 2
-    memory "32GB"
+    label 'process_medium'
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "Extracting tumor sample from $somatic_vcf"
@@ -20,16 +19,17 @@ process PHASE_VCF_SELECT_VARIANTS {
         path reference_dict
 
     output:
-        tuple val(somatic_meta), path("${somatic_meta.tumor_meta.sample_name}_tumor_only.vcf.gz"), path("${somatic_meta.tumor_meta.sample_name}_tumor_only.vcf.gz.tbi")
+        tuple val(somatic_meta), path("*_tumor_only.vcf.gz"), path("*_tumor_only.vcf.gz.tbi")
 
     script:
+        def prefix = task.ext.prefix ?: "${somatic_meta.tumor_meta.sample_name}"
         """
         gatk SelectVariants \
             -V $somatic_vcf \
             -R "${reference_fa}" \
             --sample-name ${somatic_meta.tumor_meta.sample_name} \
             --create-output-variant-index \
-            -O ${somatic_meta.tumor_meta.sample_name}_tumor_only.vcf.gz
+            -O ${prefix}_tumor_only.vcf.gz
         """
 
 }

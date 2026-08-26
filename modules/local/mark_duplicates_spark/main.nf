@@ -5,8 +5,7 @@ process MARK_DUPLICATES_SPARK {
     BAM file with duplicates marked.
     */
 
-    cpus 16
-    memory "32GB"
+    label 'process_very_high'
     container "broadinstitute/gatk:4.6.1.0"
     clusterOptions '--gres=scratch:600G'
 
@@ -16,15 +15,16 @@ process MARK_DUPLICATES_SPARK {
         tuple val(meta), path(aligned_sam)
 
     output:
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_markdup.bam"), path("${meta.sample_name}_${meta.molecule}_markdup.bam.bai")
-    
+        tuple val(meta), path("*_markdup.bam"), path("*_markdup.bam.bai")
+
     script:
 
+    def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
     """
     mkdir -p tmp
     gatk MarkDuplicatesSpark \
         -I $aligned_sam \
-        -O "${meta.sample_name}_${meta.molecule}_markdup.bam" \
+        -O "${prefix}_markdup.bam" \
         --create-output-bam-index \
         --tmp-dir ./tmp \
         --spark-master local[${task.cpus}] \

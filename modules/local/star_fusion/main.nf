@@ -5,8 +5,7 @@ process STAR_FUSION {
 
     */
 
-    cpus 12
-    memory "90GB"
+    label 'process_very_high'
     container "trinityctat/starfusion:1.15.0"
 
     tag "Running STARfusion on ${meta.sample_name}"
@@ -16,17 +15,18 @@ process STAR_FUSION {
         path ctat_resource_lib
 
     output:
-        tuple val(meta), path("${meta.sample_name}_starfusion/*.fusion_predictions.tsv"), emit: fusion_preds
-        tuple val(meta), path("${meta.sample_name}_starfusion/*.fusion_predictions.abridged.tsv"), emit: abridged_preds
+        tuple val(meta), path("*_starfusion/*.fusion_predictions.tsv"), emit: fusion_preds
+        tuple val(meta), path("*_starfusion/*.fusion_predictions.abridged.tsv"), emit: abridged_preds
         //tuple val(meta), path("${meta.sample_name}_starfusion/*.coding_effect.tsv"), emit: coding_effect
         //tuple val(meta), path("${meta.sample_name}_starfusion/"), emit: all_output
 
 
     script:
+        def prefix = task.ext.prefix ?: "${meta.sample_name}"
         """
         STAR-Fusion --genome_lib_dir $ctat_resource_lib \
              -J $chimeric_out \
-             --output_dir "./${meta.sample_name}_starfusion"
+             --output_dir "./${prefix}_starfusion"
 
         """
 

@@ -5,8 +5,7 @@ process INDEX_FINAL_VCF {
 
     */
 
-    cpus 2
-    memory "8GB"
+    label 'process_low'
     conda "bioconda::tabix=0.2.6"
 
     tag "Indexing final vcf $vcf"

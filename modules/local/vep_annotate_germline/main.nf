@@ -8,8 +8,7 @@ process VEP_ANNOTATE {
 
     */
 
-    cpus 6
-    memory "16GB"
+    label 'process_high'
     container "ensemblorg/ensembl-vep:release_115.0"
 
     tag "VEP on ${sample_meta.sample_name}"
@@ -20,22 +19,22 @@ process VEP_ANNOTATE {
         path vep_plugins
 
     output:
-        tuple val(sample_meta), path("${sample_meta.sample_name}_vep.vcf"), emit: vcf
+        tuple val(sample_meta), path("*_vep.vcf"), emit: vcf
         tuple val(sample_meta), path("*.html"), emit: report
 
     script:
+        def prefix = task.ext.prefix ?: "${sample_meta.sample_name}"
+        def args = task.ext.args ?: ''
         """
         vep \
             --input_file $vcf  \
-            --output_file ${sample_meta.sample_name}_vep.vcf \
-            --everything \
-            --format vcf --vcf --symbol --terms SO --mane_select --canonical --tsl --biotype --hgvs \
+            --output_file ${prefix}_vep.vcf \
+            --format vcf --vcf \
             --fasta $reference_fa  \
             --offline --cache \
             --plugin Frameshift --plugin Wildtype \
-            --pick \
             --dir_plugins $vep_plugins \
             --dir_cache $vep_cache \
-            --transcript_version
+            $args
         """
 }

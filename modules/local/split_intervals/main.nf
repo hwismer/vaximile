@@ -5,8 +5,7 @@ process SPLIT_INTERVALS {
 
     */
 
-    cpus 2
-    memory "8GB"
+    label 'process_low'
     cache "lenient"
     
     tag "Splitting ${intervals_file} into ${scatter_count} shards w/ ${interval_padding} bp padding"

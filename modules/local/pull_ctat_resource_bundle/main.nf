@@ -4,8 +4,7 @@ process PULL_CTAT_RESOURCE_BUNDLE {
 
     // Pulls the hg38 CTAT resource bundle needed for STARfusion and other tools.
 
-    cpus 1
-    memory "8GB"
+    label 'process_single'
     executor "local"
 
     tag "Pulling CTAT plug-n-play resource bundle"

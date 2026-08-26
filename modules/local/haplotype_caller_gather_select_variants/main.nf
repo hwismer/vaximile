@@ -1,7 +1,6 @@
 process HAPLOTYPE_CALLER_GATHER_SELECT_VARIANTS {
 
-    cpus 2
-    memory "8GB"
+    label 'process_low'
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "Select variants from ${sample_meta.sample_name} within ${interval_shard}"

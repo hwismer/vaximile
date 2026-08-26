@@ -7,8 +7,7 @@ process BAMREADCOUNT {
 
     */
 
-    cpus 4
-    memory "48GB"
+    label 'process_high'
     cache "lenient"
 
     container "mgibio/bam_readcount_helper-cwl:1.2.1"
@@ -19,18 +18,18 @@ process BAMREADCOUNT {
 
     output:
 
-        tuple val(somatic_meta), val(sample_meta), path("${sample_meta.sample_name}_${sample_meta.molecule}_bamrc_helper/*indel.tsv"), path("${sample_meta.sample_name}_${sample_meta.molecule}_bamrc_helper/*snv.tsv"), emit: brc_files
+        tuple val(somatic_meta), val(sample_meta), path("*_bamrc_helper/*indel.tsv"), path("*_bamrc_helper/*snv.tsv"), emit: brc_files
     script:
-        
+        def prefix = task.ext.prefix ?: "${sample_meta.sample_name}_${sample_meta.molecule}"
         """
-        mkdir ${sample_meta.sample_name}_${sample_meta.molecule}_bamrc_helper
+        mkdir ${prefix}_bamrc_helper
         bam_readcount_helper.py \
             $vcf \
             ${sample_meta.sample_name} \
             $reference_fa \
             $bam \
             ${sample_meta.molecule} \
-            ${sample_meta.sample_name}_${sample_meta.molecule}_bamrc_helper
+            ${prefix}_bamrc_helper
         """
 
 }

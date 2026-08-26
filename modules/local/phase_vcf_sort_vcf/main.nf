@@ -7,8 +7,7 @@ process PHASE_VCF_SORT_VCF {
 
     */
 
-    cpus 2
-    memory "32GB"
+    label 'process_medium'
     container 'broadinstitute/picard:3.4.0'
 
     tag "Sorting VCF ${combined_vcf}"
@@ -19,14 +18,15 @@ process PHASE_VCF_SORT_VCF {
         path(reference_dict)
 
     output:
-        tuple val(somatic_meta), path("${somatic_meta.tumor_meta.sample_name}_combined.sorted.vcf"), emit: sorted_vcf
+        tuple val(somatic_meta), path("*_combined.sorted.vcf"), emit: sorted_vcf
 
     script:
+        def prefix = task.ext.prefix ?: "${somatic_meta.tumor_meta.sample_name}"
         """
         java -jar /usr/picard/picard.jar \
             SortVcf \
                 -I $combined_vcf \
-                -O ${somatic_meta.tumor_meta.sample_name}_combined.sorted.vcf \
+                -O ${prefix}_combined.sorted.vcf \
                 -SD $reference_dict
         """
 

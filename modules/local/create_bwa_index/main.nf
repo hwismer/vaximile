@@ -4,8 +4,7 @@ process CREATE_BWA_INDEX {
         Create a bwa-mem2 index for bwa mem mapping.
     */
 
-    cpus 8
-    memory "80GB"
+    label 'process_high_memory'
     container "iarcbioinfo/bwa-mem2-tools:v1.0"
 
     tag "Creating BWA index for $reference_fa"

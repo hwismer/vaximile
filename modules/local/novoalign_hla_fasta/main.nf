@@ -1,7 +1,6 @@
 process NOVOALIGN_HLA_FASTA {
 
-    cpus 32
-    memory "32GB"
+    label 'process_max'
 
     conda "bioconda::novoalign=4.03.04"
 

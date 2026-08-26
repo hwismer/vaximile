@@ -19,8 +19,7 @@ process PVACSEQ {
 
     */
 
-    cpus 16
-    memory "64GB"
+    label 'process_very_high'
     container "griffithlab/pvactools:7.0.1"
 
     tag "pVACseq on ${somatic_name}"
@@ -31,30 +30,24 @@ process PVACSEQ {
             val(hla_meta), path(hla_pvac_input)
         path(human_ref_peptides)
     output:
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_pvacseq"), emit: pvacseq_dir
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_pvacseq/MHC_Class_I/*MHC_I.all_epitopes.aggregated.tsv"), emit: pvaseq_mhc_i_aggr
+        tuple val(somatic_meta), path("*_pvacseq"), emit: pvacseq_dir
+        tuple val(somatic_meta), path("*_pvacseq/MHC_Class_I/*MHC_I.all_epitopes.aggregated.tsv"), emit: pvaseq_mhc_i_aggr
 
     script:
+        def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
+        def args = task.ext.args ?: ''
         """
         pvacseq run \
             $somatic_vcf \
             ${somatic_meta.tumor_meta.sample_name} \
             \$(head $hla_pvac_input -n 1) \
             all \
-            "${somatic_meta.somatic_name}_pvacseq" \
-            -e1 8,9,10,11 \
-            -e2 12,13,14,15,16,17,18 \
+            "${prefix}_pvacseq" \
+            $args \
             --phased-proximal-variants-vcf $phased_vcf \
             --normal-sample-name ${somatic_meta.normal_meta.sample_name} \
             --iedb-install-directory /opt/iedb \
-            --pass-only \
-            --run-reference-proteome-similarity \
-            --run-ml-predictions \
-            --top-score-metric2 'combined_percentile','ic50' \
             --peptide-fasta $human_ref_peptides \
-            -m median \
-            -a sample_name \
-            --problematic-amino-acids P:-2 \
             -t $task.cpus
         """
 }

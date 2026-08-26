@@ -6,8 +6,7 @@ process MERGE_GERMLINE_VCFS {
 
     */
 
-    cpus 4
-    memory "16GB"
+    label 'process_medium'
     container "broadinstitute/gatk3:3.6-0"
 
     tag "Combining VCFs: $vcf1 $vcf2 $vcf3"
@@ -21,22 +20,23 @@ process MERGE_GERMLINE_VCFS {
         path(reference_dict)
 
     output:
-        tuple val(sample_meta), path("${sample_meta.sample_name}_germline_variants.vcf.gz")
+        tuple val(sample_meta), path("*_germline_variants.vcf.gz")
 
 
     script:
 
+        def args = task.ext.args ?: ''
+        def prefix = task.ext.prefix ?: "${sample_meta.sample_name}"
         """
         java -Xmx16g -jar /usr/GenomeAnalysisTK.jar \
             -T CombineVariants \
             -R $reference_fa \
-            -genotypeMergeOptions PRIORITIZE \
+            $args \
             --rod_priority_list $vcf1_caller,$vcf2_caller,$vcf3_caller \
             -V:$vcf1_caller $vcf1 \
             -V:$vcf2_caller $vcf2 \
             -V:$vcf3_caller $vcf3 \
-            --minimumN 2 \
-            -o "${sample_meta.sample_name}_germline_variants.vcf.gz"
+            -o "${prefix}_germline_variants.vcf.gz"
         """
 
 }

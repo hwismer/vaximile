@@ -1,7 +1,6 @@
 process MUTECT2_GATHER_SELECT_VARIANTS {
 
-    cpus 2
-    memory "8GB"
+    label 'process_low'
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "Selecting Variants within interval for ${somatic_meta.somatic_name} in $interval_shard"

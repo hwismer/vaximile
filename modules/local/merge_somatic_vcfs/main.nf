@@ -6,8 +6,7 @@ process MERGE_SOMATIC_VCFS {
 
     */
 
-    cpus 4
-    memory "16GB"
+    label 'process_medium'
     container "broadinstitute/gatk3:3.6-0"
 
     tag "Merge 3 somatic vcfs from $vcf1 $vcf2 $vcf3"
@@ -25,6 +24,7 @@ process MERGE_SOMATIC_VCFS {
 
     script:
 
+        def args = task.ext.args ?: ''
         """
         java -Xmx16g -jar /usr/GenomeAnalysisTK.jar \
             -T CombineVariants \
@@ -34,7 +34,7 @@ process MERGE_SOMATIC_VCFS {
             -V:$vcf1_caller $vcf1 \
             -V:$vcf2_caller $vcf2 \
             -V:$vcf3_caller $vcf3 \
-            --minimumN 2 \
+            $args \
             -o "${somatic_meta.somatic_name}_variants.vcf.gz"
 
         """

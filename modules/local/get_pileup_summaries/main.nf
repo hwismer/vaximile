@@ -4,8 +4,7 @@ process GET_PILEUP_SUMMARIES {
     Takes a merged post-bqsr bam and a vcf of common germline sites and gets pileup summaries at provided sites
     */
     
-    cpus 4
-    memory "16GB"
+    label 'process_medium'
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "GetPileupSummaries on ${meta.sample_name}"
@@ -15,15 +14,16 @@ process GET_PILEUP_SUMMARIES {
         tuple path(common_germline), path(common_germline_index)
 
     output:
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_pileups.table")
-    
+        tuple val(meta), path("*_pileups.table")
+
     script:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
     """
     gatk GetPileupSummaries \
         -I $bqsr_bam \
         -V $common_germline \
         -L $common_germline \
-        -O "${meta.sample_name}_${meta.molecule}_pileups.table"
+        -O "${prefix}_pileups.table"
 
     """
 }

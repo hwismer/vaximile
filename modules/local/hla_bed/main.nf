@@ -1,7 +1,6 @@
 process HLA_BED {
     
-    cpus 1
-    memory "2GB"
+    label 'process_single'
 
     conda "conda-forge::coreutils=9.3"
 

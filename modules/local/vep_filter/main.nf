@@ -8,8 +8,7 @@ process VEP_FILTER {
 
     */
 
-    cpus 2
-    memory "16GB"
+    label 'process_low'
     container "ensemblorg/ensembl-vep:release_115.0"
 
     tag "Filtering $vep_vcf with VEP based on population frequencies"
@@ -23,12 +22,13 @@ process VEP_FILTER {
         tuple val(meta), path("${meta.somatic_name}_vep.vcf"), emit: vep_vcf
 
     script:
+        def args = task.ext.args ?: ''
         """
 
         filter_vep -i $vep_vcf \
             -o "${meta.somatic_name}_vep.vcf" \
             --format vcf \
-            --filter "gnomADe_AF < 0.001 or not gnomADe_AF"
+            $args
 
         """
 }

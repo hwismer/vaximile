@@ -6,8 +6,7 @@ process STRELKA_GERMLINE {
 
     */
 
-    cpus 8
-    memory "24GB"
+    label 'process_high'
     container "mgibio/strelka:2.9.9"
 
     tag "Running Strelka in germline mode on ${meta.sample_name}"

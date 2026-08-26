@@ -5,8 +5,7 @@ process BASE_RECALIBRATOR_SCATTER {
     Returns the recalibration table for that interval.
     */
 
-    cpus 2
-    memory "12GB"
+    label 'process_low'
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "BaseRecalibrator on ${meta.sample_name} ${interval_shard}"
@@ -21,13 +20,14 @@ process BASE_RECALIBRATOR_SCATTER {
         tuple path(mills), path(mills_index)
 
     output:
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_${interval_shard}_recal_table.table")
-    
+        tuple val(meta), path("*_recal_table.table")
+
     script:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}_${interval_shard}"
     """
     gatk BaseRecalibrator \
         -I $markdup_bam \
-        -O "${meta.sample_name}_${meta.molecule}_${interval_shard}_recal_table.table" \
+        -O "${prefix}_recal_table.table" \
         -R $reference_fa \
         --known-sites $known_sites_dbsnp \
         --known-sites $known_sites_1000g_snps \

@@ -13,7 +13,21 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `nextflow.config` and `nextflow_schema.json`. Process bodies are unchanged. See
   [docs/nf-core-migration.md](docs/nf-core-migration.md) for what remains.
 
+- Converted all 94 local modules to nf-core process conventions. Each now carries a
+  `process_*` label instead of its own `cpus`/`memory` (tiers in `conf/base.config`), 67
+  support `task.ext.prefix`, and 19 read `task.ext.args` from `conf/modules.config`.
+  Output filenames are unchanged. 27 modules cannot use `ext.prefix` without risking a
+  glob that captures their own inputs; those are enumerated in
+  [docs/nf-core-migration.md](docs/nf-core-migration.md).
+- Resource requests now come from eight tiers. Each module was placed in the smallest tier
+  meeting or exceeding its previous CPU and memory request, so 79 of 94 request somewhat
+  more than before and none requests less.
+
 ### Fixed
+
+- `nextflow.config` interpolated `${manifest.name}` inside the `validation.help.command`
+  string, where `manifest` is not in scope. This failed config parsing outright, so every
+  `nextflow` invocation from the repository root aborted before compiling anything.
 
 - `mhcflow` referenced its conda environment as `./envs/mhcflow.yml`, which resolved
   against the launch directory. The file now lives beside the module and is referenced with

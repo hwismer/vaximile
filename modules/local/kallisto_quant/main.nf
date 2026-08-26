@@ -7,8 +7,7 @@ process KALLISTO_QUANT {
 
     */
 
-    cpus 8
-    memory "32GB"
+    label 'process_high'
 
     conda "bioconda::kallisto=0.51.1"
     
@@ -19,12 +18,13 @@ process KALLISTO_QUANT {
         path kallisto_index
 
     output:
-        tuple val(meta), path("${meta.sample_name}_kallisto/abundance.tsv"), emit: abundance
-        tuple val(meta), path("${meta.sample_name}_kallisto"), emit: kallisto_dir
+        tuple val(meta), path("*_kallisto/abundance.tsv"), emit: abundance
+        tuple val(meta), path("*_kallisto"), emit: kallisto_dir
         tuple val(meta), path("*"), emit: tutto
 
     script:
+        def prefix = task.ext.prefix ?: "${meta.sample_name}"
         """
-        kallisto quant -i $kallisto_index -o ${meta.sample_name}_kallisto -t ${task.cpus} $read1 $read2 > "${meta.sample_name}_kallist_stdout.out" 
+        kallisto quant -i $kallisto_index -o ${prefix}_kallisto -t ${task.cpus} $read1 $read2 > "${prefix}_kallist_stdout.out"
         """
 }

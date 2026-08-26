@@ -5,8 +5,7 @@ process ANNOTATE_VCF_GENE_EXPRESSION {
     Use the abundance estimates from kallist to annotate transcript expression in a vcf file.
 
     */
-    cpus 2
-    memory "16GB"
+    label 'process_low'
 
     container "griffithlab/vatools:5.2.0"
 
@@ -15,9 +14,10 @@ process ANNOTATE_VCF_GENE_EXPRESSION {
 
 
     output:
-        tuple val(somatic_meta), path("${somatic_name}_gene_expression.vcf")
+        tuple val(somatic_meta), path("*_gene_expression.vcf")
 
     script:
+        def prefix = task.ext.prefix ?: "${somatic_name}"
 
         """
         vcf-expression-annotator \
@@ -28,7 +28,7 @@ process ANNOTATE_VCF_GENE_EXPRESSION {
             -e TPM \
             -s ${sample_meta.sample_name} \
             --ignore-ensembl-id-version \
-            -o "${somatic_name}_gene_expression.vcf"
+            -o "${prefix}_gene_expression.vcf"
         """
 
 }

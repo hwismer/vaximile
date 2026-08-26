@@ -3,8 +3,7 @@ process INDEX_VCF {
     // TBI index a vcf file
 
 
-    cpus 2
-    memory "8GB"
+    label 'process_low'
     container "staphb/bcftools:1.23"
 
     tag "Indexing $vcf"

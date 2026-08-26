@@ -1,8 +1,7 @@
 process SOMALIER_RELATE {
 
 
-    cpus 4
-    memory "32GB"
+    label 'process_medium'
     conda "bioconda::somalier=0.3.2-0 bioconda::htslib=1.23.1"
 
     tag "somalier relate on patient ${patient}"
@@ -17,10 +16,11 @@ process SOMALIER_RELATE {
         tuple val(patient), path("*.html"), emit:html
 
     script:
+    def prefix = task.ext.prefix ?: "${patient}"
     """
     export SOMALIER_REPORT_ALL_PAIRS=1
     somalier relate \
-        -o $patient \
+        -o $prefix \
         *.somalier
     """
 }

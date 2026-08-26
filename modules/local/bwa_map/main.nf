@@ -7,8 +7,7 @@ process BWA_MAP {
         present in the FASTQs is ignored.
     */
 
-    cpus 8
-    memory "32GB"
+    label 'process_high'
     container "iarcbioinfo/bwa-mem2-tools:v1.0"
     
     tag "BWA Alignment on ${meta.sample_name}"
@@ -19,13 +18,14 @@ process BWA_MAP {
         path bwa_index
 
     output:
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}.sam")
+        tuple val(meta), path("*.sam")
 
     script:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
     """
     NEW_RG="@RG\\tID:${meta.sample_name}\\tSM:${meta.sample_name}\\tLB:${meta.sample_name}\\tPL:${meta.molecule}_${meta.sequencing_type}"
 
-    bwa-mem2 mem -t $task.cpus -R \$NEW_RG $reference_fa $fastq1 $fastq2 > "${meta.sample_name}_${meta.molecule}.sam"
+    bwa-mem2 mem -t $task.cpus -R \$NEW_RG $reference_fa $fastq1 $fastq2 > "${prefix}.sam"
 
     """
 }

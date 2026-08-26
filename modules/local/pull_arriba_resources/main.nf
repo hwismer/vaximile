@@ -4,8 +4,7 @@ process PULL_ARRIBA_RESOURCES {
 
     // Pulls arribra resources from release 2.5.1. Runs locally incase job nodes don't have internet.
 
-    cpus 1
-    memory "4GB"
+    label 'process_single'
     executor "local"
 
     tag "Pulling Arriba resources v2.5.1"

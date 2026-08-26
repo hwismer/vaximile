@@ -8,8 +8,7 @@ process MUTECT2_SCATTER {
 
     */
 
-    cpus 4
-    memory "12GB"
+    label 'process_medium'
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "Running Mutect2 scatter on ${somatic_meta.somatic_name} at $interval_shard"
@@ -23,13 +22,13 @@ process MUTECT2_SCATTER {
         val interval_padding
 
     output:
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_${interval_shard}_mutect.vcf.gz"), 
-        path("${somatic_meta.somatic_name}_${interval_shard}_mutect.vcf.gz.tbi"), path(interval_shard), emit: vcf
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_${interval_shard}_mutect_f1r2.tar.gz"), emit: f1r2
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_${interval_shard}_mutect.vcf.gz.stats"), emit: stats
+        tuple val(somatic_meta), path("*_mutect.vcf.gz"),
+        path("*_mutect.vcf.gz.tbi"), path(interval_shard), emit: vcf
+        tuple val(somatic_meta), path("*_mutect_f1r2.tar.gz"), emit: f1r2
+        tuple val(somatic_meta), path("*_mutect.vcf.gz.stats"), emit: stats
 
     script:
-
+        def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}_${interval_shard}"
         """
         gatk Mutect2 \
             -R "${reference_fa}" \
@@ -38,10 +37,10 @@ process MUTECT2_SCATTER {
             -normal ${somatic_meta.normal_meta.sample_name} \
             --germline-resource $germline_resource \
             --panel-of-normals $pon \
-            --f1r2-tar-gz "${somatic_meta.somatic_name}_${interval_shard}_mutect_f1r2.tar.gz" \
+            --f1r2-tar-gz "${prefix}_mutect_f1r2.tar.gz" \
             -L $interval_shard \
             -ip $interval_padding \
-            -O "${somatic_meta.somatic_name}_${interval_shard}_mutect.vcf.gz" \
+            -O "${prefix}_mutect.vcf.gz" \
             --native-pair-hmm-threads $task.cpus
         """
 }

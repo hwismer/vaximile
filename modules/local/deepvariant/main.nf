@@ -1,7 +1,6 @@
 process DEEPVARIANT {
 
-    cpus 16
-    memory "32GB"
+    label 'process_very_high'
     container "google/deepvariant:1.10.0"
     
     tag "DeepVariant on ${meta.sample_name}"
@@ -11,8 +10,8 @@ process DEEPVARIANT {
         tuple path(reference_fa), path(reference_index)
 
     output:
-        tuple val(meta), val("deepvariant"), path("${meta.sample_name}_deepvariant.vcf.gz"), path("${meta.sample_name}_deepvariant.vcf.gz.tbi"), emit: vcf
-        tuple val(meta), val("deepvariant"), path("${meta.sample_name}_deepvariant.gvcf.gz"), path("${meta.sample_name}_deepvariant.gvcf.gz.tbi"), emit: gvcf
+        tuple val(meta), val("deepvariant"), path("*_deepvariant.vcf.gz"), path("*_deepvariant.vcf.gz.tbi"), emit: vcf
+        tuple val(meta), val("deepvariant"), path("*_deepvariant.gvcf.gz"), path("*_deepvariant.gvcf.gz.tbi"), emit: gvcf
 
     script:
 
@@ -23,16 +22,17 @@ process DEEPVARIANT {
 
 	def model = model_map[meta.sequencing_type]
 
+    def args = task.ext.args ?: ''
+    def prefix = task.ext.prefix ?: "${meta.sample_name}"
     """
     /opt/deepvariant/bin/run_deepvariant \
         --model_type=$model \
         --ref=$reference_fa \
         --reads=$bam \
-        --output_vcf=${meta.sample_name}_deepvariant.vcf.gz \
-        --output_gvcf=${meta.sample_name}_deepvariant.gvcf.gz \
+        --output_vcf=${prefix}_deepvariant.vcf.gz \
+        --output_gvcf=${prefix}_deepvariant.gvcf.gz \
         --num_shards=$task.cpus \
-        --vcf_stats_report=true \
         --regions $bed \
-        --disable_small_model=true
+        $args
     """
 }

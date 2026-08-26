@@ -1,7 +1,6 @@
 process SAMTOOLS_COVERAGE {
     
-    cpus 8
-    memory "24GB"
+    label 'process_high'
     conda "bioconda::samtools=1.23.1 bioconda::bedtools=2.31.1 bioconda::htslib=1.23.1"
     
     tag "Samtools coverage on ${meta.sample_name}"
@@ -10,10 +9,11 @@ process SAMTOOLS_COVERAGE {
         tuple val(meta), path(bam), path(bai)
 
     output:
-       tuple val(meta), path("${meta.sample_name}_${meta.molecule}_coverage.tsv")
+       tuple val(meta), path("*_coverage.tsv")
 
     script:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
     """
-    samtools coverage $bam > ${meta.sample_name}_${meta.molecule}_coverage.tsv
+    samtools coverage $bam > ${prefix}_coverage.tsv
     """
 }

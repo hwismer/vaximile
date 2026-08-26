@@ -8,9 +8,8 @@ process PHASE_VCF_RENAME {
 
     */
 
-    cpus 2
-    memory "16GB"
-    container "staphb/bcftools:1.23.1" 
+    label 'process_low'
+    container "staphb/bcftools:1.23.1"
 
     tag "Renaming germline sample ${normal_meta.sample_name} to ${somatic_meta.tumor_meta.sample_name}"
 
@@ -18,9 +17,10 @@ process PHASE_VCF_RENAME {
         tuple val(normal_meta), val(somatic_meta), path(germline_vcf), path(germline_vcf_index)
 
     output:
-        tuple val(somatic_meta), path("${somatic_meta.tumor_meta.sample_name}_germline_rename.vcf.gz"), path("${somatic_meta.tumor_meta.sample_name}_germline_rename.vcf.gz.tbi")
+        tuple val(somatic_meta), path("*_germline_rename.vcf.gz"), path("*_germline_rename.vcf.gz.tbi")
 
     script:
+        def prefix = task.ext.prefix ?: "${somatic_meta.tumor_meta.sample_name}"
         """
         cat > sample_map.txt <<EOF
         ${normal_meta.sample_name} ${somatic_meta.tumor_meta.sample_name}
@@ -29,10 +29,10 @@ process PHASE_VCF_RENAME {
         bcftools reheader \
             -N sample_map.txt \
             --threads $task.cpus \
-            -o ${somatic_meta.tumor_meta.sample_name}_germline_rename.vcf.gz \
+            -o ${prefix}_germline_rename.vcf.gz \
             $germline_vcf
 
-        bcftools index -t --threads $task.cpus ${somatic_meta.tumor_meta.sample_name}_germline_rename.vcf.gz 
+        bcftools index -t --threads $task.cpus ${prefix}_germline_rename.vcf.gz
         """
 
 

@@ -6,8 +6,7 @@ process ADD_VCF_GT_FIELD {
 
     */
 
-    cpus 2
-    memory "16GB"
+    label 'process_low'
     container "griffithlab/vatools:5.2.0"
 
     tag "Adding 0/1 default GT to variants $somatic_vcf"
@@ -16,14 +15,15 @@ process ADD_VCF_GT_FIELD {
         tuple val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index)
          
     output:
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_gt.vcf"), path("${somatic_meta.somatic_name}_gt.vcf.tbi"),emit: vcf
+        tuple val(somatic_meta), path("*_gt.vcf"), path("*_gt.vcf.tbi"),emit: vcf
 
     script:
+        def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
         """
-        cp $somatic_vcf_index ${somatic_meta.somatic_name}_gt.vcf.tbi
+        cp $somatic_vcf_index ${prefix}_gt.vcf.tbi
         vcf-genotype-annotator $somatic_vcf \
             "${somatic_meta.tumor_meta.sample_name}" \
             0/1 \
-            -o "${somatic_meta.somatic_name}_gt.vcf"
+            -o "${prefix}_gt.vcf"
         """
 }

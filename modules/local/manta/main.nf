@@ -6,8 +6,7 @@ process MANTA {
 
     */
 
-   cpus 8
-   memory "24GB"
+   label 'process_high'
    tag "Running Manta on ${somatic_meta.somatic_name}"
     
    container "mgibio/manta_somatic-cwl:1.6.0"
@@ -16,10 +15,11 @@ process MANTA {
         tuple val(somatic_meta), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai), path(bed), path(bed_index)
         tuple path(reference_fa), path(reference_fai)
     output:
-        tuple val(somatic_meta), path("./${somatic_meta.somatic_name}_manta")
+        tuple val(somatic_meta), path("*_manta")
 
     script:
     def exome_flag = (somatic_meta.tumor_meta.sequencing_type == "exome" || somatic_meta.tumor_meta.sequencing_type == "exome_ffpe") ? "--exome" : ""
+    def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
 
     """
     /usr/bin/manta/bin/configManta.py \
@@ -28,9 +28,9 @@ process MANTA {
         --referenceFasta $reference_fa \
         ${exome_flag} \
         --callRegions $bed \
-        --runDir ./${somatic_meta.somatic_name}_manta/
-        
-    ./${somatic_meta.somatic_name}_manta/runWorkflow.py -j $task.cpus
+        --runDir ./${prefix}_manta/
+
+    ./${prefix}_manta/runWorkflow.py -j $task.cpus
     """
 
 }

@@ -1,7 +1,6 @@
 process HLAHD_TO_TSV {
 
-    cpus 2
-    memory "4GB"
+    label 'process_low'
 
     conda "python=3.10 pandas=2.1"
 
@@ -11,9 +10,10 @@ process HLAHD_TO_TSV {
         tuple val(meta), path(hlahd_result)
 
     output:
-		tuple val(meta), path("${meta.sample_name}_hlahd.tsv"), emit: hlahd_tsv
+		tuple val(meta), path("*_hlahd.tsv"), emit: hlahd_tsv
 
     script:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}"
     """
     #!/usr/bin/env python3
     
@@ -31,6 +31,6 @@ process HLAHD_TO_TSV {
         test.pivot(index="sample", columns="locus", values="calls")
               .reset_index()
               )
-    wide.to_csv("${meta.sample_name}_hlahd.tsv", sep = "\t", index = False)
+    wide.to_csv("${prefix}_hlahd.tsv", sep = "\t", index = False)
     """
 }

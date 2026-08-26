@@ -7,9 +7,8 @@ process POSTPROCESS_STRELKA {
 
     */
 
-    cpus 4
-    memory "16GB"
-    
+    label 'process_medium'
+
     container "staphb/bcftools:1.23.1" 
 
     input:
@@ -18,14 +17,15 @@ process POSTPROCESS_STRELKA {
               path(strelka_indels), path(strelka_indels_index)
 
     output:
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_strelka_snvs_indels.vcf.gz"), path("${somatic_meta.somatic_name}_strelka_snvs_indels.vcf.gz.tbi"), emit: vcf
+        tuple val(somatic_meta), path("*_strelka_snvs_indels.vcf.gz"), path("*_strelka_snvs_indels.vcf.gz.tbi"), emit: vcf
 
 
     script:
+        def args = task.ext.args ?: ''
+        def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
         """
         bcftools concat \
-            --allow-overlaps \
-            --remove-duplicates \
+            $args \
             --threads $task.cpus \
             -Oz \
             -W=tbi \
@@ -41,9 +41,9 @@ process POSTPROCESS_STRELKA {
         bcftools reheader \
             -N sample_map.txt \
             --threads $task.cpus \
-            -o ${somatic_meta.somatic_name}_strelka_snvs_indels.vcf.gz \
+            -o ${prefix}_strelka_snvs_indels.vcf.gz \
             strelka_merged.vcf.gz
 
-        bcftools index -t --threads $task.cpus ${somatic_meta.somatic_name}_strelka_snvs_indels.vcf.gz
+        bcftools index -t --threads $task.cpus ${prefix}_strelka_snvs_indels.vcf.gz
         """
 }

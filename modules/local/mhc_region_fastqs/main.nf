@@ -1,7 +1,6 @@
 process MHC_REGION_FASTQS {
     
-    cpus 4
-    memory "16GB"
+    label 'process_medium'
 
     conda "bioconda::samtools=1.23.1 bioconda::bedtools=2.31.1 bioconda::htslib=1.23.1"
     
@@ -11,10 +10,11 @@ process MHC_REGION_FASTQS {
     	tuple val(meta), path(bam), path(bai)
 
     output:
-    	tuple val(meta), path("${meta.sample_name}_R1.fastq"), path("${meta.sample_name}_R2.fastq")
+    	tuple val(meta), path("*_R1.fastq"), path("*_R2.fastq")
 
     script:
     def mhc_region = 'chr6:28510120-33480577'
+    def prefix = task.ext.prefix ?: "${meta.sample_name}"
 
     """
     set -euo pipefail
@@ -65,8 +65,8 @@ process MHC_REGION_FASTQS {
     # BAM -> paired FASTQ
     samtools collate -Ou merged.bam \
       | samtools fastq \
-            -1 ${meta.sample_name}_R1.fastq \
-            -2 ${meta.sample_name}_R2.fastq \
+            -1 ${prefix}_R1.fastq \
+            -2 ${prefix}_R2.fastq \
 			-0 /dev/null \
 			-s /dev/null \
             -

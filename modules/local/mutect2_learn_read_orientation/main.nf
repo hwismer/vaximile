@@ -1,7 +1,6 @@
 process MUTECT2_LEARN_READ_ORIENTATION {
     
-    cpus 4
-    memory "12GB"
+    label 'process_medium'
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "Learning read orientation for ${somatic_meta.somatic_name}"
@@ -10,10 +9,11 @@ process MUTECT2_LEARN_READ_ORIENTATION {
         tuple val(somatic_meta), path(f1r2s)
 
     output:
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_orientmodel.tar.gz")
+        tuple val(somatic_meta), path("*_orientmodel.tar.gz")
 
     script:
-    
+
+    def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
     def f1r2_as_input = f1r2s.collect { f1r2 ->
             "-I ${f1r2}"
         }.join(' ')
@@ -21,6 +21,6 @@ process MUTECT2_LEARN_READ_ORIENTATION {
     """
     gatk LearnReadOrientationModel \
         $f1r2_as_input \
-        -O "${somatic_meta.somatic_name}_orientmodel.tar.gz"
+        -O "${prefix}_orientmodel.tar.gz"
     """
 }

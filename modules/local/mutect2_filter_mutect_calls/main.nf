@@ -1,7 +1,6 @@
 process MUTECT2_FILTER_MUTECT_CALLS {
     
-    cpus 2
-    memory "16GB"
+    label 'process_low'
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "Filtering Mutect calls for ${somatic_meta.somatic_name}"
@@ -12,10 +11,11 @@ process MUTECT2_FILTER_MUTECT_CALLS {
         path reference_dict
 
     output:
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_mutect_filtered.vcf.gz"), path("${somatic_meta.somatic_name}_mutect_filtered.vcf.gz.tbi"), emit: filtered_vcf
+        tuple val(somatic_meta), path("*_mutect_filtered.vcf.gz"), path("*_mutect_filtered.vcf.gz.tbi"), emit: filtered_vcf
 
 
     script:
+    def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
     """
     gatk FilterMutectCalls \
         -R $reference_fa \
@@ -24,6 +24,6 @@ process MUTECT2_FILTER_MUTECT_CALLS {
         --contamination-table $contamination_table \
         -stats $stats \
         --create-output-variant-index \
-        -O "${somatic_meta.somatic_name}_mutect_filtered.vcf.gz"
+        -O "${prefix}_mutect_filtered.vcf.gz"
     """
 }

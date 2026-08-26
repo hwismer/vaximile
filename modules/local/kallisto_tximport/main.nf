@@ -1,8 +1,7 @@
 process KALLISTO_TXIMPORT {
 
-    cpus 1
-    memory "16GB"
-    
+    label 'process_low'
+
     conda "conda-forge::r-base=4.4.3 bioconda::bioconductor-tximport=1.34.0 conda-forge::r-readr=2.1.6 conda-forge::r-dplyr=1.1.4 bioconda::bioconductor-rtracklayer=1.66.0"
 
     tag "Getting gene abundance for ${meta.sample_name}"
@@ -12,9 +11,10 @@ process KALLISTO_TXIMPORT {
         path gtf
 
     output:
-        tuple val(meta), path("${meta.sample_name}.gene_tpm.tsv"), emit: gene_abundance
+        tuple val(meta), path("*.gene_tpm.tsv"), emit: gene_abundance
 
     script:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}"
     """
     #!/usr/bin/env Rscript
     
@@ -49,7 +49,7 @@ process KALLISTO_TXIMPORT {
     gene_tpm <- left_join(gene_tpm, gene_annot, by = "gene_id")
     colnames(gene_tpm) <- c("ENSEMBLID", "TPM", "Gene")
 
-    write_tsv(gene_tpm, "${meta.sample_name}.gene_tpm.tsv")
+    write_tsv(gene_tpm, "${prefix}.gene_tpm.tsv")
     
     """
 

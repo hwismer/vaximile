@@ -8,8 +8,7 @@ process OPTITYPE {
     */
     
     container "fred2/optitype:latest"
-    cpus 8
-    memory "32GB"
+    label 'process_high'
 
     tag "Optitype calls for ${meta.sample_name}"
 
@@ -22,6 +21,7 @@ process OPTITYPE {
     script:
 
         def molecule_flag = meta.molecule.toLowerCase()
+        def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
         """
         cat << EOF > OptiType.ini
         [mapping]
@@ -46,7 +46,7 @@ process OPTITYPE {
             -i $fastq1 $fastq2 \
             --$molecule_flag \
             -c OptiType.ini \
-            --prefix "${meta.sample_name}_${meta.molecule}" \
+            --prefix "${prefix}" \
             --outdir optitype_out
         """
 }

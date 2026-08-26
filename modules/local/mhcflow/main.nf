@@ -1,7 +1,6 @@
 process MHCFLOW {
 
-    cpus 32
-    memory "64GB"
+    label 'process_max'
 
     conda "${moduleDir}/environment.yml"
 
@@ -16,6 +15,7 @@ process MHCFLOW {
         tuple path(meta), path("${meta.sample_name}")
 
     script:
+    def args = task.ext.args ?: ''
     """
     mhcflow --bam $bam \
         --ref $hla_fasta \
@@ -23,7 +23,7 @@ process MHCFLOW {
         --tag $hla_kmers \
         --freq $hla_freqs \
         --nproc $task.cpus \
-        --min-ecnt 1 \
+        $args \
         --outdir ${meta.sample_name}
 	ls
     """

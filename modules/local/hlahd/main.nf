@@ -11,8 +11,7 @@ process HLAHD {
 
     */
     
-    cpus 8
-    memory "32GB"
+    label 'process_high'
     container "griffithlab/hlahd:1.0"
 
     tag "HLA-HD on ${meta.sample_name}"
@@ -21,10 +20,11 @@ process HLAHD {
         tuple val(meta), path(fastq1), path(fastq2)
     
     output:
-        tuple val(meta), path("./${meta.sample_name}/result/${meta.sample_name}_final.result.txt"), emit: final_hla_calls
-        tuple val(meta), path("./${meta.sample_name}/result/"), emit: result_dir
+        tuple val(meta), path("*/result/*_final.result.txt"), emit: final_hla_calls
+        tuple val(meta), path("*/result/"), emit: result_dir
 
     script:
+        def prefix = task.ext.prefix ?: "${meta.sample_name}"
         """
         /opt/hlahd/bin/hlahd.1.6.1.sh \
             -f /opt/hlahd/freq_data \
@@ -32,7 +32,7 @@ process HLAHD {
             $fastq1 $fastq2 \
             /opt/hlahd/HLA_gene.split.txt \
             /opt/hlahd/dictionary \
-            "${meta.sample_name}" \
+            "${prefix}" \
             ./
         """
 

@@ -7,8 +7,7 @@ process POSTPROCESS_VCF {
 
     */
 
-    cpus 4
-    memory "16GB"
+    label 'process_medium'
     container "staphb/bcftools:1.23"
 
     tag "Normalizing $vcf"

@@ -2,8 +2,7 @@ process PREPARE_FASTA {
 
     // Unzips a fasta.gz or fa.gz or otherwise renames to a standard name
 
-	cpus 2
-	memory "8GB"
+	label 'process_low'
 
     tag "Preprocessing $fasta"
 
@@ -16,7 +15,7 @@ process PREPARE_FASTA {
     script:
 
     	def is_gz = fasta.name.endsWith('.gz')
-        def prefix = fasta.name.replaceFirst(/\.(fasta|fa)(\.gz)?$/, '')
+        def prefix = task.ext.prefix ?: fasta.name.replaceFirst(/\.(fasta|fa)(\.gz)?$/, '')
 
     	"""
     	set -euo pipefail

@@ -8,8 +8,7 @@ process VEP_POPULATION_FILTER {
 
     */
 
-    cpus 2
-    memory "16GB"
+    label 'process_low'
     cache "lenient"
 
 
@@ -21,13 +20,15 @@ process VEP_POPULATION_FILTER {
         path vep_plugins
 
     output:
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_vep_filter.vcf"), emit: vcf
+        tuple val(somatic_meta), path("*_vep_filter.vcf"), emit: vcf
 
     script:
+        def args = task.ext.args ?: ''
+        def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
         """
         filter_vep -i $vep_vcf \
-            -o "${somatic_meta.somatic_name}_vep_filter.vcf" \
+            -o "${prefix}_vep_filter.vcf" \
             --format vcf \
-            --filter "gnomADe_AF < 0.001 or not gnomADe_AF"
+            $args
         """
 }

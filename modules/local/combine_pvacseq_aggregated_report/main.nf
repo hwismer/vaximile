@@ -1,7 +1,6 @@
 process COMBINE_PVACSEQ_AGGREGATED_REPORT {
 
-    cpus 2
-    memory "16GB"
+    label 'process_low'
     conda "python=3.10 pandas=2.1"
     
     tag "Combing pVACseq reports for ${patient}"
@@ -10,10 +9,11 @@ process COMBINE_PVACSEQ_AGGREGATED_REPORT {
         tuple val(patient), path(reports)
 
     output:
-        tuple val(patient), path("${patient}_pvacseq_reports.tsv")
+        tuple val(patient), path("*_pvacseq_reports.tsv")
 
     script:
 
+    def prefix = task.ext.prefix ?: "${patient}"
     def file_list = reports.collect { "'${it.name}'" }.join(", ")
 
     """
@@ -43,7 +43,7 @@ process COMBINE_PVACSEQ_AGGREGATED_REPORT {
     df["sum_rank"] = (df["Allele Expr"].rank(method="min") + df["%ile MT"].rank(method="min") + df["IC50 MT"].rank(method="min"))
     
     df = df.sort_values(["Tier", "sum_rank", "IC50 MT", "Gene", "AA Change"],kind="mergesort").drop(columns="sum_rank").reset_index()
-    df.to_csv("${patient}_pvacseq_reports.tsv", sep = "\\t", index = False)
+    df.to_csv("${prefix}_pvacseq_reports.tsv", sep = "\\t", index = False)
     """
 
 }

@@ -6,8 +6,7 @@ process HAPLOTYPE_CALLER_CNN_SCORE_VARIANTS {
 
     */
 
-    cpus 4
-    memory "16GB"
+    label 'process_medium'
 
     container "broadinstitute/gatk:4.3.0.0"
 
@@ -20,9 +19,10 @@ process HAPLOTYPE_CALLER_CNN_SCORE_VARIANTS {
         val(interval_padding)
 
     output:
-        tuple val(meta), path("${meta.sample_name}_${interval_shard}_CNN.vcf.gz"), path("${meta.sample_name}_${interval_shard}_CNN.vcf.gz.tbi"), path(interval_shard)
+        tuple val(meta), path("*_CNN.vcf.gz"), path("*_CNN.vcf.gz.tbi"), path(interval_shard)
 
     script:
+        def prefix = task.ext.prefix ?: "${meta.sample_name}_${interval_shard}"
         """
         gatk CNNScoreVariants \
             -V $vcf \
@@ -30,6 +30,6 @@ process HAPLOTYPE_CALLER_CNN_SCORE_VARIANTS {
             -ip $interval_padding \
             -R $reference_fa \
             --create-output-variant-index \
-            -O "${meta.sample_name}_${interval_shard}_CNN.vcf.gz"
+            -O "${prefix}_CNN.vcf.gz"
         """
 }

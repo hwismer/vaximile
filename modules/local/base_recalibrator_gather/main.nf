@@ -4,8 +4,7 @@ process BASE_RECALIBRATOR_GATHER {
     Gathers scattered BaseRecalibrator recal tables from separate intervals and outputs the final table.
     */
     
-    cpus 2
-    memory "8GB"
+    label 'process_low'
     container "broadinstitute/gatk:4.6.1.0"
 
     tag "GatherBQSRReports on ${meta.sample_name}"

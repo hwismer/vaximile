@@ -7,9 +7,7 @@ process STAR_ALIGN {
 
     */
 
-    cpus 16
-
-    memory "48GB"
+    label 'process_very_high'
 
     container "alexdobin/star:2.7.10a_alpha_220506"
 
@@ -21,13 +19,14 @@ process STAR_ALIGN {
         path(gtf)
 
     output:
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_Aligned.out.bam"), emit: star_bam
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_ReadsPerGene.out.tab"), emit: gene_quant
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_Log.final.out"), emit:final_log
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_SJ.out.tab"), emit: sj_out
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_Chimeric.out.junction"), path(fastq1), path(fastq2), emit: chimeric_out
+        tuple val(meta), path("*_Aligned.out.bam"), emit: star_bam
+        tuple val(meta), path("*_ReadsPerGene.out.tab"), emit: gene_quant
+        tuple val(meta), path("*_Log.final.out"), emit:final_log
+        tuple val(meta), path("*_SJ.out.tab"), emit: sj_out
+        tuple val(meta), path("*_Chimeric.out.junction"), path(fastq1), path(fastq2), emit: chimeric_out
         tuple val(meta), path("*"), emit: tutto
     script:
+        def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
         """
 
         gzip -d -c $gtf > gencode.gtf
@@ -64,7 +63,7 @@ process STAR_ALIGN {
             --alignInsertionFlush Right \
             --alignSplicedMateMapLminOverLmate 0.5 \
             --alignSplicedMateMapLmin 30 \
-            --outFileNamePrefix ./${meta.sample_name}_${meta.molecule}_ \
+            --outFileNamePrefix ./${prefix}_ \
             --quantMode GeneCounts \
             --sjdbGTFfile gencode.gtf
 

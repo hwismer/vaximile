@@ -1,7 +1,6 @@
 process GET_RNA_STRANDEDNESS {
 
-    cpus 1
-    memory "4GB"
+    label 'process_single'
 
     conda "python=3.10 pandas=2.1"
 
@@ -11,9 +10,10 @@ process GET_RNA_STRANDEDNESS {
         tuple val(meta), path(salmon_quant)
 
     output:
-        tuple val(meta), path("${meta.sample_name}_strandedness.txt"), emit: strand_txt
-    
+        tuple val(meta), path("*_strandedness.txt"), emit: strand_txt
+
     script:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}"
     """
     #!/usr/bin/env python3
 
@@ -36,7 +36,7 @@ process GET_RNA_STRANDEDNESS {
         print("Unable to parse strandedness. Check salmon output")
         sys.exit(1)
         
-    with open("${meta.sample_name}_strandedness.txt", "w") as f:
+    with open("${prefix}_strandedness.txt", "w") as f:
         f.write(strandedness + "\\n")
 
     """

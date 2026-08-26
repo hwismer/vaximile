@@ -1,7 +1,6 @@
 process SAMTOOLS_FLAGSTAT {
 
-    cpus 8
-    memory "24GB"
+    label 'process_high'
     conda "bioconda::samtools=1.23.1 bioconda::bedtools=2.31.1 bioconda::htslib=1.23.1"
     
     tag "Samtools flagstat on ${meta.sample_name}"
@@ -10,11 +9,12 @@ process SAMTOOLS_FLAGSTAT {
         tuple val(meta), path(bam), path(bai)
 
     output:
-       tuple val(meta), path("${meta.sample_name}_${meta.molecule}.flagstat")
+       tuple val(meta), path("*.flagstat")
 
     script:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
     """
-    samtools flagstat --threads $task.cpus $bam > ${meta.sample_name}_${meta.molecule}.flagstat
+    samtools flagstat --threads $task.cpus $bam > ${prefix}.flagstat
     """
 
 }

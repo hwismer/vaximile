@@ -5,8 +5,7 @@ process PHASE_VCF_VEP {
         Use VEP to annotated the phased vcf.
 
     */
-    cpus 8
-    memory "32GB"
+    label 'process_high'
     container "ensemblorg/ensembl-vep:release_115.0"
 
     tag "VEP on phased vcf $phased_vcf"
@@ -21,18 +20,18 @@ process PHASE_VCF_VEP {
         tuple val(meta), path("phased_vcf_vep.vcf"), emit: vcf
 
     script:
+        def args = task.ext.args ?: ''
         """
         vep \
             --input_file $phased_vcf  \
             --output_file "phased_vcf_vep.vcf" \
-            --format vcf --vcf --symbol --terms SO --tsl --biotype \
-            --hgvs --fasta $reference_fa  \
+            --format vcf --vcf \
+            $args \
+            --fasta $reference_fa  \
             --offline --cache $vep_cache \
             --plugin Frameshift --plugin Wildtype --plugin Downstream \
-            --pick \
             --fork ${task.cpus} \
-            --dir_plugins $vep_plugins \
-            --transcript_version
+            --dir_plugins $vep_plugins
 
         """
 

@@ -1,7 +1,6 @@
 process FASTP {
 
-    cpus 8
-    memory "32GB"
+    label 'process_high'
     conda "bioconda::fastp=1.0.1"
 
     tag "FastP on ${meta.sample_name} w/ ${meta.molecule}"
@@ -10,21 +9,23 @@ process FASTP {
         tuple val(meta), path(reads)
 
     output:
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_R1_fastp.fastq.gz"), path("${meta.sample_name}_${meta.molecule}_R2_fastp.fastq.gz"), emit: fastqs
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}.json"), emit: reports
-    
+        tuple val(meta), path("*_R1_fastp.fastq.gz"), path("*_R2_fastp.fastq.gz"), emit: fastqs
+        tuple val(meta), path("*.json"), emit: reports
+
 
     script:
+        def args = task.ext.args ?: ''
+        def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
         """
         fastp --thread $task.cpus \
               -i ${reads[0]} \
               -I ${reads[1]} \
-              -o "${meta.sample_name}_${meta.molecule}_R1_fastp.fastq.gz" \
-              -O "${meta.sample_name}_${meta.molecule}_R2_fastp.fastq.gz" \
-              -R "${meta.sample_name}_${meta.molecule}_fastp_report" \
-              -h "${meta.sample_name}_${meta.molecule}.html" \
-              -j "${meta.sample_name}_${meta.molecule}.json" \
-              --detect_adapter_for_pe
+              -o "${prefix}_R1_fastp.fastq.gz" \
+              -O "${prefix}_R2_fastp.fastq.gz" \
+              -R "${prefix}_fastp_report" \
+              -h "${prefix}.html" \
+              -j "${prefix}.json" \
+              $args
 
         """
 }

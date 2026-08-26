@@ -6,8 +6,7 @@ process HAPLOTYPE_CALLER_SCATTER {
 
     */
 
-    cpus 4
-    memory "16GB"
+    label 'process_medium'
     container "broadinstitute/gatk:4.3.0.0"
 
     tag "Haplotype Caller on ${meta.sample_name} on ${interval_shard}"
@@ -19,16 +18,18 @@ process HAPLOTYPE_CALLER_SCATTER {
         val(interval_padding)
 
     output:
-        tuple val(meta), path("${meta.sample_name}_${interval_shard}.vcf.gz"), path("${meta.sample_name}_${interval_shard}.vcf.gz.tbi"),  path(interval_shard)
+        tuple val(meta), path("*.vcf.gz"), path("*.vcf.gz.tbi"),  path(interval_shard)
 
     script:
+        def args = task.ext.args ?: ''
+        def prefix = task.ext.prefix ?: "${meta.sample_name}_${interval_shard}"
         """
         gatk HaplotypeCaller \
             -R $reference_fa \
             -I $bam \
             -L $interval_shard \
-            -O "${meta.sample_name}_${interval_shard}.vcf.gz" \
-            -ERC NONE \
+            -O "${prefix}.vcf.gz" \
+            $args \
             --native-pair-hmm-threads $task.cpus \
             -ip $interval_padding \
             --create-output-variant-index

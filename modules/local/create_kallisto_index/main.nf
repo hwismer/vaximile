@@ -6,8 +6,7 @@ process CREATE_KALLISTO_INDEX {
 
     */
     
-    cpus 8
-    memory "32GB"
+    label 'process_high'
     cache 'lenient'
     
     publishDir "./resources/kallisto", mode: "copy"
@@ -20,11 +19,12 @@ process CREATE_KALLISTO_INDEX {
         path(transcriptome_fa)
 
     output:
-        path("${transcriptome_fa}_kallisto_index.idx")
+        path("*_kallisto_index.idx")
 
     script:
+        def prefix = task.ext.prefix ?: "${transcriptome_fa}"
         """
-        kallisto index -i "${transcriptome_fa}_kallisto_index.idx" $transcriptome_fa
+        kallisto index -i "${prefix}_kallisto_index.idx" $transcriptome_fa
         """
 
 }

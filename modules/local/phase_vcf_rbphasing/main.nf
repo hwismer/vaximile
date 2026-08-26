@@ -7,8 +7,7 @@ process PHASE_VCF_RBPHASING {
 
     */
 
-    cpus 4
-    memory "32GB"
+    label 'process_medium'
     container "broadinstitute/gatk3:3.6-0"
 
     tag "ReadBacked Phasing for ${somatic_meta.somatic_name}"
@@ -19,10 +18,11 @@ process PHASE_VCF_RBPHASING {
         path reference_dict
 
     output:
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_phased.vcf")
+        tuple val(somatic_meta), path("*_phased.vcf")
 
     script:
 
+        def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
         """
         java -Xmx16g -jar /usr/GenomeAnalysisTK.jar \
             -T ReadBackedPhasing \
@@ -30,7 +30,7 @@ process PHASE_VCF_RBPHASING {
                 -I $tumor_reads \
                 --variant $combined_sorted_vcf \
                 -L $combined_sorted_vcf \
-                -o ${somatic_meta.somatic_name}_phased.vcf
+                -o ${prefix}_phased.vcf
 
         """
 }

@@ -8,9 +8,8 @@ process VEP_ANNOTATE {
 
     */
 
-    cpus 4
-    memory "16GB"
-    
+    label 'process_medium'
+
     container "ensemblorg/ensembl-vep:release_115.0"
 
     input:
@@ -20,22 +19,22 @@ process VEP_ANNOTATE {
         path vep_plugins
 
     output:
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_vep.vcf"), emit: vcf
+        tuple val(somatic_meta), path("*_vep.vcf"), emit: vcf
         tuple val(somatic_meta), path("*.html"), emit: report
 
     script:
+        def args = task.ext.args ?: ''
+        def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
         """
         vep \
             --input_file $vcf  \
-            --output_file ${somatic_meta.somatic_name}_vep.vcf \
-            --everything \
-            --format vcf --vcf --symbol --terms SO --mane_select --canonical --tsl --biotype --hgvs \
+            --output_file ${prefix}_vep.vcf \
+            --format vcf --vcf \
+            $args \
             --fasta $reference_fa  \
             --offline --cache \
             --plugin Frameshift --plugin Wildtype \
-            --pick \
             --dir_plugins $vep_plugins \
-            --dir_cache $vep_cache \
-            --transcript_version
+            --dir_cache $vep_cache
         """
 }

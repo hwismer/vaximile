@@ -1,8 +1,7 @@
 process SOMALIER_EXTRACT {
 
 
-    cpus 4
-    memory "32GB"
+    label 'process_medium'
     conda "bioconda::somalier=0.3.2-0 bioconda::htslib=1.23.1"
 
     tag "somalier extract on ${meta.sample_name} at ${sites}"

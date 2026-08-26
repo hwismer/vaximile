@@ -1,7 +1,6 @@
 process CREATE_SALMON_INDEX {
 
-    cpus 8
-    memory "32GB"
+    label 'process_high'
     
     conda "bioconda::salmon=1.11.4"
     
@@ -13,14 +12,16 @@ process CREATE_SALMON_INDEX {
         path(transcripts_fa)
 
     output:
-        path("${transcripts_fa}_salmon_index")
+        path("*_salmon_index")
 
     script:
+    def args = task.ext.args ?: ''
+    def prefix = task.ext.prefix ?: "${transcripts_fa}"
     """
     salmon index \
         -t $transcripts_fa \
-        -i "${transcripts_fa}_salmon_index" \
-        -k 31
+        -i "${prefix}_salmon_index" \
+        $args
     """
 
 

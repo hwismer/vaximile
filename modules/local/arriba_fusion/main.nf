@@ -1,7 +1,6 @@
 process ARRIBA_FUSION {
 
-    cpus 6
-    memory "350GB"
+    label 'process_max_memory'
     conda "bioconda::arriba=2.5.1"
 
     tag "Running Arriba fusion calling on ${meta.sample_name}"
@@ -13,10 +12,11 @@ process ARRIBA_FUSION {
         tuple path(arriba_blacklist), path(arriba_known_fusions), path(arriba_protein_domains)
 
     output:
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_arriba_fusions.tsv"), emit: arriba_fusions
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_arriba_fusions.discarded.tsv"), emit: discarded_fusions
+        tuple val(meta), path("*_arriba_fusions.tsv"), emit: arriba_fusions
+        tuple val(meta), path("*_arriba_fusions.discarded.tsv"), emit: discarded_fusions
 
     script:
+        def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
         """
         arriba -x $star_bam \
             -g $gtf \
@@ -24,8 +24,8 @@ process ARRIBA_FUSION {
             -b $arriba_blacklist \
             -k $arriba_known_fusions \
             -p $arriba_protein_domains \
-            -o "${meta.sample_name}_${meta.molecule}_arriba_fusions.tsv" \
-            -O "${meta.sample_name}_${meta.molecule}_arriba_fusions.discarded.tsv"
+            -o "${prefix}_arriba_fusions.tsv" \
+            -O "${prefix}_arriba_fusions.discarded.tsv"
         """
 
 }

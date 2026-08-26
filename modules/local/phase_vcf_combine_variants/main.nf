@@ -8,8 +8,7 @@ process PHASE_VCF_COMBINE_VARIANTS {
 
     */
 
-    cpus 2
-    memory "16GB"
+    label 'process_low'
     container "broadinstitute/gatk3:3.6-0"
 
     tag "Combining somatic $tumor_only_vcf and germline $germline_vcf variants"
@@ -21,16 +20,17 @@ process PHASE_VCF_COMBINE_VARIANTS {
 
 
     output:
-        tuple val(somatic_meta), path("${somatic_meta.tumor_meta.sample_name}_combined_somatic_plus_germline.vcf")
+        tuple val(somatic_meta), path("*_combined_somatic_plus_germline.vcf")
 
     script:
+        def prefix = task.ext.prefix ?: "${somatic_meta.tumor_meta.sample_name}"
         """
         java -jar /usr/GenomeAnalysisTK.jar \
             -T CombineVariants \
                 -R $reference_fa \
                 --variant $germline_vcf \
                 --variant $tumor_only_vcf \
-                -o ${somatic_meta.tumor_meta.sample_name}_combined_somatic_plus_germline.vcf \
+                -o ${prefix}_combined_somatic_plus_germline.vcf \
                 --assumeIdenticalSamples
         """
 

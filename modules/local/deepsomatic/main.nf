@@ -1,7 +1,6 @@
 process DEEPSOMATIC {
 
-    cpus 32
-    memory "64GB"
+    label 'process_max'
     container "google/deepsomatic:1.10.0"
     
     tag "DeepSomatic on ${somatic_meta.somatic_name}"
@@ -11,7 +10,7 @@ process DEEPSOMATIC {
 
 
     output:
-        tuple val(somatic_meta), path("${somatic_meta.somatic_name}_deepsomatic.vcf.gz"), path("${somatic_meta.somatic_name}_deepsomatic.vcf.gz.tbi")
+        tuple val(somatic_meta), path("*_deepsomatic.vcf.gz"), path("*_deepsomatic.vcf.gz.tbi")
 
 
     script:
@@ -24,20 +23,21 @@ process DEEPSOMATIC {
     ]
 
 	def model = model_map[somatic_meta.tumor_meta.sequencing_type]
+	def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
+	def args = task.ext.args ?: ''
     """
     run_deepsomatic \
         --model_type=$model \
         --ref=$reference_fa \
         --reads_normal=$normal_bam \
         --reads_tumor=$tumor_bam \
-        --output_vcf=${somatic_meta.somatic_name}_deepsomatic.vcf.gz \
-        --output_gvcf=${somatic_meta.somatic_name}_deepsomatic.gvcf.gz \
+        --output_vcf=${prefix}_deepsomatic.vcf.gz \
+        --output_gvcf=${prefix}_deepsomatic.gvcf.gz \
         --sample_name_tumor=${somatic_meta.tumor_meta.sample_name} \
         --sample_name_normal=${somatic_meta.normal_meta.sample_name}\
         --num_shards=$task.cpus \
         --logging_dir=./logs \
-        --vcf_stats_report=true \
-        --use_default_pon_filtering=true \
+        $args \
         --regions=$bed_regions
 
     """
