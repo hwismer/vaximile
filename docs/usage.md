@@ -118,6 +118,32 @@ individual profiles meaningful; see
 
 - `test` — minimal settings for a smoke test; see `conf/test.config`.
 
+### Execution reports and the `ps` requirement
+
+`timeline`, `report` and `trace` are **disabled** in `nextflow.config`, deliberately.
+
+Enabling any of them makes Nextflow inject a guard into every task wrapper that runs
+`command -v ps || exit 1`. It is a hard failure, not a warning — the task dies before the
+tool runs, leaving an empty `.command.out` and a single line in `.command.err`:
+
+```
+Command 'ps' required by nextflow to collect task metrics cannot be found
+```
+
+Several images this pipeline uses have no `procps` (`alexdobin/star`,
+`google/deepvariant`, `google/deepsomatic`, `staphb/bcftools`), and a container cannot see
+the host's `ps`. `dag` does not inject the guard and stays enabled.
+
+If you are running a configuration where every process does have `ps`, request the reports
+per-run rather than re-enabling them globally:
+
+```bash
+nextflow run . -profile conda -with-report -with-timeline -with-trace
+```
+
+This is worth doing when you can, since `execution_report.html` is the only practical way
+to right-size the resource tiers in `conf/base.config`.
+
 ### Institutional configuration
 
 `conf/ucsf_krummellab.config` holds the SLURM/Apptainer settings for the UCSF cluster:

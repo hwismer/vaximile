@@ -25,6 +25,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Disabled `timeline`, `report` and `trace` in `nextflow.config`. Enabling them makes
+  Nextflow inject `command -v ps || exit 1` into every task wrapper, which killed tasks
+  running in containers without `procps` (STAR, DeepVariant, DeepSomatic, bcftools) before
+  their tool ran. The symptom is an empty `.command.out` and only the "Command 'ps'
+  required by nextflow" line in `.command.err`. Request the reports per-run with
+  `-with-report`/`-with-timeline`/`-with-trace` instead. `dag` is unaffected and stays on.
 - `nextflow.config` interpolated `${manifest.name}` inside the `validation.help.command`
   string, where `manifest` is not in scope. This failed config parsing outright, so every
   `nextflow` invocation from the repository root aborted before compiling anything.
