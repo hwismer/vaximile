@@ -128,6 +128,23 @@ The four modules with neither — `combine_fastqs`, `prepare_fasta`,
 | `pull_vep_pvac_plugins` | bioconda has no pVACtools 6.0.3 |
 | `phase_vcf_sort_vcf` | runs `java -jar /usr/picard/picard.jar`; bioconda `picard` 3.4.0 exists but needs the call rewritten to `picard SortVcf` |
 
+### GATK versions are pinned deliberately — do not unify them
+
+Three different GATK generations are in use, and the split is load-bearing. Each conda
+spec pins exactly the version its container provided, and the modules carry comments
+saying so.
+
+| Modules | GATK | Why it cannot move |
+| ------- | ---- | ------------------ |
+| 19 modules (Mutect2, BQSR, pileups, interval/VCF utilities) | `gatk4=4.6.1.0` | current baseline |
+| `haplotype_caller_scatter`, `haplotype_caller_cnn_score_variants`, `haplotype_caller_filter_variants` | `gatk4=4.3.0.0` | the CNN germline chain. `CNNScoreVariants` was deprecated in favour of `NVScoreVariants` and is not in current GATK4, so bumping these to 4.6.1.0 breaks the chain |
+| `merge_germline_vcfs`, `merge_somatic_vcfs`, `phase_vcf_combine_variants`, `phase_vcf_rbphasing` | GATK3 3.6, container only | `CombineVariants` and `ReadBackedPhasing` were dropped in GATK4 and have no equivalent. bioconda's `gatk` 3.x is a wrapper needing the licensed jar registered by hand, so no conda spec is possible |
+
+The practical rule: a GATK module's version is part of its behaviour. `HaplotypeCaller`
+defaults, `FilterMutectCalls` filters and the CNN tranche models all differ between
+releases, so treat any version change as a change to results and revalidate rather than
+assuming it is a maintenance bump.
+
 ### Two conda pins that are not exact
 
 - **`bwa-mem2=2.2.1`** — the container tag (`iarcbioinfo/bwa-mem2-tools:v1.0`) names the

@@ -1,6 +1,11 @@
 process HAPLOTYPE_CALLER_FILTER_VARIANTS {
     
     label 'process_medium'
+    // GATK PINNED TO 4.3.0.0 - DO NOT BUMP TO MATCH THE 4.6.1.0 MODULES.
+    // This module is part of the CNNScoreVariants germline chain
+    // (HaplotypeCaller -> CNNScoreVariants -> FilterVariantTranches). CNNScoreVariants
+    // was deprecated in favour of NVScoreVariants and is not available in current GATK4,
+    // so the three modules in this chain must stay on a release that still ships it.
     conda "bioconda::gatk4=4.3.0.0"
     container "broadinstitute/gatk:4.3.0.0"
 

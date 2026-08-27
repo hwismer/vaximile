@@ -8,6 +8,10 @@ process PHASE_VCF_RBPHASING {
     */
 
     label 'process_medium'
+    // GATK3 ONLY - deliberately has no conda spec, and must not be given a gatk4 one.
+    // This tool has no GATK4 equivalent: CombineVariants and ReadBackedPhasing were both
+    // dropped in GATK4. bioconda's `gatk` 3.x is only a wrapper that needs the licensed
+    // jar registered by hand, so this module stays container-only.
     container "broadinstitute/gatk3:3.6-0"
 
     tag "ReadBacked Phasing for ${somatic_meta.somatic_name}"
