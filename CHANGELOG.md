@@ -33,6 +33,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `HLAHD` declared its directory output as the glob `*/result/`. A glob ending in `/`
+  never matches, so the task failed with "Missing output file(s) `*/result/`" even though
+  HLA-HD had run and written its results. Introduced when the explicit
+  `./${meta.sample_name}/result/` path became a glob during the ext.prefix conversion. Now
+  `path("*/result", type: 'dir')`. No other module has a trailing-slash glob.
 - `SALMON_QUANT` passed `--libType` after `-1/-2`, which salmon rejects outright
   ("The (--libType/-l) option must precede the input files"). Introduced when
   `--libType A` and `--validateMappings` — which sat on opposite sides of the read

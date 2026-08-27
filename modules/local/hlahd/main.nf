@@ -21,7 +21,9 @@ process HLAHD {
     
     output:
         tuple val(meta), path("*/result/*_final.result.txt"), emit: final_hla_calls
-        tuple val(meta), path("*/result/"), emit: result_dir
+        // No trailing slash: a glob ending in "/" never matches, so `*/result/` fails
+        // with "Missing output file(s)" even when the directory is there.
+        tuple val(meta), path("*/result", type: 'dir'), emit: result_dir
 
     script:
         def prefix = task.ext.prefix ?: "${meta.sample_name}"
