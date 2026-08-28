@@ -48,6 +48,14 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Every parameter is now printed at the start of a run, grouped by the sections in
+  `nextflow_schema.json`, with `*` marking values that differ from the schema default.
+  nf-schema's `paramsSummaryLog()` prints only non-default values, which hid every
+  reference URI and GATK resource VCF a run depends on - exactly what you want recorded
+  alongside a set of results.
+- Added `default` to the 20 parameters in `nextflow_schema.json` that have one in
+  `nextflow.config`. Previously only 5 declared a default, so `--help` under-reported and
+  nothing could tell an overridden value from a default one.
 - `--bwa_index` now works. Previously the main workflow bypassed the `BWA_INDEX`
   subworkflow entirely when the parameter was set, emitting one channel item per index
   file instead of a single item holding the whole set - so `BWA_MAP` did not receive a

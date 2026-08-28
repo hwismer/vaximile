@@ -15,7 +15,7 @@ workflow PIPELINE_INITIALISATION {
     main:
 
     validateParameters()
-    log.info(paramsSummaryLog(workflow))
+    log.info(paramsSummaryAll())
     validateReferenceInputs()
 
     ch_capture_kits = Channel.fromPath(capture_kits, checkIfExists: true)
@@ -84,6 +84,54 @@ workflow PIPELINE_COMPLETION {
     FUNCTIONS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
+
+//
+// Log EVERY parameter the run will use, grouped by the sections in
+// nextflow_schema.json, with a marker on the ones that differ from their schema default.
+//
+// nf-schema's paramsSummaryLog() deliberately prints only values that differ from the
+// defaults ("Only displaying parameters that differ from the pipeline defaults"), which
+// hides most of what a run actually depends on - every reference URI, every GATK resource
+// VCF, the scatter settings. Those defaults are exactly what you want recorded next to a
+// set of results, so print all of them.
+//
+def paramsSummaryAll() {
+    def schema = new groovy.json.JsonSlurper().parse(file("${projectDir}/nextflow_schema.json").toFile())
+    def described = [] as Set
+    def lines = ["", "-" * 78, "Parameters for this run", "-" * 78]
+
+    schema['$defs'].each { section_key, section ->
+        def props = section.properties ?: [:]
+        if (!props) {
+            return
+        }
+        lines << ""
+        lines << "  ${section.title ?: section_key}"
+        props.keySet().sort().each { name ->
+            described << name
+            def spec = props[name]
+            def value = params.containsKey(name) ? params[name] : null
+            def has_default = spec.containsKey('default')
+            def overridden = value != null && (!has_default || value != spec.default)
+            def shown = value == null ? '(not set)' : value
+            lines << "    ${name.padRight(30)} : ${shown}${overridden ? '   *' : ''}"
+        }
+    }
+
+    // Anything in params that the schema does not describe - profile-only settings,
+    // -params-file extras, typos in a --flag that validateParameters() let through.
+    def extra = params.keySet().findAll { k -> !(k in described) }.sort()
+    if (extra) {
+        lines << ""
+        lines << "  Not described in nextflow_schema.json"
+        extra.each { name -> lines << "    ${name.padRight(30)} : ${params[name]}" }
+    }
+
+    lines << ""
+    lines << "  * = differs from the schema default"
+    lines << "-" * 78
+    return lines.join('\n')
+}
 
 //
 // Checks nextflow_schema.json cannot express: the VEP cache is a user-supplied

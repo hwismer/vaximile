@@ -10,7 +10,12 @@
             "type": "object",
             "fa_icon": "fas fa-terminal",
             "description": "Define where the pipeline should find input data and save output data.",
-            "required": ["samplesheet", "capture_kits", "vep_cache", "outdir"],
+            "required": [
+                "samplesheet",
+                "capture_kits",
+                "vep_cache",
+                "outdir"
+            ],
             "properties": {
                 "samplesheet": {
                     "type": "string",
@@ -58,7 +63,8 @@
                     "type": "string",
                     "format": "file-path",
                     "description": "Reference genome FASTA. Gzipped input is decompressed and indexed automatically.",
-                    "fa_icon": "fas fa-file"
+                    "fa_icon": "fas fa-file",
+                    "default": "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/GRCh38.primary_assembly.genome.fa.gz"
                 },
                 "reference_includes_chr_prefix": {
                     "type": "boolean",
@@ -70,19 +76,22 @@
                     "type": "string",
                     "format": "file-path",
                     "description": "Gene annotation GTF used for RNA alignment, quantification and fusion calling.",
-                    "fa_icon": "fas fa-file"
+                    "fa_icon": "fas fa-file",
+                    "default": "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.annotation.gtf.gz"
                 },
                 "transcriptome_reference": {
                     "type": "string",
                     "format": "file-path",
                     "description": "Transcriptome FASTA used to build the kallisto and salmon indices.",
-                    "fa_icon": "fas fa-file"
+                    "fa_icon": "fas fa-file",
+                    "default": "https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz"
                 },
                 "human_ref_peptides": {
                     "type": "string",
                     "format": "file-path",
                     "description": "Reference proteome peptide FASTA used by pVACtools for reference proteome similarity.",
-                    "fa_icon": "fas fa-file"
+                    "fa_icon": "fas fa-file",
+                    "default": "https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz"
                 }
             }
         },
@@ -129,7 +138,8 @@
                     "type": "string",
                     "format": "file-path",
                     "description": "Interval list restricting variant calling. Defaults to the GATK hg38 WGS calling regions.",
-                    "fa_icon": "fas fa-file"
+                    "fa_icon": "fas fa-file",
+                    "default": "gs://gcp-public-data--broad-references/hg38/v0/wgs_calling_regions.hg38.interval_list"
                 },
                 "interval_padding": {
                     "type": "integer",
@@ -151,10 +161,30 @@
             "fa_icon": "fas fa-shield-virus",
             "description": "Reference data for MHC region extraction and HLA allele calling.",
             "properties": {
-                "hla_fasta": { "type": "string", "format": "file-path", "description": "HLA class I reference FASTA." },
-                "hla_fasta_fai": { "type": "string", "format": "file-path", "description": "Index for the HLA reference FASTA." },
-                "hla_kmers": { "type": "string", "format": "file-path", "description": "Unique HLA k-mer file used by the typing tools." },
-                "hla_freq": { "type": "string", "format": "file-path", "description": "HLA allele population frequency table." }
+                "hla_fasta": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "HLA class I reference FASTA.",
+                    "default": "https://raw.githubusercontent.com/jason-weirather/hla-polysolver/master/data/abc_complete.fasta"
+                },
+                "hla_fasta_fai": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Index for the HLA reference FASTA.",
+                    "default": "https://raw.githubusercontent.com/jason-weirather/hla-polysolver/master/data/abc_complete.fasta.fai"
+                },
+                "hla_kmers": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Unique HLA k-mer file used by the typing tools.",
+                    "default": "https://github.com/jason-weirather/hla-polysolver/blob/master/data/abc_v14.uniq"
+                },
+                "hla_freq": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "HLA allele population frequency table.",
+                    "default": "https://github.com/jason-weirather/hla-polysolver/blob/master/data/HLA_FREQ.txt"
+                }
             }
         },
         "gatk_resource_options": {
@@ -163,15 +193,60 @@
             "fa_icon": "fas fa-archive",
             "description": "Known-sites VCFs used for BQSR, contamination estimation and somatic filtering. Each must have a matching .tbi.",
             "properties": {
-                "common_germline": { "type": "string", "format": "file-path", "description": "Common germline biallelic SNP sites for contamination estimation." },
-                "known_sites_dbsnp": { "type": "string", "format": "file-path", "description": "dbSNP known sites VCF for BQSR." },
-                "known_sites_1000g_snps": { "type": "string", "format": "file-path", "description": "1000 Genomes high-confidence SNPs for BQSR." },
-                "known_indels": { "type": "string", "format": "file-path", "description": "Known indels VCF for BQSR." },
-                "gnomad": { "type": "string", "format": "file-path", "description": "gnomAD allele-frequency-only VCF for Mutect2." },
-                "pon": { "type": "string", "format": "file-path", "description": "Panel of normals VCF for Mutect2." },
-                "hapmap": { "type": "string", "format": "file-path", "description": "HapMap VCF for germline variant recalibration." },
-                "mills": { "type": "string", "format": "file-path", "description": "Mills gold standard indels VCF." },
-                "somalier_sites": { "type": "string", "format": "file-path", "description": "Sites VCF used by somalier for relatedness checks." }
+                "common_germline": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Common germline biallelic SNP sites for contamination estimation.",
+                    "default": "gs://gatk-best-practices/somatic-hg38/small_exac_common_3.hg38.vcf.gz"
+                },
+                "known_sites_dbsnp": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "dbSNP known sites VCF for BQSR.",
+                    "default": "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf.gz"
+                },
+                "known_sites_1000g_snps": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "1000 Genomes high-confidence SNPs for BQSR.",
+                    "default": "gs://gcp-public-data--broad-references/hg38/v0/1000G_phase1.snps.high_confidence.hg38.vcf.gz"
+                },
+                "known_indels": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Known indels VCF for BQSR.",
+                    "default": "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.known_indels.vcf.gz"
+                },
+                "gnomad": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "gnomAD allele-frequency-only VCF for Mutect2.",
+                    "default": "gs://gatk-best-practices/somatic-hg38/af-only-gnomad.hg38.vcf.gz"
+                },
+                "pon": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Panel of normals VCF for Mutect2.",
+                    "default": "gs://gatk-best-practices/somatic-hg38/1000g_pon.hg38.vcf.gz"
+                },
+                "hapmap": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "HapMap VCF for germline variant recalibration.",
+                    "default": "gs://gcp-public-data--broad-references/hg38/v0/hapmap_3.3.hg38.vcf.gz"
+                },
+                "mills": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Mills gold standard indels VCF.",
+                    "default": "gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz"
+                },
+                "somalier_sites": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Sites VCF used by somalier for relatedness checks.",
+                    "default": "https://github.com/brentp/somalier/files/3412456/sites.hg38.vcf.gz"
+                }
             }
         },
         "generic_options": {
@@ -184,7 +259,14 @@
                     "type": "string",
                     "default": "copy",
                     "description": "Method used to save pipeline results to output directory.",
-                    "enum": ["symlink", "rellink", "link", "copy", "copyNoFollow", "move"],
+                    "enum": [
+                        "symlink",
+                        "rellink",
+                        "link",
+                        "copy",
+                        "copyNoFollow",
+                        "move"
+                    ],
                     "hidden": true,
                     "fa_icon": "fas fa-copy"
                 },
@@ -192,24 +274,40 @@
                     "type": "boolean",
                     "description": "Display version and exit.",
                     "hidden": true,
-                    "fa_icon": "fas fa-question-circle"
+                    "fa_icon": "fas fa-question-circle",
+                    "default": false
                 },
                 "help": {
                     "type": "boolean",
                     "description": "Display help text.",
                     "hidden": true,
-                    "fa_icon": "fas fa-question-circle"
+                    "fa_icon": "fas fa-question-circle",
+                    "default": false
                 }
             }
         }
     },
     "allOf": [
-        { "$ref": "#/$defs/input_output_options" },
-        { "$ref": "#/$defs/reference_genome_options" },
-        { "$ref": "#/$defs/alignment_index_options" },
-        { "$ref": "#/$defs/variant_calling_options" },
-        { "$ref": "#/$defs/hla_typing_options" },
-        { "$ref": "#/$defs/gatk_resource_options" },
-        { "$ref": "#/$defs/generic_options" }
+        {
+            "$ref": "#/$defs/input_output_options"
+        },
+        {
+            "$ref": "#/$defs/reference_genome_options"
+        },
+        {
+            "$ref": "#/$defs/alignment_index_options"
+        },
+        {
+            "$ref": "#/$defs/variant_calling_options"
+        },
+        {
+            "$ref": "#/$defs/hla_typing_options"
+        },
+        {
+            "$ref": "#/$defs/gatk_resource_options"
+        },
+        {
+            "$ref": "#/$defs/generic_options"
+        }
     ]
 }
