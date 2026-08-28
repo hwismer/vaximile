@@ -48,6 +48,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Fixed `--bwa_index` causing `BWA_MAP` to align only one sample. The prebuilt index was
+  emitted with `channel.fromList`, a one-item *queue* channel, which the first `BWA_MAP`
+  task consumes - so every other sample was silently skipped. It is now `channel.value`,
+  which is read without being consumed. The auto branch was unaffected because a process
+  output that emits exactly once is treated as a value channel.
 - Every parameter is now printed at the start of a run, grouped by the sections in
   `nextflow_schema.json`, with `*` marking values that differ from the schema default.
   nf-schema's `paramsSummaryLog()` prints only non-default values, which hid every

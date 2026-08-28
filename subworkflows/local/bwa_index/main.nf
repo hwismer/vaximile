@@ -57,10 +57,18 @@ workflow BWA_INDEX {
 
     main:
         if ( bwa_index ) {
-            // fromList, not value: emit the whole file set as ONE item and then close,
-            // matching the shape of CREATE_BWA_INDEX's single-item process output so both
-            // branches behave identically downstream.
-            bwa_index_ch = channel.fromList( [ prebuilt_bwa_index(bwa_index) ] )
+            // MUST be channel.value, not fromList/of.
+            //
+            // BWA_MAP is invoked once per sample against a queue channel of FASTQs, and
+            // this index has to be readable by every one of those tasks. A value channel
+            // is read without being consumed; a one-item queue channel is consumed by the
+            // first task, so BWA_MAP would align only a single sample and silently skip
+            // the rest.
+            //
+            // The auto branch works because a process output that emits exactly once is
+            // treated as a value channel too - so both branches broadcast, which is what
+            // makes them interchangeable here.
+            bwa_index_ch = channel.value( prebuilt_bwa_index(bwa_index) )
         } else {
             bwa_index_ch = CREATE_BWA_INDEX(reference_genome).bwa_index
         }
