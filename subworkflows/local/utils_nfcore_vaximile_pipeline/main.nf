@@ -62,11 +62,19 @@ workflow PIPELINE_COMPLETION {
 
     main:
 
-    workflow.onComplete {
+    // Capture the metadata object here, while the workflow binding is still resolvable.
+    // Referencing `workflow` from inside the closure instead resolves to null when the
+    // handler actually fires from within a named workflow body, which ended every run
+    // with "Failed to invoke `workflow.onComplete` event handler" and an NPE on
+    // `workflow.success`.
+    def wf = workflow
+    def outdir = params.outdir
+
+    wf.onComplete {
         log.info(
-            workflow.success
-                ? "Pipeline completed successfully. Results in ${params.outdir}"
-                : "Pipeline completed with errors. Exit status: ${workflow.exitStatus}"
+            wf.success
+                ? "Pipeline completed successfully. Results in ${outdir}"
+                : "Pipeline completed with errors. Exit status: ${wf.exitStatus}"
         )
     }
 }

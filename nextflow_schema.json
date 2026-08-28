@@ -96,6 +96,7 @@
                     "type": "string",
                     "format": "directory-path",
                     "description": "Directory containing a prebuilt bwa-mem2 index.",
+                    "help_text": "Must hold the five files bwa-mem2 writes (.0123, .amb, .ann, .bwt.2bit.64, .pac), named after the *prepared* reference FASTA, i.e. '<reference_fa stem>_prc.fa.<ext>'. bwa-mem2 is given the reference FASTA as its index prefix, so an index built from a differently named FASTA will not be found. The pipeline checks this at launch and lists what is missing. The simplest valid directory is what CREATE_BWA_INDEX publishes to ./resources/bwa/ on a run without this parameter.",
                     "fa_icon": "fas fa-folder-open"
                 },
                 "star_index": {

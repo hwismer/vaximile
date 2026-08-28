@@ -48,6 +48,22 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `--bwa_index` now works. Previously the main workflow bypassed the `BWA_INDEX`
+  subworkflow entirely when the parameter was set, emitting one channel item per index
+  file instead of a single item holding the whole set - so `BWA_MAP` did not receive a
+  usable index. Both paths now go through `BWA_INDEX` and emit the same shape, and a
+  supplied directory is validated at launch: it must contain the five files `bwa-mem2
+  index` writes, named after the prepared reference (`<stem>_prc.fa.<ext>`), because
+  `BWA_MAP` passes that FASTA to bwa-mem2 as the index prefix. Missing files are listed
+  by name rather than surfacing as a per-sample bwa-mem2 failure mid-run.
+- `APPLY_BQSR_GATHER` computed `sorted_bams` and then passed the unsorted `bams` to
+  `GatherBamFiles`, which concatenates without re-sorting. Shard order out of
+  `groupTuple` is not guaranteed, so the merged BAM could be mis-ordered. It now uses the
+  sorted list, matching `MUTECT2_GATHER_VCFS` and `HAPLOTYPE_CALLER_GATHER_VCFS`.
+- `PIPELINE_COMPLETION`'s `workflow.onComplete` handler threw
+  `NullPointerException: Cannot get property 'success' on null object` on every run,
+  because `workflow` resolves to null inside a closure invoked from a named workflow body.
+  The metadata object is now captured before the closure.
 - `HLAHD` declared its directory output as the glob `*/result/`. A glob ending in `/`
   never matches, so the task failed with "Missing output file(s) `*/result/`" even though
   HLA-HD had run and written its results. Introduced when the explicit

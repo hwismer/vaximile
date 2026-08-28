@@ -128,6 +128,32 @@ The four modules with neither — `combine_fastqs`, `prepare_fasta`,
 | `pull_vep_pvac_plugins` | bioconda has no pVACtools 6.0.3 |
 | `phase_vcf_sort_vcf` | runs `java -jar /usr/picard/picard.jar`; bioconda `picard` 3.4.0 exists but needs the call rewritten to `picard SortVcf` |
 
+### Reusing a prebuilt bwa-mem2 index
+
+`--bwa_index` takes a directory. When it is set the pipeline skips `CREATE_BWA_INDEX`;
+when it is not, the index is built once and published to `./resources/bwa/`.
+
+The directory must contain the five files `bwa-mem2 index` produces, **named after the
+prepared reference FASTA**:
+
+```
+<reference_fa stem>_prc.fa.0123
+<reference_fa stem>_prc.fa.amb
+<reference_fa stem>_prc.fa.ann
+<reference_fa stem>_prc.fa.bwt.2bit.64
+<reference_fa stem>_prc.fa.pac
+```
+
+The naming is not incidental. `BWA_MAP` passes the reference FASTA to bwa-mem2 as the
+index prefix, so bwa-mem2 looks for `<reference_fa>.0123` and friends. An index built from
+a FASTA with a different filename is unusable even if it is otherwise perfectly valid.
+`PREPARE_FASTA` decompresses and renames the reference to `<stem>_prc.fa`, which is why
+that suffix appears.
+
+The pipeline validates this at launch and names any missing file, rather than letting
+bwa-mem2 fail per-sample once alignment starts. The easiest way to get a valid directory
+is to run once without `--bwa_index` and reuse `./resources/bwa/`.
+
 ### GATK versions are pinned deliberately — do not unify them
 
 Three different GATK generations are in use, and the split is load-bearing. Each conda

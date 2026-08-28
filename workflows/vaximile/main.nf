@@ -55,13 +55,9 @@ workflow VAXIMILE {
     reference_dict = prepared_reference.dict.first()
     
 
-    bwa_index_input = params.bwa_index
-    if (bwa_index_input  == null) {
-        bwa_index = BWA_INDEX(reference_genome, bwa_index_input)
-    } else {
-        // THIS DOESNT BEHAVE WELL FOR SOME REASON
-        bwa_index = Channel.fromPath("${params.bwa_index}/*", checkIfExists: true, hidden: true)
-    }
+    // BWA_INDEX handles both cases: it validates and loads a prebuilt index when
+    // --bwa_index is given, and builds one otherwise. Either way it emits the same shape.
+    bwa_index = BWA_INDEX(reference_genome, params.bwa_index).bwa_index
     
     transcriptome_reference = Channel.fromPath(params.transcriptome_reference).first()
     gtf = Channel.fromPath(file(params.gtf)).first()

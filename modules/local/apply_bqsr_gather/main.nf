@@ -16,10 +16,15 @@ process APPLY_BQSR_GATHER {
         tuple val(meta), path("${meta.sample_name}_${meta.molecule}_bqsr.bam")
 
     script:
-    def sorted_bams = bams.sort { it.name }
+    // GatherBamFiles concatenates without re-sorting, so the shards have to arrive in
+    // coordinate order. groupTuple does not preserve order, so sort explicitly here.
+    // SplitIntervals names shards with a zero-padded index (0000-scattered.interval_list,
+    // 0001-...), which makes sorting by filename equivalent to coordinate order.
+    // MUTECT2_GATHER_VCFS and HAPLOTYPE_CALLER_GATHER_VCFS do the same thing.
+    def sorted_bams = bams.toSorted { a, b -> a.name <=> b.name }
     """
     gatk GatherBamFiles \
-        ${bams.collect { "-I ${it}" }.join(' ')} \
+        ${sorted_bams.collect { "-I ${it}" }.join(' ')} \
         -O "${sample_name}_${molecule}_bqsr.bam"
     """
 
