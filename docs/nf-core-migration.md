@@ -155,6 +155,14 @@ glob that matches the filename it produced before.
 Not yet verified:
 
 - **No task has been executed.** Nothing here proves a tool actually runs.
+- **`nextflow run -preview` is not a reliable gate on this pipeline.** The workflow's
+  `output {}` block resolves nondeterministically under preview: identical runs sometimes
+  print the `Outputs:` section and sometimes idle indefinitely after reporting success,
+  with `main` parked in `OutputDsl.getOutput` -> `DataflowVariable.get()`. This happens on
+  both the built and prebuilt `--bwa_index` paths, so it is a preview/`output {}`
+  interaction rather than anything specific to a channel construct. Preview is still worth
+  running - it catches include and wiring errors - but treat a hang as inconclusive rather
+  than as a failure signal. The pipeline logic itself finishes in about 8 seconds.
 - `nf-core pipelines lint` **cannot run in this environment** — the installed nf-core is
   broken under Python 3.13 (`ModuleNotFoundError: imghdr`). Needs a current nf-core in a
   Python ≤3.12 env, or a newer release.

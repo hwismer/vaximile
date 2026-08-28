@@ -57,10 +57,9 @@ workflow BWA_INDEX {
 
     main:
         if ( bwa_index ) {
-            // fromList, not value: this must emit the whole file set as ONE item and then
-            // CLOSE, exactly like CREATE_BWA_INDEX's single-item process output. A value
-            // channel never closes, which leaves the workflow's output block waiting on
-            // channels that can never resolve.
+            // fromList, not value: emit the whole file set as ONE item and then close,
+            // matching the shape of CREATE_BWA_INDEX's single-item process output so both
+            // branches behave identically downstream.
             bwa_index_ch = channel.fromList( [ prebuilt_bwa_index(bwa_index) ] )
         } else {
             bwa_index_ch = CREATE_BWA_INDEX(reference_genome).bwa_index
