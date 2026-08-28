@@ -13,15 +13,15 @@ process OPTITYPE {
     tag "Optitype calls for ${meta.sample_name}"
 
     input:
-        tuple val(meta), path(fastq1), path(fastq2)
+        tuple val(meta), val(molecule), path(fastq1), path(fastq2)
 
     output:
         tuple val(meta), path("optitype_out/*_result.tsv"), path("optitype_out/*_coverage_plot.pdf"), emit: hla_calls
 
     script:
 
-        def molecule_flag = meta.molecule.toLowerCase()
-        def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
+        def molecule_flag = molecule.toLowerCase()
+        def prefix = task.ext.prefix ?: "${meta.sample_name}_${molecule}"
         """
         cat << EOF > OptiType.ini
         [mapping]

@@ -36,22 +36,29 @@ workflow GERMLINE_WORKFLOW {
         }
         .combine(processed_regions, by:0)
         .map { capture_kit, meta, bam, bai, bed, bed_tbi ->
-            tuple(meta, bam, bai, bed, bed_tbi)
-        } 
+            tuple(meta, meta.sequencing_type, bam, bai, bed, bed_tbi)
+        }
         strelka_germline = STRELKA_GERMLINE(strelka_input, reference_genome)
         
         deepsomatic_input = sample_bams.map { meta, bam, bai ->
             tuple(meta.capture_kit, meta, bam, bai)
         }
         .combine(capture_kits, by:0)
-        .map { capture_kit, meta, bam, bai, bed -> tuple(meta, bam, bai, bed) }
+        .map { capture_kit, meta, bam, bai, bed ->
+            tuple(meta, meta.sequencing_type, bam, bai, bed)
+        }
         
         deepvariant = DEEPVARIANT(deepsomatic_input, reference_genome)
         deepvariant_vcf = deepvariant.vcf
 
         vcfs = haplotype_caller_vcf.mix(strelka_germline).mix(deepvariant_vcf)
         filter_vcfs = FILTER_VCF(vcfs)
-        vcfs_norm = POSTPROCESS_VCF(filter_vcfs, reference_genome)
+        postprocess_vcf_input = filter_vcfs
+            .map { meta, caller, vcf, tbi ->
+                tuple(meta, meta.sample_name, caller, vcf, tbi)
+            }
+
+        vcfs_norm = POSTPROCESS_VCF(postprocess_vcf_input, reference_genome)
 
         callers = vcfs_norm.branch{ meta, caller, vcf, tbi ->
             strelka: caller == "strelka"

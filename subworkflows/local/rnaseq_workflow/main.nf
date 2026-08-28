@@ -29,7 +29,12 @@ workflow RNASEQ_WORKFLOW {
         }
 
         // Align fastqs to genome
-        star = STAR_ALIGN(fastqs, star_index_ch, gtf)
+        star_align_input = fastqs
+            .map { meta, fastq1, fastq2 ->
+                tuple(meta, meta.sample_name, fastq1, fastq2)
+            }
+
+        star = STAR_ALIGN(star_align_input, star_index_ch, gtf)
         star_sorted = STAR_SORT_INDEX_BAM(star.star_bam)
 
         // If null parameter, then generate kallisto index using transcriptome_fa

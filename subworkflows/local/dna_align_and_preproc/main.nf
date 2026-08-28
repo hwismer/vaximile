@@ -28,7 +28,12 @@ workflow DNA_ALIGN_AND_PREPROC {
     main:
         
         // Map with BWA-mem2
-        bwa_sam = BWA_MAP(fastqs, reference_genome, bwa_index)
+        bwa_map_input = fastqs
+            .map { meta, fastq1, fastq2 ->
+                tuple(meta, meta.sample_name, meta.molecule, meta.sequencing_type, fastq1, fastq2)
+            }
+
+        bwa_sam = BWA_MAP(bwa_map_input, reference_genome, bwa_index)
 
         // **********************************************************
         // GATK PRE-PROCESSING BEST PRACTICES
@@ -61,6 +66,9 @@ workflow DNA_ALIGN_AND_PREPROC {
             mills
         )
         base_recal_gather_input = base_recal.groupTuple(size: num_intervals)
+            .map { meta, recal_tables ->
+                tuple(meta, meta.sample_name, meta.molecule, recal_tables)
+            }
         base_recal_gathered = BASE_RECALIBRATOR_GATHER(base_recal_gather_input)
         
         // Scatter BQSR calls
@@ -73,6 +81,9 @@ workflow DNA_ALIGN_AND_PREPROC {
 
         bqsr = APPLY_BQSR_SCATTER(bqsr_input, reference_genome, reference_dict)
         bqsr_scattered = bqsr.groupTuple(size: num_intervals)
+            .map { meta, bams ->
+                tuple(meta, meta.sample_name, meta.molecule, bams)
+            }
         bqsr_gather = APPLY_BQSR_GATHER(bqsr_scattered) // Get final BQSR bams
         bqsr_sort = SORT_BAM(bqsr_gather)
 

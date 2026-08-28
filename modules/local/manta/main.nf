@@ -12,13 +12,13 @@ process MANTA {
    container "mgibio/manta_somatic-cwl:1.6.0"
 
    input:
-        tuple val(somatic_meta), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai), path(bed), path(bed_index)
+        tuple val(somatic_meta), val(tumor_sequencing_type), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai), path(bed), path(bed_index)
         tuple path(reference_fa), path(reference_fai)
     output:
         tuple val(somatic_meta), path("*_manta")
 
     script:
-    def exome_flag = (somatic_meta.tumor_meta.sequencing_type == "exome" || somatic_meta.tumor_meta.sequencing_type == "exome_ffpe") ? "--exome" : ""
+    def exome_flag = (tumor_sequencing_type == "exome" || tumor_sequencing_type == "exome_ffpe") ? "--exome" : ""
     def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
 
     """

@@ -12,7 +12,7 @@ process STRELKA_GERMLINE {
     tag "Running Strelka in germline mode on ${meta.sample_name}"
 
    input:
-        tuple val(meta), path(bam), path(bai), path(bed), path(bed_index)
+        tuple val(meta), val(sequencing_type), path(bam), path(bai), path(bed), path(bed_index)
         tuple path(reference_fa), path(reference_fai)
 
     output:
@@ -20,7 +20,7 @@ process STRELKA_GERMLINE {
 
     script:
 
-    def exome_flag = (meta.sequencing_type == "exome" || meta.sequencing_type == "exome_ffpe") ? "--exome" : ""
+    def exome_flag = (sequencing_type == "exome" || sequencing_type == "exome_ffpe") ? "--exome" : ""
 
     """
     /opt/strelka/bin/configureStrelkaGermlineWorkflow.py \

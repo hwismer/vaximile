@@ -11,7 +11,7 @@ process APPLY_BQSR_GATHER {
     tag "GatherBams on ${meta.sample_name}"
 
     input:
-        tuple val(meta), path(bams)
+        tuple val(meta), val(sample_name), val(molecule), path(bams)
     output:
         tuple val(meta), path("${meta.sample_name}_${meta.molecule}_bqsr.bam")
 
@@ -20,7 +20,7 @@ process APPLY_BQSR_GATHER {
     """
     gatk GatherBamFiles \
         ${bams.collect { "-I ${it}" }.join(' ')} \
-        -O "${meta.sample_name}_${meta.molecule}_bqsr.bam"
+        -O "${sample_name}_${molecule}_bqsr.bam"
     """
 
 }

@@ -9,7 +9,7 @@ process MERGE_BAMS {
 
     tag "Merging Bams from ${meta.sample_name}"
     input:
-        tuple val(meta), path(bams), path(bais)
+        tuple val(meta), val(sample_name), path(bams), path(bais)
 
     output:
        tuple val(meta), path("${meta.sample_name}.bam"), path("${meta.sample_name}.bam.bai")
@@ -21,11 +21,11 @@ process MERGE_BAMS {
     samtools merge \
         -@ ${task.cpus} \
         -f \
-        ${meta.sample_name}.bam \
+        ${sample_name}.bam \
         ${bams.join(' ')}
 
     samtools index \
         -@ ${task.cpus} \
-        ${meta.sample_name}.bam
+        ${sample_name}.bam
     """
 }

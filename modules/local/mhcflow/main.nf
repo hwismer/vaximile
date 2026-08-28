@@ -5,7 +5,7 @@ process MHCFLOW {
     conda "${moduleDir}/environment.yml"
 
     input:
-        tuple val(meta), path(bam), path(bai)
+        tuple val(meta), val(sample_name), path(bam), path(bai)
         tuple path(hla_fasta), path(hla_fai)
         path hla_bed
         path hla_kmers
@@ -24,7 +24,7 @@ process MHCFLOW {
         --freq $hla_freqs \
         --nproc $task.cpus \
         $args \
-        --outdir ${meta.sample_name}
+        --outdir ${sample_name}
 	ls
     """
 }

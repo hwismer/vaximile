@@ -12,7 +12,7 @@ process ADD_VCF_GT_FIELD {
     tag "Adding 0/1 default GT to variants $somatic_vcf"
 
     input:
-        tuple val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index)
+        tuple val(somatic_meta), val(tumor_sample_name), path(somatic_vcf), path(somatic_vcf_index)
          
     output:
         tuple val(somatic_meta), path("*_gt.vcf"), path("*_gt.vcf.tbi"),emit: vcf
@@ -22,7 +22,7 @@ process ADD_VCF_GT_FIELD {
         """
         cp $somatic_vcf_index ${prefix}_gt.vcf.tbi
         vcf-genotype-annotator $somatic_vcf \
-            "${somatic_meta.tumor_meta.sample_name}" \
+            "${tumor_sample_name}" \
             0/1 \
             -o "${prefix}_gt.vcf"
         """

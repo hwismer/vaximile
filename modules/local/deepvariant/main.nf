@@ -6,7 +6,7 @@ process DEEPVARIANT {
     tag "DeepVariant on ${meta.sample_name}"
 
     input:
-        tuple val(meta), path(bam), path(bai), path(bed)
+        tuple val(meta), val(sequencing_type), path(bam), path(bai), path(bed)
         tuple path(reference_fa), path(reference_index)
 
     output:
@@ -20,7 +20,7 @@ process DEEPVARIANT {
         genome     : 'WGS',
     ]
 
-	def model = model_map[meta.sequencing_type]
+	def model = model_map[sequencing_type]
 
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.sample_name}"

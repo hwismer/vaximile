@@ -13,6 +13,21 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `nextflow.config` and `nextflow_schema.json`. Process bodies are unchanged. See
   [docs/nf-core-migration.md](docs/nf-core-migration.md) for what remains.
 
+- Processes that use metadata inside their script now declare it as explicit `val()`
+  inputs instead of reaching into the meta map. 30 modules and 12 caller files changed:
+  each module takes named arguments (`sample_name`, `molecule`, `sequencing_type`,
+  `somatic_name`, `tumor_sample_name`, `normal_sample_name`, `tumor_sequencing_type`) and
+  the workflow projects those fields at the call site. Nested access such as
+  `somatic_meta.tumor_meta.sample_name` is gone from every script body.
+
+  The meta map stays as element 0 of each tuple, so no `join`, `groupTuple`, `branch` or
+  `combine(by:)` key changed - the projection maps are always chained *after* the keyed
+  operation. Verified mechanically: every process input tuple arity matches the tuple
+  built at its call site, no keyed operation differs from the previous commit, and
+  `nextflow run . -profile test -preview` builds the same DAG as before.
+
+  `tag` directives and `ext.prefix` defaults still read the map. Both are cosmetic, and
+  narrowing the change to script bodies kept the diff reviewable.
 - Added verified conda specs to 39 container-only modules, so `-profile conda` now covers
   70 of 94 local modules instead of 31. Containers are retained; every spec was checked
   against bioconda with `conda search` and pins the container's version (exceptions:

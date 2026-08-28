@@ -14,7 +14,7 @@ process BWA_MAP {
     tag "BWA Alignment on ${meta.sample_name}"
 
     input:
-        tuple val(meta), path(fastq1), path(fastq2)
+        tuple val(meta), val(sample_name), val(molecule), val(sequencing_type), path(fastq1), path(fastq2)
         tuple path(reference_fa), path(reference_index)
         path bwa_index
 
@@ -22,9 +22,9 @@ process BWA_MAP {
         tuple val(meta), path("*.sam")
 
     script:
-    def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
+    def prefix = task.ext.prefix ?: "${sample_name}_${molecule}"
     """
-    NEW_RG="@RG\\tID:${meta.sample_name}\\tSM:${meta.sample_name}\\tLB:${meta.sample_name}\\tPL:${meta.molecule}_${meta.sequencing_type}"
+    NEW_RG="@RG\\tID:${sample_name}\\tSM:${sample_name}\\tLB:${sample_name}\\tPL:${molecule}_${sequencing_type}"
 
     bwa-mem2 mem -t $task.cpus -R \$NEW_RG $reference_fa $fastq1 $fastq2 > "${prefix}.sam"
 

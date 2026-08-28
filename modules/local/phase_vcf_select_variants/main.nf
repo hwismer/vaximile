@@ -15,7 +15,7 @@ process PHASE_VCF_SELECT_VARIANTS {
 
     input:
 
-        tuple val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index)
+        tuple val(somatic_meta), val(tumor_sample_name), path(somatic_vcf), path(somatic_vcf_index)
         tuple path(reference_fa), path(reference_fai)
         path reference_dict
 
@@ -23,12 +23,12 @@ process PHASE_VCF_SELECT_VARIANTS {
         tuple val(somatic_meta), path("*_tumor_only.vcf.gz"), path("*_tumor_only.vcf.gz.tbi")
 
     script:
-        def prefix = task.ext.prefix ?: "${somatic_meta.tumor_meta.sample_name}"
+        def prefix = task.ext.prefix ?: "${tumor_sample_name}"
         """
         gatk SelectVariants \
             -V $somatic_vcf \
             -R "${reference_fa}" \
-            --sample-name ${somatic_meta.tumor_meta.sample_name} \
+            --sample-name ${tumor_sample_name} \
             --create-output-variant-index \
             -O ${prefix}_tumor_only.vcf.gz
         """

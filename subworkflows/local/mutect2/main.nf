@@ -32,14 +32,19 @@ workflow MUTECT2 {
         }
 
 
-        somatic_pair_interval = somatic_pairs_kit.combine(intervals_map, by:0).map{kit, meta, tb, tbai, nb, nbai, interval -> tuple(meta, tb, tbai, nb, nbai, interval) }
+        somatic_pair_interval = somatic_pairs_kit.combine(intervals_map, by:0).map{kit, meta, tb, tbai, nb, nbai, interval -> tuple(meta, meta.normal_meta.sample_name, tb, tbai, nb, nbai, interval) }
         mutect2_scatter = MUTECT2_SCATTER(somatic_pair_interval, reference_genome, reference_dict, gnomad, pon, interval_padding)
 
         mutect_vcfs = mutect2_scatter.vcf
         mutect_f1r2s = mutect2_scatter.f1r2
         mutect_stats = mutect2_scatter.stats
 
-        select_variants = MUTECT2_GATHER_SELECT_VARIANTS(mutect_vcfs)
+        gather_select_variants_input = mutect_vcfs
+            .map { somatic_meta, vcf, vcf_index, interval_shard ->
+                tuple(somatic_meta, somatic_meta.somatic_name, vcf, vcf_index, interval_shard)
+            }
+
+        select_variants = MUTECT2_GATHER_SELECT_VARIANTS(gather_select_variants_input)
         select_variants_grouped = select_variants.groupTuple(size: num_intervals)
         gather_vcfs = MUTECT2_GATHER_VCFS(select_variants_grouped)
 

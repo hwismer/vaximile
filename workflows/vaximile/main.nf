@@ -173,7 +173,7 @@ workflow VAXIMILE {
                 molecule: "DNA"
             ]
 
-            tuple(new_meta, bams, bais)
+            tuple(new_meta, new_meta.sample_name, bams, bais)
     }
     
     combined_bams = MERGE_BAMS(bams_merged_input) // Merge BAMs sharing somatic_name

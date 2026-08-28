@@ -13,22 +13,22 @@ process BAMREADCOUNT {
     container "mgibio/bam_readcount_helper-cwl:1.2.1"
 
     input:
-        tuple val(somatic_name), val(somatic_meta), path(vcf), val(sample_meta), path(bam), path(bai)
+        tuple val(somatic_name), val(somatic_meta), val(sample_name), val(molecule), path(vcf), val(sample_meta), path(bam), path(bai)
         tuple path(reference_fa), path(reference_index)
 
     output:
 
         tuple val(somatic_meta), val(sample_meta), path("*_bamrc_helper/*indel.tsv"), path("*_bamrc_helper/*snv.tsv"), emit: brc_files
     script:
-        def prefix = task.ext.prefix ?: "${sample_meta.sample_name}_${sample_meta.molecule}"
+        def prefix = task.ext.prefix ?: "${sample_name}_${molecule}"
         """
         mkdir ${prefix}_bamrc_helper
         bam_readcount_helper.py \
             $vcf \
-            ${sample_meta.sample_name} \
+            ${sample_name} \
             $reference_fa \
             $bam \
-            ${sample_meta.molecule} \
+            ${molecule} \
             ${prefix}_bamrc_helper
         """
 

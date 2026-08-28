@@ -7,7 +7,7 @@ process MUTECT2_GATHER_SELECT_VARIANTS {
     tag "Selecting Variants within interval for ${somatic_meta.somatic_name} in $interval_shard"
 
     input:
-        tuple val(somatic_meta), path(vcf), path(vcf_index),  path(interval_shard)
+        tuple val(somatic_meta), val(somatic_name), path(vcf), path(vcf_index),  path(interval_shard)
 
     output:
         tuple val(somatic_meta), path("${somatic_meta.somatic_name}_${interval_shard}.vcf.gz")
@@ -18,7 +18,7 @@ process MUTECT2_GATHER_SELECT_VARIANTS {
     gatk SelectVariants \
         -V $vcf \
         -L $interval_shard \
-        -O "${somatic_meta.somatic_name}_${interval_shard}.vcf.gz"
+        -O "${somatic_name}_${interval_shard}.vcf.gz"
     """
 
 }

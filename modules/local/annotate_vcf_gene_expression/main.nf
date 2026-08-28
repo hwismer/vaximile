@@ -10,7 +10,7 @@ process ANNOTATE_VCF_GENE_EXPRESSION {
     container "griffithlab/vatools:5.2.0"
 
     input:
-        tuple val(somatic_name), val(somatic_meta), path(vcf), val(sample_meta), path(gene_abundance)
+        tuple val(somatic_name), val(somatic_meta), val(sample_name), path(vcf), val(sample_meta), path(gene_abundance)
 
 
     output:
@@ -26,7 +26,7 @@ process ANNOTATE_VCF_GENE_EXPRESSION {
             custom gene \
             -i ENSEMBLID \
             -e TPM \
-            -s ${sample_meta.sample_name} \
+            -s ${sample_name} \
             --ignore-ensembl-id-version \
             -o "${prefix}_gene_expression.vcf"
         """

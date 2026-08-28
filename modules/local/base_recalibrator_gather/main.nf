@@ -11,7 +11,7 @@ process BASE_RECALIBRATOR_GATHER {
     tag "GatherBQSRReports on ${meta.sample_name}"
 
     input:
-        tuple val(meta), path(recal_tables)
+        tuple val(meta), val(sample_name), val(molecule), path(recal_tables)
 
     output:
         tuple val(meta), path("${meta.sample_name}_${meta.molecule}_recal_table.table")
@@ -20,7 +20,7 @@ process BASE_RECALIBRATOR_GATHER {
     """
     gatk GatherBQSRReports \
         ${recal_tables.collect { "-I ${it}" }.join(' ')} \
-        -O "${meta.sample_name}_${meta.molecule}_recal_table.table"
+        -O "${sample_name}_${molecule}_recal_table.table"
     """
 
 }

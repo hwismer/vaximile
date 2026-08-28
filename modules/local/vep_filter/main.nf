@@ -15,7 +15,7 @@ process VEP_FILTER {
     tag "Filtering $vep_vcf with VEP based on population frequencies"
 
     input:
-        tuple val(meta), path(vep_vcf)
+        tuple val(meta), val(somatic_name), path(vep_vcf)
         path vep_cache
         path vep_plugins
 
@@ -27,7 +27,7 @@ process VEP_FILTER {
         """
 
         filter_vep -i $vep_vcf \
-            -o "${meta.somatic_name}_vep.vcf" \
+            -o "${somatic_name}_vep.vcf" \
             --format vcf \
             $args
 

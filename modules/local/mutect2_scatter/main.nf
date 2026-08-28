@@ -15,7 +15,7 @@ process MUTECT2_SCATTER {
     tag "Running Mutect2 scatter on ${somatic_meta.somatic_name} at $interval_shard"
 
     input:
-        tuple val(somatic_meta), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai), path(interval_shard)
+        tuple val(somatic_meta), val(normal_sample_name), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai), path(interval_shard)
         tuple path(reference_fa), path(reference_index)
         path reference_dict
         tuple path(germline_resource), path(germline_resource_index)
@@ -35,7 +35,7 @@ process MUTECT2_SCATTER {
             -R "${reference_fa}" \
             -I ${tumor_bam} \
             -I ${normal_bam} \
-            -normal ${somatic_meta.normal_meta.sample_name} \
+            -normal ${normal_sample_name} \
             --germline-resource $germline_resource \
             --panel-of-normals $pon \
             --f1r2-tar-gz "${prefix}_mutect_f1r2.tar.gz" \

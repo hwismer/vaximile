@@ -10,7 +10,7 @@ process ANNOTATE_VCF_TRANSCRIPT_EXPRESSION {
     container "griffithlab/vatools:5.2.0"
 
     input:
-        tuple val(somatic_name), val(somatic_meta), path(vcf), val(sample_meta), path(tx_abundance)
+        tuple val(somatic_name), val(somatic_meta), val(sample_name), path(vcf), val(sample_meta), path(tx_abundance)
 
     output:
         tuple val(somatic_meta), path("*_tx_expression.vcf")
@@ -20,7 +20,7 @@ process ANNOTATE_VCF_TRANSCRIPT_EXPRESSION {
         """
         vcf-expression-annotator \
             $vcf \
-            -s ${sample_meta.sample_name} \
+            -s ${sample_name} \
             $tx_abundance \
             kallisto transcript \
             -o ${prefix}_tx_expression.vcf

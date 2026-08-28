@@ -19,14 +19,24 @@ workflow PVAC_VCF_PHASING {
        
     main:
 
-    select_variants = PHASE_VCF_SELECT_VARIANTS(somatic_vcf, reference_genome, reference_dict)
+    phase_vcf_select_variants_input = somatic_vcf
+        .map { somatic_meta, vcf, vcf_index ->
+            tuple(somatic_meta, somatic_meta.tumor_meta.sample_name, vcf, vcf_index)
+        }
+
+    select_variants = PHASE_VCF_SELECT_VARIANTS(phase_vcf_select_variants_input, reference_genome, reference_dict)
     
 
     somatic_meta_germline = somatic_vcf.map{meta, vcf, tbi ->
         tuple(meta.normal_meta, meta)
     }.join(germline_vcf, by:0)
 
-    germline_renamed = PHASE_VCF_RENAME(somatic_meta_germline)
+    phase_vcf_rename_input = somatic_meta_germline
+        .map { normal_meta, somatic_meta, vcf, vcf_index ->
+            tuple(normal_meta, somatic_meta, normal_meta.sample_name, somatic_meta.tumor_meta.sample_name, vcf, vcf_index)
+        }
+
+    germline_renamed = PHASE_VCF_RENAME(phase_vcf_rename_input)
 
 
     combine_variants_input = select_variants.join(germline_renamed, by:0)

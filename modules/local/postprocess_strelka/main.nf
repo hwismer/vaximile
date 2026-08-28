@@ -13,7 +13,7 @@ process POSTPROCESS_STRELKA {
     container "staphb/bcftools:1.23.1" 
 
     input:
-        tuple val(somatic_meta),
+        tuple val(somatic_meta), val(tumor_sample_name), val(normal_sample_name),
               path(strelka_snvs), path(strelka_snvs_index),
               path(strelka_indels), path(strelka_indels_index)
 
@@ -35,8 +35,8 @@ process POSTPROCESS_STRELKA {
             $strelka_snvs $strelka_indels
 
         cat > sample_map.txt <<EOF
-        NORMAL ${somatic_meta.normal_meta.sample_name}
-        TUMOR ${somatic_meta.tumor_meta.sample_name}
+        NORMAL ${normal_sample_name}
+        TUMOR ${tumor_sample_name}
         EOF
         
         bcftools reheader \

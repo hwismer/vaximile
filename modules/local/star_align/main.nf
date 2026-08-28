@@ -14,7 +14,7 @@ process STAR_ALIGN {
     tag "Aligning ${meta.sample_name} with STAR"
 
     input:
-        tuple val(meta), path(fastq1), path(fastq2)
+        tuple val(meta), val(sample_name), path(fastq1), path(fastq2)
         path(star_index_dir)
         path(gtf)
 
@@ -26,7 +26,7 @@ process STAR_ALIGN {
         tuple val(meta), path("*_Chimeric.out.junction"), path(fastq1), path(fastq2), emit: chimeric_out
         tuple val(meta), path("*"), emit: tutto
     script:
-        def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
+        def prefix = task.ext.prefix ?: "${sample_name}_${meta.molecule}"
         """
 
         gzip -d -c $gtf > gencode.gtf
@@ -49,7 +49,7 @@ process STAR_ALIGN {
             --alignMatesGapMax 100000 \
             --alignIntronMax 100000 \
             --alignSJstitchMismatchNmax 5 -1 5 5 \
-            --outSAMattrRGline ID:"${meta.sample_name}" SM:"${meta.sample_name}" \
+            --outSAMattrRGline ID:"${sample_name}" SM:"${sample_name}" \
             --chimMultimapScoreRange 3 \
             --chimScoreJunctionNonGTAG 0 \
             --chimScoreSeparation 1 \

@@ -25,8 +25,9 @@ process PVACSEQ {
 
     tag "pVACseq on ${somatic_name}"
     input:
-        tuple val(somatic_name), 
-            val(somatic_meta), path(somatic_vcf), path(somatic_vcf_index),
+        tuple val(somatic_name),
+            val(somatic_meta), val(tumor_sample_name), val(normal_sample_name),
+            path(somatic_vcf), path(somatic_vcf_index),
             path(phased_vcf), path(phased_vcf_index), 
             val(hla_meta), path(hla_pvac_input)
         path(human_ref_peptides)
@@ -40,13 +41,13 @@ process PVACSEQ {
         """
         pvacseq run \
             $somatic_vcf \
-            ${somatic_meta.tumor_meta.sample_name} \
+            ${tumor_sample_name} \
             \$(head $hla_pvac_input -n 1) \
             all \
             "${prefix}_pvacseq" \
             $args \
             --phased-proximal-variants-vcf $phased_vcf \
-            --normal-sample-name ${somatic_meta.normal_meta.sample_name} \
+            --normal-sample-name ${normal_sample_name} \
             --iedb-install-directory /opt/iedb \
             --peptide-fasta $human_ref_peptides \
             -t $task.cpus

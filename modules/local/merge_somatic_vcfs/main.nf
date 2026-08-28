@@ -16,8 +16,8 @@ process MERGE_SOMATIC_VCFS {
     tag "Merge 3 somatic vcfs from $vcf1 $vcf2 $vcf3"
 
     input:
-        tuple val(somatic_meta), 
-            val(vcf1_caller), path(vcf1), path(vcf1_index), 
+        tuple val(somatic_meta), val(somatic_name),
+            val(vcf1_caller), path(vcf1), path(vcf1_index),
             val(vcf2_caller), path(vcf2), path(vcf2_index),
             val(vcf3_caller), path(vcf3), path(vcf3_index)
         tuple path(reference_fa), path(reference_index)
@@ -39,7 +39,7 @@ process MERGE_SOMATIC_VCFS {
             -V:$vcf2_caller $vcf2 \
             -V:$vcf3_caller $vcf3 \
             $args \
-            -o "${somatic_meta.somatic_name}_variants.vcf.gz"
+            -o "${somatic_name}_variants.vcf.gz"
 
         """
     

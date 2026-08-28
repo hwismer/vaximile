@@ -13,7 +13,8 @@ workflow DEEPSOMATIC_WORKFLOW {
             tuple(meta.capture_kit, meta, tumor_bam, tumor_bai, normal_bam, normal_bai)
         }
         .combine(capture_kits, by:0)
-        .map { kit, meta, tb, tbai, nbam, nbai, bed -> tuple(meta, tb, tbai, nbam, nbai, bed)
+        .map { kit, meta, tb, tbai, nbam, nbai, bed ->
+            tuple(meta, meta.tumor_meta.sample_name, meta.normal_meta.sample_name, meta.tumor_meta.sequencing_type, tb, tbai, nbam, nbai, bed)
         }
 
         deepsomatic = DEEPSOMATIC(somatic_pairs_kit, reference_genome)

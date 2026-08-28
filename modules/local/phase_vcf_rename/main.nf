@@ -15,16 +15,16 @@ process PHASE_VCF_RENAME {
     tag "Renaming germline sample ${normal_meta.sample_name} to ${somatic_meta.tumor_meta.sample_name}"
 
     input:
-        tuple val(normal_meta), val(somatic_meta), path(germline_vcf), path(germline_vcf_index)
+        tuple val(normal_meta), val(somatic_meta), val(normal_sample_name), val(tumor_sample_name), path(germline_vcf), path(germline_vcf_index)
 
     output:
         tuple val(somatic_meta), path("*_germline_rename.vcf.gz"), path("*_germline_rename.vcf.gz.tbi")
 
     script:
-        def prefix = task.ext.prefix ?: "${somatic_meta.tumor_meta.sample_name}"
+        def prefix = task.ext.prefix ?: "${tumor_sample_name}"
         """
         cat > sample_map.txt <<EOF
-        ${normal_meta.sample_name} ${somatic_meta.tumor_meta.sample_name}
+        ${normal_sample_name} ${tumor_sample_name}
         EOF
         
         bcftools reheader \

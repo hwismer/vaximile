@@ -11,7 +11,12 @@ workflow PVACTOOLS_WORKFLOW {
 
     main:
 
-    pvacseq = PVACSEQ(pvacseq_input, proteome_reference)
+    pvacseq_ch = pvacseq_input
+        .map { somatic_name, somatic_meta, somatic_vcf, somatic_vcf_index, phased_vcf, phased_vcf_index, hla_meta, hla_pvac_input ->
+            tuple(somatic_name, somatic_meta, somatic_meta.tumor_meta.sample_name, somatic_meta.normal_meta.sample_name, somatic_vcf, somatic_vcf_index, phased_vcf, phased_vcf_index, hla_meta, hla_pvac_input)
+        }
+
+    pvacseq = PVACSEQ(pvacseq_ch, proteome_reference)
     pvacfuse = PVACFUSE(pvacfuse_input, proteome_reference)
 
     pvacseq_patient = pvacseq.pvaseq_mhc_i_aggr.map{meta, report -> tuple(meta.patient, report)}.groupTuple()

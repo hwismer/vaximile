@@ -5,7 +5,7 @@ process DEEPSOMATIC {
     
     tag "DeepSomatic on ${somatic_meta.somatic_name}"
     input:
-        tuple val(somatic_meta), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai), path(bed_regions)
+        tuple val(somatic_meta), val(tumor_sample_name), val(normal_sample_name), val(tumor_sequencing_type), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai), path(bed_regions)
         tuple path(reference_fa), path(reference_index)
 
 
@@ -22,7 +22,7 @@ process DEEPSOMATIC {
         genome_ffpe: 'FFPE_WGS'
     ]
 
-	def model = model_map[somatic_meta.tumor_meta.sequencing_type]
+	def model = model_map[tumor_sequencing_type]
 	def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
 	def args = task.ext.args ?: ''
     """
@@ -33,8 +33,8 @@ process DEEPSOMATIC {
         --reads_tumor=$tumor_bam \
         --output_vcf=${prefix}_deepsomatic.vcf.gz \
         --output_gvcf=${prefix}_deepsomatic.gvcf.gz \
-        --sample_name_tumor=${somatic_meta.tumor_meta.sample_name} \
-        --sample_name_normal=${somatic_meta.normal_meta.sample_name}\
+        --sample_name_tumor=${tumor_sample_name} \
+        --sample_name_normal=${normal_sample_name}\
         --num_shards=$task.cpus \
         --logging_dir=./logs \
         $args \

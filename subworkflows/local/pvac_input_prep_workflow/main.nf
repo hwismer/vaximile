@@ -34,7 +34,12 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
     main:
     
     // Add GT to strelka calls
-    strelka_gt = ADD_VCF_GT_FIELD(strelka_vcf)
+    add_vcf_gt_field_input = strelka_vcf
+        .map { meta, vcf, tbi ->
+            tuple(meta, meta.tumor_meta.sample_name, vcf, tbi)
+        }
+
+    strelka_gt = ADD_VCF_GT_FIELD(add_vcf_gt_field_input)
 
     strelka = strelka_gt.map{meta, vcf, tbi -> tuple(meta, "strelka", vcf, tbi)}
     mutect = mutect_vcf.map{meta, vcf, tbi -> tuple(meta, "mutect", vcf, tbi)}
@@ -42,7 +47,12 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
 
     vcfs = mutect.mix(deepsomatic).mix(strelka)
     vcfs_filtered = FILTER_VCF(vcfs).filtered_vcf
-    vcfs_normalized = POSTPROCESS_VCF(vcfs_filtered, reference_genome)
+    postprocess_vcf_input = vcfs_filtered
+        .map { meta, caller, vcf, tbi ->
+            tuple(meta, meta.somatic_name, caller, vcf, tbi)
+        }
+
+    vcfs_normalized = POSTPROCESS_VCF(postprocess_vcf_input, reference_genome)
     
     callers = vcfs_normalized.branch{ meta, caller, vcf, tbi ->
         mutect: caller == "mutect"
@@ -52,8 +62,12 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
     
     merged_callers = callers.mutect.join(callers.deepsomatic).join(callers.strelka)
 
+    merge_somatic_vcfs_input = merged_callers
+        .map { meta, vcf1_caller, vcf1, vcf1_index, vcf2_caller, vcf2, vcf2_index, vcf3_caller, vcf3, vcf3_index ->
+            tuple(meta, meta.somatic_name, vcf1_caller, vcf1, vcf1_index, vcf2_caller, vcf2, vcf2_index, vcf3_caller, vcf3, vcf3_index)
+        }
 
-    merged_vcf = MERGE_SOMATIC_VCFS(merged_callers, reference_genome, reference_dict)
+    merged_vcf = MERGE_SOMATIC_VCFS(merge_somatic_vcfs_input, reference_genome, reference_dict)
     vep = VEP_ANNOTATE(merged_vcf, reference_genome, vep_cache, vep_plugins)
     vep_filtered = VEP_POPULATION_FILTER(vep.vcf, vep_cache, vep_plugins)
 
@@ -62,6 +76,9 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
     
 
     bamreadcount_helper_input = vep_filtered_somatic_name.combine(all_samples_somatic_name, by:0)
+        .map { somatic_name, somatic_meta, vcf, sample_meta, bam, bai ->
+            tuple(somatic_name, somatic_meta, sample_meta.sample_name, sample_meta.molecule, vcf, sample_meta, bam, bai)
+        }
 
     brc_helper = BAMREADCOUNT(bamreadcount_helper_input, reference_genome)
     
@@ -72,18 +89,45 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
     }
     
 
-    tumor_dna = ANNOTATE_VCF_COVERAGE_TUMOR_DNA(brc_helper_branched.tumor_dna.join(vep_filtered))
-    normal_dna_tdna = ANNOTATE_VCF_COVERAGE_NORMAL_DNA(brc_helper_branched.normal_dna.join(tumor_dna)) 
-    tumor_rna_ndna_tdna = ANNOTATE_VCF_COVERAGE_TUMOR_RNA(brc_helper_branched.tumor_rna.join(normal_dna_tdna))
+    annotate_vcf_coverage_tumor_dna_input = brc_helper_branched.tumor_dna.join(vep_filtered)
+        .map { somatic_meta, sample_meta, indels, snvs, vcf ->
+            tuple(somatic_meta, sample_meta, sample_meta.sample_name, sample_meta.molecule, somatic_meta.somatic_name, indels, snvs, vcf)
+        }
+
+    tumor_dna = ANNOTATE_VCF_COVERAGE_TUMOR_DNA(annotate_vcf_coverage_tumor_dna_input)
+
+    annotate_vcf_coverage_normal_dna_input = brc_helper_branched.normal_dna.join(tumor_dna)
+        .map { somatic_meta, sample_meta, indels, snvs, vcf ->
+            tuple(somatic_meta, sample_meta, sample_meta.sample_name, sample_meta.molecule, somatic_meta.somatic_name, indels, snvs, vcf)
+        }
+
+    normal_dna_tdna = ANNOTATE_VCF_COVERAGE_NORMAL_DNA(annotate_vcf_coverage_normal_dna_input)
+
+    annotate_vcf_coverage_tumor_rna_input = brc_helper_branched.tumor_rna.join(normal_dna_tdna)
+        .map { somatic_meta, sample_meta, indels, snvs, vcf ->
+            tuple(somatic_meta, sample_meta, sample_meta.sample_name, sample_meta.molecule, somatic_meta.somatic_name, indels, snvs, vcf)
+        }
+
+    tumor_rna_ndna_tdna = ANNOTATE_VCF_COVERAGE_TUMOR_RNA(annotate_vcf_coverage_tumor_rna_input)
 
 
     somatic_name_vcf_coverage = tumor_rna_ndna_tdna.map{meta, vcf -> tuple(meta.somatic_name, meta, vcf) }
     somatic_name_tx = kallisto_tx_abundance.map{meta, tx -> tuple(meta.somatic_name, meta, tx) }
-    tx_vcf = ANNOTATE_VCF_TRANSCRIPT_EXPRESSION(somatic_name_vcf_coverage.join(somatic_name_tx))
+    annotate_vcf_transcript_expression_input = somatic_name_vcf_coverage.join(somatic_name_tx)
+        .map { somatic_name, somatic_meta, vcf, sample_meta, tx ->
+            tuple(somatic_name, somatic_meta, sample_meta.sample_name, vcf, sample_meta, tx)
+        }
+
+    tx_vcf = ANNOTATE_VCF_TRANSCRIPT_EXPRESSION(annotate_vcf_transcript_expression_input)
 
     tx_vcf_somatic_name = tx_vcf.map{ meta, vcf -> tuple(meta.somatic_name, meta, vcf) }
     somatic_name_gene = kallisto_gene_abundance.map{ meta, gene -> tuple(meta.somatic_name, meta, gene) }
-    gene_vcf = ANNOTATE_VCF_GENE_EXPRESSION(tx_vcf_somatic_name.join(somatic_name_gene))
+    annotate_vcf_gene_expression_input = tx_vcf_somatic_name.join(somatic_name_gene)
+        .map { somatic_name, somatic_meta, vcf, sample_meta, gene ->
+            tuple(somatic_name, somatic_meta, sample_meta.sample_name, vcf, sample_meta, gene)
+        }
+
+    gene_vcf = ANNOTATE_VCF_GENE_EXPRESSION(annotate_vcf_gene_expression_input)
 
     index_input = gene_vcf.map{meta, vcf ->
         tuple(meta.somatic_name, meta, vcf)

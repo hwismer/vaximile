@@ -14,7 +14,7 @@ process POSTPROCESS_VCF {
     tag "Normalizing $vcf"
 
     input:
-        tuple val(meta), val(caller), path(vcf), path(vcf_index)
+        tuple val(meta), val(sample_name), val(caller), path(vcf), path(vcf_index)
         tuple path(reference_fa), path(reference_index)
 
     output:
@@ -26,7 +26,7 @@ process POSTPROCESS_VCF {
 
         """
         bcftools norm -m -any -d exact -f $reference_fa $vcf -Oz -o norm_vcf.vcf.gz
-        bcftools sort norm_vcf.vcf.gz -Oz -o "${meta.sample_name}_${caller}_variants.vcf.gz"
-        bcftools index -t "${meta.sample_name}_${caller}_variants.vcf.gz"
+        bcftools sort norm_vcf.vcf.gz -Oz -o "${sample_name}_${caller}_variants.vcf.gz"
+        bcftools index -t "${sample_name}_${caller}_variants.vcf.gz"
         """
 }

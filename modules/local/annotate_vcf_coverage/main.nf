@@ -10,7 +10,7 @@ process ANNOTATE_VCF_COVERAGE {
     container "griffithlab/vatools:5.2.0"
 
     input:
-        tuple val(somatic_meta), val(sample_meta), path(indels), path(snvs), path(vcf)
+        tuple val(somatic_meta), val(sample_meta), val(sample_name), val(molecule), val(somatic_name), path(indels), path(snvs), path(vcf)
     output:
         tuple val(somatic_meta), path("${somatic_meta.somatic_name}_${sample_meta.sample_name}_${sample_meta.molecule}_coverage.vcf")
         
@@ -19,18 +19,18 @@ process ANNOTATE_VCF_COVERAGE {
         vcf-readcount-annotator \
             $vcf \
             $indels \
-            ${sample_meta.molecule} \
-            -s ${sample_meta.sample_name} \
+            ${molecule} \
+            -s ${sample_name} \
             -t indel \
             -o vcf1.vcf
 
         vcf-readcount-annotator \
             vcf1.vcf \
             $snvs \
-            ${sample_meta.molecule} \
-            -s ${sample_meta.sample_name} \
+            ${molecule} \
+            -s ${sample_name} \
             -t snv \
-            -o ${somatic_meta.somatic_name}_${sample_meta.sample_name}_${sample_meta.molecule}_coverage.vcf
+            -o ${somatic_name}_${sample_name}_${molecule}_coverage.vcf
         """
 
 }

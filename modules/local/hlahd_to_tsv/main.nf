@@ -7,13 +7,13 @@ process HLAHD_TO_TSV {
     tag "Converting HLAHD to TSV for  ${meta.sample_name}"
 
     input:
-        tuple val(meta), path(hlahd_result)
+        tuple val(meta), val(sample_name), path(hlahd_result)
 
     output:
 		tuple val(meta), path("*_hlahd.tsv"), emit: hlahd_tsv
 
     script:
-    def prefix = task.ext.prefix ?: "${meta.sample_name}"
+    def prefix = task.ext.prefix ?: "${sample_name}"
     """
     #!/usr/bin/env python3
     
@@ -21,7 +21,7 @@ process HLAHD_TO_TSV {
     
     test = pd.read_csv("${hlahd_result}", sep = "\\t", header = None, names=range(10))
     test = test.rename(columns = {0:"locus"})
-    test.insert(0, "sample", "${meta.sample_name}")
+    test.insert(0, "sample", "${sample_name}")
     test["calls"] = test.iloc[:, 2:].apply(
         lambda r: " - ".join([x for x in r if pd.notna(x) and x != "-" and x != "Not typed"]),
             axis=1

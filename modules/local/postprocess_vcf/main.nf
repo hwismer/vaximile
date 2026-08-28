@@ -14,7 +14,7 @@ process POSTPROCESS_VCF {
     tag "Normalizing $somatic_vcf"
 
     input:
-        tuple val(meta), val(caller), path(somatic_vcf), path(somatic_vcf_index)
+        tuple val(meta), val(somatic_name), val(caller), path(somatic_vcf), path(somatic_vcf_index)
         tuple path(reference_fa), path(reference_index_dir)
 
     output:
@@ -28,7 +28,7 @@ process POSTPROCESS_VCF {
         def args = task.ext.args ?: ''
         """
         bcftools norm $args -f $reference_fa $somatic_vcf -Oz -o norm_vcf.vcf.gz
-        bcftools sort norm_vcf.vcf.gz -Oz -o "${meta.somatic_name}_${caller}_variants.vcf.gz"
-        bcftools index -t "${meta.somatic_name}_${caller}_variants.vcf.gz"
+        bcftools sort norm_vcf.vcf.gz -Oz -o "${somatic_name}_${caller}_variants.vcf.gz"
+        bcftools index -t "${somatic_name}_${caller}_variants.vcf.gz"
         """
 }
