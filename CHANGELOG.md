@@ -48,6 +48,39 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Pinned OptiType to 1.5.0 (`quay.io/biocontainers/optitype:1.5.0--pyhdfd78af_1`, plus a
+  matching conda spec). The previous image, `fred2/optitype:latest`, is a floating tag last
+  pushed in 2018 and that repo's newest tag is `release-v1.3.1`, so runs were neither
+  reproducible nor current. HLA calls may change: this is a real version jump, not a repin.
+- Fixed a bash `versions.yml` heredoc being appended to five modules whose script runs
+  under `python3`/`Rscript` (`get_rna_strandedness`, `hla_calls_pvac`, `hlahd_to_tsv`,
+  `combine_pvacseq_aggregated_report`, `kallisto_tximport`). They now write the file from
+  their own interpreter. Introduced by the versions change and invisible to the stub run,
+  whose stub blocks are bash.
+- `STAR_FUSION` declared `fastq1`/`fastq2` inputs and never passed them, and never set
+  `--CPU`, so its 16-CPU label did nothing. Both fixed. Fusion calls may change, since
+  STAR-Fusion now has read-level evidence it previously lacked.
+- `get_rna_strandedness` left `strandedness` unbound when salmon reported a stranded
+  library whose orientation was neither `R` nor `F`, dying with a `NameError` instead of
+  the intended message.
+- `SOMALIER_EXTRACT` declared its output as `${meta.sample_name}.somalier`, but the tool
+  names the file from the BAM's `SM` read-group tag; it now globs `*.somalier`.
+- `ADD_VCF_GT_FIELD` copied its input's `.tbi` onto a freshly written *uncompressed* VCF,
+  which cannot have a tabix index. The bogus index is gone, along with `FILTER_VCF`'s
+  index input, which was staged and never read.
+- `star_align` and `kallisto_quant` emitted `path("*")` catch-alls that globbed the whole
+  work directory, publishing staged inputs as results. Nothing consumed them.
+- `POSTPROCESS_STRELKA` passed `--threads` twice to one `bcftools concat` and indexed an
+  intermediate it then discarded.
+- The three GATK3 modules hard-coded `-Xmx16g`, decoupled from their label's memory; the
+  heap is now derived from `task.memory`.
+- The three `PULL_*` modules with `storeDir` no longer populate the real resource store
+  under `-stub-run`, where they write empty placeholders that a later real run would have
+  reused instead of downloading.
+- Unified the split bcftools pin (five modules on 1.23, two on 1.23.1) onto 1.23.1.
+- `MHCFLOW` had a leftover debug `ls` and wrote to a different name than it declared;
+  `DEEPSOMATIC` was missing a space before a line continuation; `SAMTOOLS_COVERAGE`'s conda
+  spec pulled bedtools and htslib it never used. Plus assorted stale comments and typos.
 - Every module now reports its tool version. Each writes a `versions.yml` to Nextflow's
   `versions` topic channel, which `main.nf` collects into
   `<outdir>/pipeline_info/software_versions.yml`. `topic:` rather than `emit:` means no

@@ -93,10 +93,10 @@ process HLA_CALLS_PVAC {
         writer = csv.writer(f,lineterminator="\\n")
         writer.writerow(alleles)
 
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        python: 3.10
-    END_VERSIONS
+    # versions.yml must be written by this interpreter: the script block runs under
+    # python, so a bash heredoc here would be a syntax error.
+    with open("versions.yml", "w") as _vf:
+        _vf.write('"${task.process}":\\n    python: 3.10\\n')
     """
 
     stub:

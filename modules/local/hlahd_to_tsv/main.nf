@@ -32,11 +32,11 @@ process HLAHD_TO_TSV {
         test.pivot(index="sample", columns="locus", values="calls")
               .reset_index()
               )
-    wide.to_csv("${prefix}_hlahd.tsv", sep = "\t", index = False)
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        python: 3.10
-    END_VERSIONS
+    wide.to_csv("${prefix}_hlahd.tsv", sep = "\\t", index = False)
+    # versions.yml must be written by this interpreter: the script block runs under
+    # python, so a bash heredoc here would be a syntax error.
+    with open("versions.yml", "w") as _vf:
+        _vf.write('"${task.process}":\\n    python: 3.10\\n')
     """
 
     stub:

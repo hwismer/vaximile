@@ -45,10 +45,10 @@ process COMBINE_PVACSEQ_AGGREGATED_REPORT {
     
     df = df.sort_values(["Tier", "sum_rank", "IC50 MT", "Gene", "AA Change"],kind="mergesort").drop(columns="sum_rank").reset_index()
     df.to_csv("${prefix}_pvacseq_reports.tsv", sep = "\\t", index = False)
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        python: 3.10
-    END_VERSIONS
+    # versions.yml must be written by this interpreter: the script block runs under
+    # python, so a bash heredoc here would be a syntax error.
+    with open("versions.yml", "w") as _vf:
+        _vf.write('"${task.process}":\\n    python: 3.10\\n')
     """
 
     stub:

@@ -1,7 +1,7 @@
 process APPLY_BQSR_GATHER {
 
     /*
-    Gathers all bqsr games to create a final merged bam with adjusted base quality scores.
+    Gathers all bqsr shards to create a final merged bam with adjusted base quality scores.
     */
 
     label 'process_medium'

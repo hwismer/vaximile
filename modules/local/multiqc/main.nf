@@ -4,7 +4,7 @@ process MULTIQC {
     Runs MultiQC on gathered files on a per-patient basis.
     Currently also imports HLA-HD calls into table format.
 
-    Replaces sample names with sample names from metadat and merged samples that start with Merge
+    Replaces sample names with sample names from metadata and merged samples that start with Merge
     */
 
     label 'process_low'
@@ -23,7 +23,6 @@ process MULTIQC {
     
     def prefix = task.ext.prefix ?: "${patient}"
     def clean_sample_names = sample_names.findAll { it != null }.unique().sort { -it.size() }
-    def clean_somatic_names = somatic_names.findAll { it != null }.unique().sort { -it.size() }
 
     def rename_tsv = (clean_sample_names)
         .collect { s -> "^${s}.*\t${s}" }

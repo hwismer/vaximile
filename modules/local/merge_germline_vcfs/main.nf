@@ -33,7 +33,7 @@ process MERGE_GERMLINE_VCFS {
         def args = task.ext.args ?: ''
         def prefix = task.ext.prefix ?: "${sample_meta.sample_name}"
         """
-        java -Xmx16g -jar /usr/GenomeAnalysisTK.jar \
+        java -Xmx${task.memory.toGiga() - 1}g -jar /usr/GenomeAnalysisTK.jar \
             -T CombineVariants \
             -R $reference_fa \
             $args \

@@ -4,8 +4,8 @@ process INDEX_VCF {
 
 
     label 'process_low'
-    conda "bioconda::bcftools=1.23"
-    container "staphb/bcftools:1.23"
+    conda "bioconda::bcftools=1.23.1"
+    container "staphb/bcftools:1.23.1"
 
     tag "Indexing $vcf"
 
@@ -33,7 +33,7 @@ process INDEX_VCF {
         touch ${vcf_name}_${filename_suffix}.vcf.gz.tbi
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            bcftools: 1.23
+            bcftools: 1.23.1
         END_VERSIONS
         """
 

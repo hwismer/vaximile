@@ -1,6 +1,8 @@
 process PULL_CTAT_RESOURCE_BUNDLE {
 
-    storeDir './vaximile_resources/ctat_resource_dir'
+    // Not under -stub-run: the stub writes empty placeholders, and storing those
+    // would make a later real run skip the download and use empty resources.
+    storeDir workflow.stubRun ? null : './vaximile_resources/ctat_resource_dir'
 
     // Pulls the hg38 CTAT resource bundle needed for STARfusion and other tools.
 

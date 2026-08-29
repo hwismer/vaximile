@@ -52,10 +52,10 @@ process KALLISTO_TXIMPORT {
 
     write_tsv(gene_tpm, "${prefix}.gene_tpm.tsv")
     
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        r-base: 4.4.3
-    END_VERSIONS
+    writeLines(
+        c('"${task.process}":', "    r-base: 4.4.3"),
+        "versions.yml"
+    )
     """
 
     stub:

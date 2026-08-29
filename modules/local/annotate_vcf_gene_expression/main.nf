@@ -2,7 +2,7 @@ process ANNOTATE_VCF_GENE_EXPRESSION {
 
     /*
 
-    Use the abundance estimates from kallist to annotate transcript expression in a vcf file.
+    Use the abundance estimates from kallist to annotate gene expression in a vcf file.
 
     */
     label 'process_low'

@@ -31,7 +31,7 @@ process MERGE_SOMATIC_VCFS {
 
         def args = task.ext.args ?: ''
         """
-        java -Xmx16g -jar /usr/GenomeAnalysisTK.jar \
+        java -Xmx${task.memory.toGiga() - 1}g -jar /usr/GenomeAnalysisTK.jar \
             -T CombineVariants \
             -R $reference_fa \
             -genotypeMergeOptions PRIORITIZE \

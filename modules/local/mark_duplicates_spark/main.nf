@@ -1,7 +1,7 @@
 process MARK_DUPLICATES_SPARK {
 
     /*
-    Par of GATK pre-processing best practices. Takes an aligned bam or sam file and outputrdinate-sorted
+    Part of GATK pre-processing best practices. Takes an aligned bam or sam file and outputs a coordinate-sorted
     BAM file with duplicates marked.
     */
 

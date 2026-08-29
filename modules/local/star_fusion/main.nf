@@ -28,6 +28,9 @@ process STAR_FUSION {
         """
         STAR-Fusion --genome_lib_dir $ctat_resource_lib \
              -J $chimeric_out \
+             --left_fq $fastq1 \
+             --right_fq $fastq2 \
+             --CPU $task.cpus \
              --output_dir "./${prefix}_starfusion"
 
         cat <<-END_VERSIONS > versions.yml

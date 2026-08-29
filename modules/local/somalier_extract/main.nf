@@ -12,7 +12,10 @@ process SOMALIER_EXTRACT {
         path(sites)
 
     output:
-        tuple val(meta), path("${meta.sample_name}.somalier"), emit: somalier
+        // Glob, not the exact name: `somalier extract` derives the filename from the
+        // BAM's SM read-group tag, which need not equal meta.sample_name. Naming it
+        // exactly made the process fail with a missing output whenever they differed.
+        tuple val(meta), path("*.somalier"), emit: somalier
         path "versions.yml", topic: versions
         
 

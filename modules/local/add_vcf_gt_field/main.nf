@@ -15,13 +15,12 @@ process ADD_VCF_GT_FIELD {
         tuple val(somatic_meta), val(tumor_sample_name), path(somatic_vcf), path(somatic_vcf_index)
          
     output:
-        tuple val(somatic_meta), path("*_gt.vcf"), path("*_gt.vcf.tbi"),emit: vcf
+        tuple val(somatic_meta), path("*_gt.vcf"), emit: vcf
         path "versions.yml", topic: versions
 
     script:
         def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
         """
-        cp $somatic_vcf_index ${prefix}_gt.vcf.tbi
         vcf-genotype-annotator $somatic_vcf \
             "${tumor_sample_name}" \
             0/1 \
@@ -36,8 +35,7 @@ process ADD_VCF_GT_FIELD {
         def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
         """
         touch ${prefix}_gt.vcf
-        touch ${prefix}_gt.vcf.tbi
-        cat <<-END_VERSIONS > versions.yml
+            cat <<-END_VERSIONS > versions.yml
         "${task.process}":
             vatools: 5.2.0
         END_VERSIONS

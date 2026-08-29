@@ -2,7 +2,8 @@ process HAPLOTYPE_CALLER_SCATTER {
 
     /*
 
-    Use HaplotypeCaller on a single scattered interval. Post processes with CNNScoreVariants.
+    Use HaplotypeCaller on a single scattered interval. CNNScoreVariants runs
+    separately, in HAPLOTYPE_CALLER_CNN_SCORE_VARIANTS.
 
     */
 

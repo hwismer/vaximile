@@ -1,7 +1,7 @@
 process SAMTOOLS_COVERAGE {
     
     label 'process_high'
-    conda "bioconda::samtools=1.23.1 bioconda::bedtools=2.31.1 bioconda::htslib=1.23.1"
+    conda "bioconda::samtools=1.23.1"
     
     tag "Samtools coverage on ${meta.sample_name}"
 

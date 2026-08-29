@@ -1,6 +1,8 @@
 process PULL_VEP_PVAC_PLUGINS {
 
-    storeDir './vaximile_resources/vep_pvac_plugins'
+    // Not under -stub-run: the stub writes empty placeholders, and storing those
+    // would make a later real run skip the download and use empty resources.
+    storeDir workflow.stubRun ? null : './vaximile_resources/vep_pvac_plugins'
 
     // Pulls the VEP plugins necessary to run pvactools. Runs locally to ensure internet connection.
 

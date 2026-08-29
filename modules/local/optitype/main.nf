@@ -7,7 +7,12 @@ process OPTITYPE {
 
     */
     
-    container "fred2/optitype:latest"
+    // Pinned to OptiType 1.5.0. The previous image, fred2/optitype:latest, was a floating
+    // tag last pushed in 2018 (that repo's newest tag is release-v1.3.1), so runs were
+    // neither reproducible nor current. The biocontainer puts OptiTypePipeline.py and
+    // razers3 on PATH rather than under /usr/local/bin/OptiType, hence the script change.
+    conda "bioconda::optitype=1.5.0"
+    container "quay.io/biocontainers/optitype:1.5.0--pyhdfd78af_1"
     label 'process_high'
 
     tag "Optitype calls for ${meta.sample_name}"
@@ -26,7 +31,7 @@ process OPTITYPE {
         """
         cat << EOF > OptiType.ini
         [mapping]
-        razers3=/usr/local/bin/razers3
+        razers3=\$(which razers3)
         threads=${task.cpus}
         [ilp]
         solver=cbc
@@ -36,14 +41,8 @@ process OPTITYPE {
         unpaired_weight=0
         use_discordant=false
         EOF
-        
-        which python
-        which OptiTypePipeline.py
-        
-        pwd
-        ls -lh
 
-        python /usr/local/bin/OptiType/OptiTypePipeline.py \
+        OptiTypePipeline.py \
             -i $fastq1 $fastq2 \
             --$molecule_flag \
             -c OptiType.ini \
@@ -51,7 +50,7 @@ process OPTITYPE {
             --outdir optitype_out
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            optitype: \$(OptiTypePipeline.py --version 2>&1 | tail -1)
+            optitype: 1.5.0
         END_VERSIONS
         """
 
@@ -64,7 +63,7 @@ process OPTITYPE {
         touch optitype_out/${prefix}_coverage_plot.pdf
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            optitype: latest
+            optitype: 1.5.0
         END_VERSIONS
         """
 }

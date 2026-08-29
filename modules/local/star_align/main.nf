@@ -24,7 +24,9 @@ process STAR_ALIGN {
         tuple val(meta), path("*_Log.final.out"), emit:final_log
         tuple val(meta), path("*_SJ.out.tab"), emit: sj_out
         tuple val(meta), path("*_Chimeric.out.junction"), path(fastq1), path(fastq2), emit: chimeric_out
-        tuple val(meta), path("*"), emit: tutto
+        // Removed: `path("*")` globbed the whole work directory, so staged inputs
+        // (FASTQs, index dirs, the decompressed GTF) and versions.yml were emitted
+        // as results. Nothing consumed it.
         path "versions.yml", topic: versions
     script:
         def prefix = task.ext.prefix ?: "${sample_name}_${meta.molecule}"

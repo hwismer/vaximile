@@ -20,7 +20,9 @@ process KALLISTO_QUANT {
     output:
         tuple val(meta), path("*_kallisto/abundance.tsv"), emit: abundance
         tuple val(meta), path("*_kallisto"), emit: kallisto_dir
-        tuple val(meta), path("*"), emit: tutto
+        // Removed: `path("*")` globbed the whole work directory, so staged inputs
+        // (FASTQs, index dirs, the decompressed GTF) and versions.yml were emitted
+        // as results. Nothing consumed it.
         path "versions.yml", topic: versions
 
     script:

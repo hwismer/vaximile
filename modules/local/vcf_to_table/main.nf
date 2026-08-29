@@ -4,7 +4,7 @@ process VCF_TO_TABLE {
     conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
 
-    tag "Exporint $vcf to tsv table"
+    tag "Exporting $vcf to tsv table"
 
     input:
         tuple val(meta), val(file_name), path(vcf), path(vcf_index)

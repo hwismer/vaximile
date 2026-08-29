@@ -41,9 +41,9 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
 
     strelka_gt = ADD_VCF_GT_FIELD(add_vcf_gt_field_input).vcf
 
-    strelka = strelka_gt.map{meta, vcf, tbi -> tuple(meta, "strelka", vcf, tbi)}
-    mutect = mutect_vcf.map{meta, vcf, tbi -> tuple(meta, "mutect", vcf, tbi)}
-    deepsomatic = deepsomatic_vcf.map{meta, vcf, tbi -> tuple(meta, "deepsomatic", vcf, tbi) }
+    strelka = strelka_gt.map{meta, vcf -> tuple(meta, "strelka", vcf)}
+    mutect = mutect_vcf.map{meta, vcf, _tbi -> tuple(meta, "mutect", vcf)}
+    deepsomatic = deepsomatic_vcf.map{meta, vcf, _tbi -> tuple(meta, "deepsomatic", vcf) }
 
     vcfs = mutect.mix(deepsomatic).mix(strelka)
     vcfs_filtered = FILTER_VCF(vcfs).filtered_vcf

@@ -10,7 +10,7 @@ process POSTPROCESS_STRELKA {
     label 'process_medium'
 
     conda "bioconda::bcftools=1.23.1"
-    container "staphb/bcftools:1.23.1" 
+    container "staphb/bcftools:1.23.1"
 
     input:
         tuple val(somatic_meta), val(tumor_sample_name), val(normal_sample_name),
@@ -30,9 +30,7 @@ process POSTPROCESS_STRELKA {
             $args \
             --threads $task.cpus \
             -Oz \
-            -W=tbi \
             -o strelka_merged.vcf.gz \
-            --threads $task.cpus \
             $strelka_snvs $strelka_indels
 
         cat > sample_map.txt <<EOF

@@ -7,14 +7,16 @@ process FILTER_VCF {
     */
     
     label 'process_medium'
-    conda "bioconda::bcftools=1.23"
-    container "staphb/bcftools:1.23"
+    conda "bioconda::bcftools=1.23.1"
+    container "staphb/bcftools:1.23.1"
 
     tag "Filtering non-passing variants from $caller $somatic_vcf"
     
     
     input:
-        tuple val(somatic_meta), val(caller), path(somatic_vcf), path(tbi)
+        // No index input: `bcftools view -f PASS` reads the VCF directly, and one
+        // caller branch (Strelka via ADD_VCF_GT_FIELD) has no valid index to give.
+        tuple val(somatic_meta), val(caller), path(somatic_vcf)
         
     output:
         tuple val(somatic_meta), val(caller), path("*_filtered_variants.vcf.gz"), path("*_filtered_variants.vcf.gz.tbi"), emit: filtered_vcf
@@ -39,7 +41,7 @@ process FILTER_VCF {
         touch ${prefix}_filtered_variants.vcf.gz.tbi
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            bcftools: 1.23
+            bcftools: 1.23.1
         END_VERSIONS
         """
 

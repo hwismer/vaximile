@@ -29,7 +29,7 @@ process PHASE_VCF_RBPHASING {
 
         def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
         """
-        java -Xmx16g -jar /usr/GenomeAnalysisTK.jar \
+        java -Xmx${task.memory.toGiga() - 1}g -jar /usr/GenomeAnalysisTK.jar \
             -T ReadBackedPhasing \
                 -R $reference_fa \
                 -I $tumor_reads \

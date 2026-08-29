@@ -2,7 +2,7 @@ process STRELKA {
     
     /*
 
-    Run Manta Indel Caller
+    Run Strelka somatic variant caller
 
     */
     

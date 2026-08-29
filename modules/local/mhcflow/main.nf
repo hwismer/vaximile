@@ -28,8 +28,7 @@ process MHCFLOW {
         --freq $hla_freqs \
         --nproc $task.cpus \
         $args \
-        --outdir ${sample_name}
-	ls
+        --outdir ${meta.sample_name}
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         unknown: unknown

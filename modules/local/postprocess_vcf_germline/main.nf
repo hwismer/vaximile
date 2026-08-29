@@ -8,8 +8,8 @@ process POSTPROCESS_VCF {
     */
 
     label 'process_medium'
-    conda "bioconda::bcftools=1.23"
-    container "staphb/bcftools:1.23"
+    conda "bioconda::bcftools=1.23.1"
+    container "staphb/bcftools:1.23.1"
 
     tag "Normalizing $vcf"
 
@@ -41,7 +41,7 @@ process POSTPROCESS_VCF {
         touch "${sample_name}_${caller}_variants.vcf.gz.tbi"
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            bcftools: 1.23
+            bcftools: 1.23.1
         END_VERSIONS
         """
 }

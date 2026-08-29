@@ -33,6 +33,11 @@ process GET_RNA_STRANDEDNESS {
             strandedness = "RF"
         elif expected_format[2] == "F":
             strandedness = "FR"
+        else:
+            # Without this branch `strandedness` stays unbound and the script dies with a
+            # NameError instead of the intended message.
+            print("Unable to parse strandedness. Check salmon output")
+            sys.exit(1)
     else:
         print("Unable to parse strandedness. Check salmon output")
         sys.exit(1)
@@ -40,10 +45,10 @@ process GET_RNA_STRANDEDNESS {
     with open("${prefix}_strandedness.txt", "w") as f:
         f.write(strandedness + "\\n")
 
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        python: 3.10
-    END_VERSIONS
+    # versions.yml must be written by this interpreter: the script block runs under
+    # python, so a bash heredoc here would be a syntax error.
+    with open("versions.yml", "w") as _vf:
+        _vf.write('"${task.process}":\\n    python: 3.10\\n')
     """
 
     stub:
