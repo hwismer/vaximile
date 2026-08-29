@@ -48,6 +48,16 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Every module now reports its tool version. Each writes a `versions.yml` to Nextflow's
+  `versions` topic channel, which `main.nf` collects into
+  `<outdir>/pipeline_info/software_versions.yml`. `topic:` rather than `emit:` means no
+  per-process wiring: 94 modules would otherwise each need threading through their
+  subworkflow. 62 modules query the tool directly; the other 32 report the version pinned
+  in their own `conda`/`container` directive, since their tool has no usable version flag.
+  Stub blocks always report the pinned literal, so a stub run stays offline.
+- Gave every module's outputs `emit:` names (48 had none). This was a prerequisite:
+  adding `versions.yml` makes every process multi-output, so a call site consuming the
+  result bare would break. 62 call sites now select an emit name explicitly.
 - Added a `stub:` block to all 94 local modules, and made `-profile test` self-contained,
   so `nextflow run . -profile test -stub-run` exercises the whole DAG - 132 tasks - in
   ~10 seconds offline with no containers, conda or data. This is the first check in this

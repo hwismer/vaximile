@@ -120,6 +120,20 @@ ASCAT is skipped via `ext.when = false` in `conf/test.config`: it is the one ven
 nf-core module, and its stub still runs `Rscript -e "library(ASCAT)"` to capture a
 version, which needs its container.
 
+## Software versions
+
+Every module writes a `versions.yml`, collected into
+`<outdir>/pipeline_info/software_versions.yml`, so a set of results records the tool
+versions that produced it. Modules whose tool has a usable version flag query it at run
+time; the rest report the version pinned in their own `conda`/`container` directive.
+
+Two things that file will show you, both worth acting on:
+
+- `optitype: latest` - `fred2/optitype:latest` is an unpinned container tag, so this
+  module is not reproducible across time. It should be pinned to a digest or release.
+- `unknown: unknown` - the four modules that declare neither `conda` nor `container`
+  (plus two whose tool could not be identified) rely on whatever is on the host `PATH`.
+
 ## Profiles
 
 Use `-profile` to select a software provisioning method. Multiple profiles are

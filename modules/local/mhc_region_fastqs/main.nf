@@ -10,7 +10,8 @@ process MHC_REGION_FASTQS {
     	tuple val(meta), path(bam), path(bai)
 
     output:
-    	tuple val(meta), path("*_R1.fastq"), path("*_R2.fastq")
+    	tuple val(meta), path("*_R1.fastq"), path("*_R2.fastq"), emit: reads
+    	path "versions.yml", topic: versions
 
     script:
     def mhc_region = 'chr6:28510120-33480577'
@@ -70,6 +71,10 @@ process MHC_REGION_FASTQS {
 			-0 /dev/null \
 			-s /dev/null \
             -
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        samtools: \$(samtools --version 2>&1 | head -1 | sed 's/samtools //')
+    END_VERSIONS
     """
 
     stub:
@@ -77,5 +82,9 @@ process MHC_REGION_FASTQS {
     """
     touch ${prefix}_R1.fastq
     touch ${prefix}_R2.fastq
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        samtools: 1.23.1
+    END_VERSIONS
     """
 }

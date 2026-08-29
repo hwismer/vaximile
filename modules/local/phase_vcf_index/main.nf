@@ -16,6 +16,7 @@ process PHASE_VCF_INDEX {
 
     output:
         tuple val(meta), path("*_phased_annotated.vcf.gz"), path("*_phased_annotated.vcf.gz.tbi"), emit: phased_vcf
+        path "versions.yml", topic: versions
 
 
     script:
@@ -25,6 +26,10 @@ process PHASE_VCF_INDEX {
         bgzip -c $phased_vcf > ${prefix}_phased_annotated.vcf.gz
 
         tabix -p vcf ${prefix}_phased_annotated.vcf.gz
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            tabix: 0.2.6
+        END_VERSIONS
         """
 
     stub:
@@ -32,6 +37,10 @@ process PHASE_VCF_INDEX {
         """
         touch ${prefix}_phased_annotated.vcf.gz
         touch ${prefix}_phased_annotated.vcf.gz.tbi
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            tabix: 0.2.6
+        END_VERSIONS
         """
 
 }

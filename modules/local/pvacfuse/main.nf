@@ -12,6 +12,7 @@ process PVACFUSE {
 
     output:
         tuple val(star_meta), path("*_pvacfuse"), emit: pvacfuse_dir
+        path "versions.yml", topic: versions
 
     script:
         def args = task.ext.args ?: ''
@@ -29,12 +30,20 @@ process PVACFUSE {
             --run-reference-proteome-similarity \
             --peptide-fasta $human_ref_peptides \
             -t $task.cpus
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            pvactools: \$(pvacseq --version 2>&1 | tail -1)
+        END_VERSIONS
         """
 
     stub:
         def prefix = task.ext.prefix ?: "${somatic_name}"
         """
         mkdir -p ${prefix}_pvacfuse
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            pvactools: 7.0.1
+        END_VERSIONS
         """
 
 }

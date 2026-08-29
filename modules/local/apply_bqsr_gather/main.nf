@@ -13,7 +13,8 @@ process APPLY_BQSR_GATHER {
     input:
         tuple val(meta), val(sample_name), val(molecule), path(bams)
     output:
-        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_bqsr.bam")
+        tuple val(meta), path("${meta.sample_name}_${meta.molecule}_bqsr.bam"), emit: bam
+        path "versions.yml", topic: versions
 
     script:
     // GatherBamFiles concatenates without re-sorting, so the shards have to arrive in
@@ -26,11 +27,19 @@ process APPLY_BQSR_GATHER {
     gatk GatherBamFiles \
         ${sorted_bams.collect { "-I ${it}" }.join(' ')} \
         -O "${sample_name}_${molecule}_bqsr.bam"
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        gatk4: \$(gatk --version 2>&1 | grep -Eo 'v[0-9.]+' | head -1 | tr -d 'v')
+    END_VERSIONS
     """
 
     stub:
     """
     touch "${sample_name}_${molecule}_bqsr.bam"
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        gatk4: 4.6.1.0
+    END_VERSIONS
     """
 
 }

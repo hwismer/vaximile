@@ -19,6 +19,7 @@ process BAMREADCOUNT {
     output:
 
         tuple val(somatic_meta), val(sample_meta), path("*_bamrc_helper/*indel.tsv"), path("*_bamrc_helper/*snv.tsv"), emit: brc_files
+        path "versions.yml", topic: versions
     script:
         def prefix = task.ext.prefix ?: "${sample_name}_${molecule}"
         """
@@ -30,6 +31,10 @@ process BAMREADCOUNT {
             $bam \
             ${molecule} \
             ${prefix}_bamrc_helper
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            bam-readcount: 1.2.1
+        END_VERSIONS
         """
 
     stub:
@@ -38,6 +43,10 @@ process BAMREADCOUNT {
         mkdir -p ${prefix}_bamrc_helper
         touch ${prefix}_bamrc_helper/${prefix}_indel.tsv
         touch ${prefix}_bamrc_helper/${prefix}_snv.tsv
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            bam-readcount: 1.2.1
+        END_VERSIONS
         """
 
 }

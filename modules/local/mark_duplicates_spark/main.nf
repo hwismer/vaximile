@@ -16,7 +16,8 @@ process MARK_DUPLICATES_SPARK {
         tuple val(meta), path(aligned_sam)
 
     output:
-        tuple val(meta), path("*_markdup.bam"), path("*_markdup.bam.bai")
+        tuple val(meta), path("*_markdup.bam"), path("*_markdup.bam.bai"), emit: bam
+        path "versions.yml", topic: versions
 
     script:
 
@@ -33,6 +34,10 @@ process MARK_DUPLICATES_SPARK {
         --conf spark.sql.shuffle.partitions=${task.cpus * 3} \
         --conf spark.executor.memory=${(task.memory.toGiga() * 0.8) as int}g \
         --conf spark.driver.memory=8g
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        gatk4: \$(gatk --version 2>&1 | grep -Eo 'v[0-9.]+' | head -1 | tr -d 'v')
+    END_VERSIONS
     """
 
     stub:
@@ -40,6 +45,10 @@ process MARK_DUPLICATES_SPARK {
     """
     touch ${prefix}_markdup.bam
     touch ${prefix}_markdup.bam.bai
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        gatk4: 4.6.1.0
+    END_VERSIONS
     """
 
 }

@@ -20,7 +20,8 @@ process PHASE_VCF_SELECT_VARIANTS {
         path reference_dict
 
     output:
-        tuple val(somatic_meta), path("*_tumor_only.vcf.gz"), path("*_tumor_only.vcf.gz.tbi")
+        tuple val(somatic_meta), path("*_tumor_only.vcf.gz"), path("*_tumor_only.vcf.gz.tbi"), emit: vcf
+        path "versions.yml", topic: versions
 
     script:
         def prefix = task.ext.prefix ?: "${tumor_sample_name}"
@@ -31,6 +32,10 @@ process PHASE_VCF_SELECT_VARIANTS {
             --sample-name ${tumor_sample_name} \
             --create-output-variant-index \
             -O ${prefix}_tumor_only.vcf.gz
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            gatk4: \$(gatk --version 2>&1 | grep -Eo 'v[0-9.]+' | head -1 | tr -d 'v')
+        END_VERSIONS
         """
 
     stub:
@@ -38,6 +43,10 @@ process PHASE_VCF_SELECT_VARIANTS {
         """
         touch ${prefix}_tumor_only.vcf.gz
         touch ${prefix}_tumor_only.vcf.gz.tbi
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            gatk4: 4.6.1.0
+        END_VERSIONS
         """
 
 }

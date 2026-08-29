@@ -15,6 +15,7 @@ process PULL_ASCAT_RESOURCES {
         path("G1000_alleles_hg38"), emit: alleles
         path("GC_G1000_hg38"), emit: GC
         path("RT_G1000_hg38"), emit: RT
+        path "versions.yml", topic: versions
 
     script:
         
@@ -41,6 +42,10 @@ process PULL_ASCAT_RESOURCES {
 
     wget https://zenodo.org/records/14008443/files/RT_G1000_WGS_hg38.zip
     unzip RT_G1000_WGS_hg38.zip -d RT_G1000_hg38
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        samtools: \$(samtools --version 2>&1 | head -1 | sed 's/samtools //')
+    END_VERSIONS
     """
 
     stub:
@@ -49,6 +54,10 @@ process PULL_ASCAT_RESOURCES {
     mkdir -p G1000_alleles_hg38
     mkdir -p GC_G1000_hg38
     mkdir -p RT_G1000_hg38
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        samtools: 1.23.1
+    END_VERSIONS
     """
 
 

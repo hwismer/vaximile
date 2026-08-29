@@ -29,7 +29,15 @@ workflow {
         VAXIMILE.out.multiqc_reports
     )
 
+    // Every module writes a versions.yml to the `versions` topic. A topic channel
+    // collects them with no per-process wiring, which is why versions are declared with
+    // `topic:` rather than `emit:` - 94 modules would otherwise each need threading
+    // through their subworkflow.
+    software_versions = channel.topic('versions')
+        .collectFile(name: 'software_versions.yml', sort: true, newLine: false)
+
     publish:
+    software_versions = software_versions
     multiqc_reports = VAXIMILE.out.multiqc_reports
     somatic_vcf = VAXIMILE.out.somatic_vcf
     somatic_vcf_table = VAXIMILE.out.somatic_vcf_table
@@ -48,6 +56,9 @@ workflow {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 output {
+    software_versions {
+        path { _v -> "${params.outdir}/pipeline_info/" }
+    }
     multiqc_reports {
         path { patient, report -> "${params.outdir}/${patient}/multiqc/" }
     }

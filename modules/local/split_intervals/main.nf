@@ -22,6 +22,7 @@ process SPLIT_INTERVALS {
 
     output:
          tuple val(capture_kit), path("*-scattered.interval_list"), emit: interval_shards
+         path "versions.yml", topic: versions
 
     script:
     """
@@ -32,6 +33,10 @@ process SPLIT_INTERVALS {
         --interval-padding $interval_padding \
         -O .
 
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        gatk4: \$(gatk --version 2>&1 | grep -Eo 'v[0-9.]+' | head -1 | tr -d 'v')
+    END_VERSIONS
     """
 
     stub:
@@ -39,6 +44,10 @@ process SPLIT_INTERVALS {
     for i in \$(seq 1 ${scatter_count}); do
         touch "\$(printf '%04d' \$((i - 1)))-scattered.interval_list"
     done
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        gatk4: 4.6.1.0
+    END_VERSIONS
     """
 }
 

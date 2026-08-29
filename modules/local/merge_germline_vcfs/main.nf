@@ -24,7 +24,8 @@ process MERGE_GERMLINE_VCFS {
         path(reference_dict)
 
     output:
-        tuple val(sample_meta), path("*_germline_variants.vcf.gz")
+        tuple val(sample_meta), path("*_germline_variants.vcf.gz"), emit: vcf
+        path "versions.yml", topic: versions
 
 
     script:
@@ -41,6 +42,10 @@ process MERGE_GERMLINE_VCFS {
             -V:$vcf2_caller $vcf2 \
             -V:$vcf3_caller $vcf3 \
             -o "${prefix}_germline_variants.vcf.gz"
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            gatk3: 3.6-0
+        END_VERSIONS
         """
 
     stub:
@@ -48,6 +53,10 @@ process MERGE_GERMLINE_VCFS {
         def prefix = task.ext.prefix ?: "${sample_meta.sample_name}"
         """
         touch ${prefix}_germline_variants.vcf.gz
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            gatk3: 3.6-0
+        END_VERSIONS
         """
 
 }

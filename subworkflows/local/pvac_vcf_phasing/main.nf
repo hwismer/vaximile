@@ -24,7 +24,7 @@ workflow PVAC_VCF_PHASING {
             tuple(somatic_meta, somatic_meta.tumor_meta.sample_name, vcf, vcf_index)
         }
 
-    select_variants = PHASE_VCF_SELECT_VARIANTS(phase_vcf_select_variants_input, reference_genome, reference_dict)
+    select_variants = PHASE_VCF_SELECT_VARIANTS(phase_vcf_select_variants_input, reference_genome, reference_dict).vcf
     
 
     somatic_meta_germline = somatic_vcf.map{meta, vcf, tbi ->
@@ -36,19 +36,19 @@ workflow PVAC_VCF_PHASING {
             tuple(normal_meta, somatic_meta, normal_meta.sample_name, somatic_meta.tumor_meta.sample_name, vcf, vcf_index)
         }
 
-    germline_renamed = PHASE_VCF_RENAME(phase_vcf_rename_input)
+    germline_renamed = PHASE_VCF_RENAME(phase_vcf_rename_input).vcf
 
 
     combine_variants_input = select_variants.join(germline_renamed, by:0)
-    combined_variants = PHASE_VCF_COMBINE_VARIANTS(combine_variants_input, reference_genome, reference_dict)
+    combined_variants = PHASE_VCF_COMBINE_VARIANTS(combine_variants_input, reference_genome, reference_dict).vcf
 
-    combined_sorted = PHASE_VCF_SORT_VCF(combined_variants, reference_genome, reference_dict)
+    combined_sorted = PHASE_VCF_SORT_VCF(combined_variants, reference_genome, reference_dict).sorted_vcf
 
     combined_sorted_by_tumor_sample = combined_sorted.map{ meta, vcf ->
         tuple(meta.tumor_meta, meta, vcf)
     }.join(tumor_bam)
 
-    rbphased = PHASE_VCF_RBPHASING(combined_sorted_by_tumor_sample, reference_genome, reference_dict)
+    rbphased = PHASE_VCF_RBPHASING(combined_sorted_by_tumor_sample, reference_genome, reference_dict).vcf
 
     phased_vep = VEP_ANNOTATE(rbphased, reference_genome, vep_cache, vep_plugins)
 
@@ -56,7 +56,7 @@ workflow PVAC_VCF_PHASING {
     index_input = phased_vep.vcf.map{meta, vcf ->
         tuple(meta.tumor_meta.sample_name, meta, vcf)
     }
-    final_phased = INDEX_VCF(index_input, "phased")
+    final_phased = INDEX_VCF(index_input, "phased").vcf
 
     
     emit:

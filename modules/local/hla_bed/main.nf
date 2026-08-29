@@ -9,6 +9,7 @@ process HLA_BED {
 
     output:
     path "hla_region.bed", emit: bed
+    path "versions.yml", topic: versions
     
     script:
     def contig = chr_prefix ? 'chr6' : '6'
@@ -16,10 +17,18 @@ process HLA_BED {
     def end = 33480577
     """
     printf '%s\\t%d\\t%d\\t%s\\n' '${contig}' ${start} ${end} 'MHC' > hla_region.bed
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        coreutils: 9.3
+    END_VERSIONS
     """
 
     stub:
     """
     touch hla_region.bed
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        coreutils: 9.3
+    END_VERSIONS
     """
 }

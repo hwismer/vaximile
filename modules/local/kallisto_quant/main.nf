@@ -21,11 +21,16 @@ process KALLISTO_QUANT {
         tuple val(meta), path("*_kallisto/abundance.tsv"), emit: abundance
         tuple val(meta), path("*_kallisto"), emit: kallisto_dir
         tuple val(meta), path("*"), emit: tutto
+        path "versions.yml", topic: versions
 
     script:
         def prefix = task.ext.prefix ?: "${meta.sample_name}"
         """
         kallisto quant -i $kallisto_index -o ${prefix}_kallisto -t ${task.cpus} $read1 $read2 > "${prefix}_kallist_stdout.out"
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            kallisto: \$(kallisto version 2>&1 | sed 's/kallisto, version //')
+        END_VERSIONS
         """
 
     stub:
@@ -34,5 +39,9 @@ process KALLISTO_QUANT {
         mkdir -p ${prefix}_kallisto
         touch ${prefix}_kallisto/abundance.tsv
         touch ${prefix}_kallist_stdout.out
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            kallisto: 0.51.1
+        END_VERSIONS
         """
 }

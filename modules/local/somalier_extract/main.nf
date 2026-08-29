@@ -12,7 +12,8 @@ process SOMALIER_EXTRACT {
         path(sites)
 
     output:
-        tuple val(meta), path("${meta.sample_name}.somalier")
+        tuple val(meta), path("${meta.sample_name}.somalier"), emit: somalier
+        path "versions.yml", topic: versions
         
 
     script:
@@ -21,10 +22,18 @@ process SOMALIER_EXTRACT {
         -s $sites \
         -f $reference_fa \
         $bam 
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        somalier: \$(somalier --version 2>&1 | grep -Eo '[0-9]+\.[0-9.]+' | head -1)
+    END_VERSIONS
     """
 
     stub:
     """
     touch ${meta.sample_name}.somalier
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        somalier: 0.3.2
+    END_VERSIONS
     """
 }

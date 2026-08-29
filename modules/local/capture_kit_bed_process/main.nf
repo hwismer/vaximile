@@ -12,7 +12,8 @@ process CAPTURE_KIT_BED_PROCESS {
         tuple val(kit), path(bed)
 
     output:
-        tuple val(kit), path("*_sorted.bed.gz"), path("*_sorted.bed.gz.tbi")
+        tuple val(kit), path("*_sorted.bed.gz"), path("*_sorted.bed.gz.tbi"), emit: bed
+        path "versions.yml", topic: versions
 
     script:
     def prefix = task.ext.prefix ?: "${bed.baseName}"
@@ -20,6 +21,10 @@ process CAPTURE_KIT_BED_PROCESS {
     bedtools sort -i $bed > ${prefix}_sorted.bed
     bgzip -@ $task.cpus -c ${prefix}_sorted.bed > ${prefix}_sorted.bed.gz
     tabix -p bed ${prefix}_sorted.bed.gz
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        samtools: \$(samtools --version 2>&1 | head -1 | sed 's/samtools //')
+    END_VERSIONS
     """
 
     stub:
@@ -27,6 +32,10 @@ process CAPTURE_KIT_BED_PROCESS {
     """
     touch ${prefix}_sorted.bed.gz
     touch ${prefix}_sorted.bed.gz.tbi
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        samtools: 1.23.1
+    END_VERSIONS
     """
 
 }

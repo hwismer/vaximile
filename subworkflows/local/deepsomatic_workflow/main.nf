@@ -17,7 +17,7 @@ workflow DEEPSOMATIC_WORKFLOW {
             tuple(meta, meta.tumor_meta.sample_name, meta.normal_meta.sample_name, meta.tumor_meta.sequencing_type, tb, tbai, nbam, nbai, bed)
         }
 
-        deepsomatic = DEEPSOMATIC(somatic_pairs_kit, reference_genome)
+        deepsomatic = DEEPSOMATIC(somatic_pairs_kit, reference_genome).vcf
 
     emit:
         deepsomatic_vcf = deepsomatic

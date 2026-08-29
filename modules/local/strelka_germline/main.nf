@@ -16,7 +16,8 @@ process STRELKA_GERMLINE {
         tuple path(reference_fa), path(reference_fai)
 
     output:
-        tuple val(meta), val("strelka"), path("./strelka/results/variants/variants.vcf.gz"), path("./strelka/results/variants/variants.vcf.gz.tbi")
+        tuple val(meta), val("strelka"), path("./strelka/results/variants/variants.vcf.gz"), path("./strelka/results/variants/variants.vcf.gz.tbi"), emit: vcf
+        path "versions.yml", topic: versions
 
     script:
 
@@ -31,6 +32,10 @@ process STRELKA_GERMLINE {
         --runDir "./strelka"
 
     ./strelka/runWorkflow.py -m local -j $task.cpus
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        strelka: 2.9.9
+    END_VERSIONS
     """
 
     stub:
@@ -38,6 +43,10 @@ process STRELKA_GERMLINE {
     mkdir -p ./strelka/results/variants
     touch ./strelka/results/variants/variants.vcf.gz
     touch ./strelka/results/variants/variants.vcf.gz.tbi
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        strelka: 2.9.9
+    END_VERSIONS
     """
 
 }

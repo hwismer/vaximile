@@ -121,8 +121,8 @@ workflow VAXIMILE {
     // Split Capture Intervals
 
     num_intervals = params.scatter_count
-    intervals = SPLIT_INTERVALS(reference_genome, reference_dict, capture_kits, num_intervals, 0)
-    processed_regions = CAPTURE_KIT_BED_PROCESS(capture_kits)
+    intervals = SPLIT_INTERVALS(reference_genome, reference_dict, capture_kits, num_intervals, 0).interval_shards
+    processed_regions = CAPTURE_KIT_BED_PROCESS(capture_kits).bed
 
 
     //**************************************************************************************************************************************
@@ -172,7 +172,7 @@ workflow VAXIMILE {
             tuple(new_meta, new_meta.sample_name, bams, bais)
     }
     
-    combined_bams = MERGE_BAMS(bams_merged_input) // Merge BAMs sharing somatic_name
+    combined_bams = MERGE_BAMS(bams_merged_input).bam // Merge BAMs sharing somatic_name
 
     // Call HLA alleles on individual samples AND merged samples
     hla_input = markdup_bams.mix(combined_bams)
@@ -469,7 +469,7 @@ workflow VAXIMILE {
         .mix(mqc_somalier_samples)
         .mix(mqc_hlahd_tsv)
         .groupTuple()
-    multiqc = MULTIQC(mqc_reports)
+    multiqc = MULTIQC(mqc_reports).html
     
     //**************************************************************************************************************************************
 

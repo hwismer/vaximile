@@ -22,7 +22,8 @@ process PHASE_VCF_RBPHASING {
         path reference_dict
 
     output:
-        tuple val(somatic_meta), path("*_phased.vcf")
+        tuple val(somatic_meta), path("*_phased.vcf"), emit: vcf
+        path "versions.yml", topic: versions
 
     script:
 
@@ -36,12 +37,20 @@ process PHASE_VCF_RBPHASING {
                 -L $combined_sorted_vcf \
                 -o ${prefix}_phased.vcf
 
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            gatk3: 3.6-0
+        END_VERSIONS
         """
     stub:
 
         def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
         """
         touch ${prefix}_phased.vcf
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            gatk3: 3.6-0
+        END_VERSIONS
         """
 
 }

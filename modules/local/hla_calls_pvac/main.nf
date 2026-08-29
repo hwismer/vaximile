@@ -11,6 +11,7 @@ process HLA_CALLS_PVAC {
 
     output:
 		tuple val(meta), path("*_hla_calls.csv"), emit: pvac_calls
+		path "versions.yml", topic: versions
 
     script:
     def prefix = task.ext.prefix ?: "${meta.sample_name}"
@@ -92,11 +93,19 @@ process HLA_CALLS_PVAC {
         writer = csv.writer(f,lineterminator="\\n")
         writer.writerow(alleles)
 
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        python: 3.10
+    END_VERSIONS
     """
 
     stub:
     def prefix = task.ext.prefix ?: "${meta.sample_name}"
     """
     touch "${prefix}_hla_calls.csv"
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        python: 3.10
+    END_VERSIONS
     """
 }

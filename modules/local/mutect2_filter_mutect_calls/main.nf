@@ -13,6 +13,7 @@ process MUTECT2_FILTER_MUTECT_CALLS {
 
     output:
         tuple val(somatic_meta), path("*_mutect_filtered.vcf.gz"), path("*_mutect_filtered.vcf.gz.tbi"), emit: filtered_vcf
+        path "versions.yml", topic: versions
 
 
     script:
@@ -26,6 +27,10 @@ process MUTECT2_FILTER_MUTECT_CALLS {
         -stats $stats \
         --create-output-variant-index \
         -O "${prefix}_mutect_filtered.vcf.gz"
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        gatk4: \$(gatk --version 2>&1 | grep -Eo 'v[0-9.]+' | head -1 | tr -d 'v')
+    END_VERSIONS
     """
 
     stub:
@@ -33,5 +38,9 @@ process MUTECT2_FILTER_MUTECT_CALLS {
     """
     touch ${prefix}_mutect_filtered.vcf.gz
     touch ${prefix}_mutect_filtered.vcf.gz.tbi
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        gatk4: 4.6.1.0
+    END_VERSIONS
     """
 }

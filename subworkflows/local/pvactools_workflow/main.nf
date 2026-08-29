@@ -17,10 +17,10 @@ workflow PVACTOOLS_WORKFLOW {
         }
 
     pvacseq = PVACSEQ(pvacseq_ch, proteome_reference)
-    pvacfuse = PVACFUSE(pvacfuse_input, proteome_reference)
+    pvacfuse = PVACFUSE(pvacfuse_input, proteome_reference).pvacfuse_dir
 
     pvacseq_patient = pvacseq.pvaseq_mhc_i_aggr.map{meta, report -> tuple(meta.patient, report)}.groupTuple()
-    combined_report = COMBINE_PVACSEQ_AGGREGATED_REPORT(pvacseq_patient)
+    combined_report = COMBINE_PVACSEQ_AGGREGATED_REPORT(pvacseq_patient).tsv
 
 
     emit:

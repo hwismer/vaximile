@@ -9,7 +9,8 @@ process COMBINE_PVACSEQ_AGGREGATED_REPORT {
         tuple val(patient), path(reports)
 
     output:
-        tuple val(patient), path("*_pvacseq_reports.tsv")
+        tuple val(patient), path("*_pvacseq_reports.tsv"), emit: tsv
+        path "versions.yml", topic: versions
 
     script:
 
@@ -44,6 +45,10 @@ process COMBINE_PVACSEQ_AGGREGATED_REPORT {
     
     df = df.sort_values(["Tier", "sum_rank", "IC50 MT", "Gene", "AA Change"],kind="mergesort").drop(columns="sum_rank").reset_index()
     df.to_csv("${prefix}_pvacseq_reports.tsv", sep = "\\t", index = False)
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        python: 3.10
+    END_VERSIONS
     """
 
     stub:
@@ -52,6 +57,10 @@ process COMBINE_PVACSEQ_AGGREGATED_REPORT {
 
     """
     touch ${prefix}_pvacseq_reports.tsv
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        python: 3.10
+    END_VERSIONS
     """
 
 }

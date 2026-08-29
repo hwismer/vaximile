@@ -38,7 +38,7 @@ workflow GERMLINE_WORKFLOW {
         .map { capture_kit, meta, bam, bai, bed, bed_tbi ->
             tuple(meta, meta.sequencing_type, bam, bai, bed, bed_tbi)
         }
-        strelka_germline = STRELKA_GERMLINE(strelka_input, reference_genome)
+        strelka_germline = STRELKA_GERMLINE(strelka_input, reference_genome).vcf
         
         deepsomatic_input = sample_bams.map { meta, bam, bai ->
             tuple(meta.capture_kit, meta, bam, bai)
@@ -52,13 +52,13 @@ workflow GERMLINE_WORKFLOW {
         deepvariant_vcf = deepvariant.vcf
 
         vcfs = haplotype_caller_vcf.mix(strelka_germline).mix(deepvariant_vcf)
-        filter_vcfs = FILTER_VCF(vcfs)
+        filter_vcfs = FILTER_VCF(vcfs).filtered_vcf
         postprocess_vcf_input = filter_vcfs
             .map { meta, caller, vcf, tbi ->
                 tuple(meta, meta.sample_name, caller, vcf, tbi)
             }
 
-        vcfs_norm = POSTPROCESS_VCF(postprocess_vcf_input, reference_genome)
+        vcfs_norm = POSTPROCESS_VCF(postprocess_vcf_input, reference_genome).postproc_vcf
 
         callers = vcfs_norm.branch{ meta, caller, vcf, tbi ->
             strelka: caller == "strelka"
@@ -68,7 +68,7 @@ workflow GERMLINE_WORKFLOW {
         
         merged_callers = callers.deepvariant.join(callers.haplotypecaller).join(callers.strelka)
         
-        merged_vcf = MERGE_GERMLINE_VCFS(merged_callers, reference_genome, reference_dict)
+        merged_vcf = MERGE_GERMLINE_VCFS(merged_callers, reference_genome, reference_dict).vcf
 
         merged_vep = VEP_ANNOTATE(merged_vcf, reference_genome, vep_cache, vep_plugins)
         vep_vcf = merged_vep.vcf
@@ -78,10 +78,10 @@ workflow GERMLINE_WORKFLOW {
         merged_vcf_input = vep_vcf.map{meta, vcf ->
             tuple(meta.sample_name, meta, vcf)
         }
-        merged_vcf_indexed = INDEX_VCF(merged_vcf_input, "germline")
+        merged_vcf_indexed = INDEX_VCF(merged_vcf_input, "germline").vcf
 
         vcf_table_name = merged_vcf_indexed.map{ meta, vcf, tbi -> tuple(meta, meta.sample_name + "_germline", vcf, tbi) }
-        vcf_table = VCF_TO_TABLE(vcf_table_name)
+        vcf_table = VCF_TO_TABLE(vcf_table_name).tsv
 
     
     emit:

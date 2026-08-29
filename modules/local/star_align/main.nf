@@ -25,6 +25,7 @@ process STAR_ALIGN {
         tuple val(meta), path("*_SJ.out.tab"), emit: sj_out
         tuple val(meta), path("*_Chimeric.out.junction"), path(fastq1), path(fastq2), emit: chimeric_out
         tuple val(meta), path("*"), emit: tutto
+        path "versions.yml", topic: versions
     script:
         def prefix = task.ext.prefix ?: "${sample_name}_${meta.molecule}"
         """
@@ -67,6 +68,10 @@ process STAR_ALIGN {
             --quantMode GeneCounts \
             --sjdbGTFfile gencode.gtf
 
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            star: \$(STAR --version 2>&1)
+        END_VERSIONS
         """
 
     stub:
@@ -77,6 +82,10 @@ process STAR_ALIGN {
         touch ${prefix}_Log.final.out
         touch ${prefix}_SJ.out.tab
         touch ${prefix}_Chimeric.out.junction
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            star: 2.7.10a_alpha_220506
+        END_VERSIONS
         """
 
 }

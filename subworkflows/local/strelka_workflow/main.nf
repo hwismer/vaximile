@@ -19,7 +19,7 @@ workflow STRELKA_WORKFLOW {
             tuple(meta, meta.tumor_meta.sequencing_type, tumor_bam, tumor_bai, normal_bam, normal_bai, bed, bed_tbi)
         }
         
-        manta = MANTA(somatic_pairs_kit, reference_genome)
+        manta = MANTA(somatic_pairs_kit, reference_genome).dir
 
         strelka_input = somatic_pairs.join(manta).map { meta, tumor_bam, tumor_bai, normal_bam, normal_bai, manta_dir ->
             tuple(meta.capture_kit, meta, tumor_bam, tumor_bai, normal_bam, normal_bai, manta_dir)

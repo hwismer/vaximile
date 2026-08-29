@@ -24,7 +24,8 @@ process HAPLOTYPE_CALLER_SCATTER {
         val(interval_padding)
 
     output:
-        tuple val(meta), path("*.vcf.gz"), path("*.vcf.gz.tbi"),  path(interval_shard)
+        tuple val(meta), path("*.vcf.gz"), path("*.vcf.gz.tbi"),  path(interval_shard), emit: vcf
+        path "versions.yml", topic: versions
 
     script:
         def args = task.ext.args ?: ''
@@ -39,6 +40,10 @@ process HAPLOTYPE_CALLER_SCATTER {
             --native-pair-hmm-threads $task.cpus \
             -ip $interval_padding \
             --create-output-variant-index
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            gatk4: \$(gatk --version 2>&1 | grep -Eo 'v[0-9.]+' | head -1 | tr -d 'v')
+        END_VERSIONS
         """
 
     stub:
@@ -46,5 +51,9 @@ process HAPLOTYPE_CALLER_SCATTER {
         """
         touch ${prefix}.vcf.gz
         touch ${prefix}.vcf.gz.tbi
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            gatk4: 4.3.0.0
+        END_VERSIONS
         """
 }

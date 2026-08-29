@@ -19,7 +19,8 @@ process BWA_MAP {
         path bwa_index
 
     output:
-        tuple val(meta), path("*.sam")
+        tuple val(meta), path("*.sam"), emit: sam
+        path "versions.yml", topic: versions
 
     script:
     def prefix = task.ext.prefix ?: "${sample_name}_${molecule}"
@@ -28,11 +29,19 @@ process BWA_MAP {
 
     bwa-mem2 mem -t $task.cpus -R \$NEW_RG $reference_fa $fastq1 $fastq2 > "${prefix}.sam"
 
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        bwa-mem2: \$(bwa-mem2 version 2>&1 | tail -1)
+    END_VERSIONS
     """
 
     stub:
     def prefix = task.ext.prefix ?: "${sample_name}_${molecule}"
     """
     touch ${prefix}.sam
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        bwa-mem2: 2.2.1
+    END_VERSIONS
     """
 }

@@ -10,7 +10,8 @@ process HAPLOTYPE_CALLER_GATHER_VCFS {
         tuple val(sample_meta), path(vcfs)
 
     output:
-        tuple val(sample_meta), path("*_merged.vcf")
+        tuple val(sample_meta), path("*_merged.vcf"), emit: vcf
+        path "versions.yml", topic: versions
 
     script:
 
@@ -25,6 +26,10 @@ process HAPLOTYPE_CALLER_GATHER_VCFS {
         $vcf_as_input \
         -O "${prefix}_merged.vcf"
 
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        gatk4: \$(gatk --version 2>&1 | grep -Eo 'v[0-9.]+' | head -1 | tr -d 'v')
+    END_VERSIONS
     """
 
     stub:
@@ -33,6 +38,10 @@ process HAPLOTYPE_CALLER_GATHER_VCFS {
 
     """
     touch ${prefix}_merged.vcf
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        gatk4: 4.6.1.0
+    END_VERSIONS
     """
 
 }

@@ -12,6 +12,7 @@ process SALMON_QUANT {
 
     output:
         tuple val(meta), path("*_salmon_quant"), emit: quant
+        path "versions.yml", topic: versions
 
     script:
     // $args MUST stay ahead of -1/-2. It carries --libType, and salmon rejects a
@@ -27,12 +28,20 @@ process SALMON_QUANT {
         -2 $fastq2 \
         -p $task.cpus \
         -o "${prefix}_salmon_quant"
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        salmon: \$(salmon --version 2>&1 | sed 's/salmon //')
+    END_VERSIONS
     """
 
     stub:
     def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
     """
     mkdir -p "${prefix}_salmon_quant"
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        salmon: 1.11.4
+    END_VERSIONS
     """
 
 }

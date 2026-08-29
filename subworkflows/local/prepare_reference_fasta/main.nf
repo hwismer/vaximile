@@ -8,7 +8,7 @@ workflow PREPARE_REFERENCE_FASTA {
         fasta
     main:
         
-        fasta_proc = PREPARE_FASTA(fasta)
+        fasta_proc = PREPARE_FASTA(fasta).fasta
         fasta_plus_fai = INDEX_FASTA(fasta_proc).fai
         dict = MAKE_FASTA_DICT(fasta_plus_fai).dict
 

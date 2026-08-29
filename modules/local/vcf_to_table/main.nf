@@ -10,7 +10,8 @@ process VCF_TO_TABLE {
         tuple val(meta), val(file_name), path(vcf), path(vcf_index)
 
     output:
-        tuple val(meta), path("*.tsv")
+        tuple val(meta), path("*.tsv"), emit: tsv
+        path "versions.yml", topic: versions
 
     script:
         def prefix = task.ext.prefix ?: "${file_name}"
@@ -21,12 +22,20 @@ process VCF_TO_TABLE {
             -GF AD -GF DP -GF GT -GF AF \
             -GF RDP -GF RAF -GF RAD -GF RADF -GF RADR -GF TX -GF GX \
             -O "${prefix}.tsv"
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            gatk4: \$(gatk --version 2>&1 | grep -Eo 'v[0-9.]+' | head -1 | tr -d 'v')
+        END_VERSIONS
         """
 
     stub:
         def prefix = task.ext.prefix ?: "${file_name}"
         """
         touch "${prefix}.tsv"
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            gatk4: 4.6.1.0
+        END_VERSIONS
         """
 
 

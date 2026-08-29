@@ -10,7 +10,8 @@ process DEEPSOMATIC {
 
 
     output:
-        tuple val(somatic_meta), path("*_deepsomatic.vcf.gz"), path("*_deepsomatic.vcf.gz.tbi")
+        tuple val(somatic_meta), path("*_deepsomatic.vcf.gz"), path("*_deepsomatic.vcf.gz.tbi"), emit: vcf
+        path "versions.yml", topic: versions
 
 
     script:
@@ -40,6 +41,10 @@ process DEEPSOMATIC {
         $args \
         --regions=$bed_regions
 
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        deepsomatic: 1.10.0
+    END_VERSIONS
     """
 
     stub:
@@ -47,6 +52,10 @@ process DEEPSOMATIC {
     """
     touch ${prefix}_deepsomatic.vcf.gz
     touch ${prefix}_deepsomatic.vcf.gz.tbi
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        deepsomatic: 1.10.0
+    END_VERSIONS
     """
 
 }

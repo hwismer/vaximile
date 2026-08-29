@@ -44,13 +44,13 @@ workflow MUTECT2 {
                 tuple(somatic_meta, somatic_meta.somatic_name, vcf, vcf_index, interval_shard)
             }
 
-        select_variants = MUTECT2_GATHER_SELECT_VARIANTS(gather_select_variants_input)
+        select_variants = MUTECT2_GATHER_SELECT_VARIANTS(gather_select_variants_input).vcf
         select_variants_grouped = select_variants.groupTuple(size: num_intervals)
-        gather_vcfs = MUTECT2_GATHER_VCFS(select_variants_grouped)
+        gather_vcfs = MUTECT2_GATHER_VCFS(select_variants_grouped).vcf
 
-        contamination = MUTECT2_CALCULATE_CONTAMINATION(somatic_pileups)
-        read_orientation = MUTECT2_LEARN_READ_ORIENTATION(mutect_f1r2s.groupTuple(size: num_intervals))
-        stats = MUTECT2_MERGE_STATS(mutect_stats.groupTuple(size: num_intervals))
+        contamination = MUTECT2_CALCULATE_CONTAMINATION(somatic_pileups).table
+        read_orientation = MUTECT2_LEARN_READ_ORIENTATION(mutect_f1r2s.groupTuple(size: num_intervals)).tar
+        stats = MUTECT2_MERGE_STATS(mutect_stats.groupTuple(size: num_intervals)).stats
 
         mutect2_filtering_input = gather_vcfs.join(read_orientation).join(stats).join(contamination)
         filtered_calls = MUTECT2_FILTER_MUTECT_CALLS(mutect2_filtering_input, reference_genome, reference_dict)

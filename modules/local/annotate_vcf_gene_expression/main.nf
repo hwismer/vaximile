@@ -14,7 +14,8 @@ process ANNOTATE_VCF_GENE_EXPRESSION {
 
 
     output:
-        tuple val(somatic_meta), path("*_gene_expression.vcf")
+        tuple val(somatic_meta), path("*_gene_expression.vcf"), emit: vcf
+        path "versions.yml", topic: versions
 
     script:
         def prefix = task.ext.prefix ?: "${somatic_name}"
@@ -29,6 +30,10 @@ process ANNOTATE_VCF_GENE_EXPRESSION {
             -s ${sample_name} \
             --ignore-ensembl-id-version \
             -o "${prefix}_gene_expression.vcf"
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            vatools: 5.2.0
+        END_VERSIONS
         """
 
     stub:
@@ -36,6 +41,10 @@ process ANNOTATE_VCF_GENE_EXPRESSION {
 
         """
         touch ${prefix}_gene_expression.vcf
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            vatools: 5.2.0
+        END_VERSIONS
         """
 
 }

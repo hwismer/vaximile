@@ -8,14 +8,23 @@ process NOVOALIGN_HLA_FASTA {
         tuple path(hla_fasta), path(hla_fai)
 
     output:
-        tuple path(hla_fasta), path(hla_fai)
+        tuple path(hla_fasta), path(hla_fai), emit: out
+        path "versions.yml", topic: versions
 
     script:
     """
 
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        novoalign: 4.03.04
+    END_VERSIONS
     """
 
     stub:
     """
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        novoalign: 4.03.04
+    END_VERSIONS
     """
 }

@@ -9,7 +9,7 @@ workflow SOMALIER {
         somalier_sites_vcf
 
     main:
-        extract = SOMALIER_EXTRACT(sample_bams, reference_genome, somalier_sites_vcf)
+        extract = SOMALIER_EXTRACT(sample_bams, reference_genome, somalier_sites_vcf).somalier
         extract_unique = extract.unique { meta, files -> 
             meta.sample_name
         }

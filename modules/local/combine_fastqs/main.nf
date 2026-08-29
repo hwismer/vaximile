@@ -9,7 +9,8 @@ process COMBINE_FASTQS {
     input:
         tuple val(meta), path(fastqs_r1), path(fastqs_r2)
     output:
-        tuple val(meta), path("*_R1.merged.fastq.gz"), path("*_R2.merged.fastq.gz")
+        tuple val(meta), path("*_R1.merged.fastq.gz"), path("*_R2.merged.fastq.gz"), emit: reads
+        path "versions.yml", topic: versions
 
 
     script:
@@ -17,6 +18,10 @@ process COMBINE_FASTQS {
     """
     cat ${fastqs_r1.join(' ')} > ${prefix}_R1.merged.fastq.gz
     cat ${fastqs_r2.join(' ')} > ${prefix}_R2.merged.fastq.gz
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        unknown: unknown
+    END_VERSIONS
     """
 
 
@@ -25,6 +30,10 @@ process COMBINE_FASTQS {
     """
     touch ${prefix}_R1.merged.fastq.gz
     touch ${prefix}_R2.merged.fastq.gz
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        unknown: unknown
+    END_VERSIONS
     """
 
 }

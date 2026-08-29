@@ -19,17 +19,17 @@ workflow HLA_TYPING_WORKFLOW {
 
     main:
 
-        hla_bed = HLA_BED(chr_prefix)
+        hla_bed = HLA_BED(chr_prefix).bed
         
         mhcflow_input = bams
             .map { meta, bam, bai ->
                 tuple(meta, meta.sample_name, bam, bai)
             }
 
-        mhcflow = MHCFLOW(mhcflow_input, hla_fasta, hla_bed, hla_kmers, hla_freqs)
+        mhcflow = MHCFLOW(mhcflow_input, hla_fasta, hla_bed, hla_kmers, hla_freqs).out
 
 
-        fastqs = MHC_REGION_FASTQS(bams)
+        fastqs = MHC_REGION_FASTQS(bams).reads
         //mhc_region = EXTRACT_MHC_REGION(bams)
         //fastqs = BAM_TO_FASTQ(mhc_region)
         // Run Optitype and HLA-HD on fastqs
@@ -49,7 +49,7 @@ workflow HLA_TYPING_WORKFLOW {
                 tuple(meta, meta.sample_name, hlahd_result)
             }
 
-        hlahd_tsv = HLAHD_TO_TSV(hlahd_to_tsv_input)
+        hlahd_tsv = HLAHD_TO_TSV(hlahd_to_tsv_input).hlahd_tsv
         // Final HLA calls
         hla_calls_pvac_input = HLA_CALLS_PVAC(combined_typing_results)
 

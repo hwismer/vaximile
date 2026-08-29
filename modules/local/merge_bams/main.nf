@@ -12,7 +12,8 @@ process MERGE_BAMS {
         tuple val(meta), val(sample_name), path(bams), path(bais)
 
     output:
-       tuple val(meta), path("${meta.sample_name}.bam"), path("${meta.sample_name}.bam.bai")
+       tuple val(meta), path("${meta.sample_name}.bam"), path("${meta.sample_name}.bam.bai"), emit: bam
+       path "versions.yml", topic: versions
 
     script:
 	"""
@@ -27,11 +28,19 @@ process MERGE_BAMS {
     samtools index \
         -@ ${task.cpus} \
         ${sample_name}.bam
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        samtools: \$(samtools --version 2>&1 | head -1 | sed 's/samtools //')
+    END_VERSIONS
     """
 
     stub:
     """
     touch ${sample_name}.bam
     touch ${sample_name}.bam.bai
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        samtools: 1.23.1
+    END_VERSIONS
     """
 }

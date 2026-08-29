@@ -21,6 +21,7 @@ process VEP_FILTER {
 
     output:
         tuple val(meta), path("${meta.somatic_name}_vep.vcf"), emit: vep_vcf
+        path "versions.yml", topic: versions
 
     script:
         def args = task.ext.args ?: ''
@@ -31,10 +32,18 @@ process VEP_FILTER {
             --format vcf \
             $args
 
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            ensembl-vep: \$(vep --help 2>&1 | grep -Eo 'ensembl-vep +: *[0-9.]+' | grep -Eo '[0-9.]+$')
+        END_VERSIONS
         """
 
     stub:
         """
         touch "${somatic_name}_vep.vcf"
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            ensembl-vep: 115
+        END_VERSIONS
         """
 }

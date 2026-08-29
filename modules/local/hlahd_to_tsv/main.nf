@@ -11,6 +11,7 @@ process HLAHD_TO_TSV {
 
     output:
 		tuple val(meta), path("*_hlahd.tsv"), emit: hlahd_tsv
+		path "versions.yml", topic: versions
 
     script:
     def prefix = task.ext.prefix ?: "${sample_name}"
@@ -32,11 +33,19 @@ process HLAHD_TO_TSV {
               .reset_index()
               )
     wide.to_csv("${prefix}_hlahd.tsv", sep = "\t", index = False)
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        python: 3.10
+    END_VERSIONS
     """
 
     stub:
     def prefix = task.ext.prefix ?: "${sample_name}"
     """
     touch ${prefix}_hlahd.tsv
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        python: 3.10
+    END_VERSIONS
     """
 }

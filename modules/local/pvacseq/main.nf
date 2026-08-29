@@ -34,6 +34,7 @@ process PVACSEQ {
     output:
         tuple val(somatic_meta), path("*_pvacseq"), emit: pvacseq_dir
         tuple val(somatic_meta), path("*_pvacseq/MHC_Class_I/*MHC_I.all_epitopes.aggregated.tsv"), emit: pvaseq_mhc_i_aggr
+        path "versions.yml", topic: versions
 
     script:
         def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
@@ -51,6 +52,10 @@ process PVACSEQ {
             --iedb-install-directory /opt/iedb \
             --peptide-fasta $human_ref_peptides \
             -t $task.cpus
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            pvactools: \$(pvacseq --version 2>&1 | tail -1)
+        END_VERSIONS
         """
 
     stub:
@@ -58,5 +63,9 @@ process PVACSEQ {
         """
         mkdir -p ${prefix}_pvacseq/MHC_Class_I
         touch ${prefix}_pvacseq/MHC_Class_I/${prefix}_MHC_I.all_epitopes.aggregated.tsv
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            pvactools: 7.0.1
+        END_VERSIONS
         """
 }

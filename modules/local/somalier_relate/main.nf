@@ -14,6 +14,7 @@ process SOMALIER_RELATE {
         tuple val(patient), path("*.samples.tsv"), emit: samples
         tuple val(patient), path("*.groups.tsv"), emit: groups
         tuple val(patient), path("*.html"), emit:html
+        path "versions.yml", topic: versions
 
     script:
     def prefix = task.ext.prefix ?: "${patient}"
@@ -22,6 +23,10 @@ process SOMALIER_RELATE {
     somalier relate \
         -o $prefix \
         *.somalier
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        somalier: \$(somalier --version 2>&1 | grep -Eo '[0-9]+\.[0-9.]+' | head -1)
+    END_VERSIONS
     """
 
     stub:
@@ -31,5 +36,9 @@ process SOMALIER_RELATE {
     touch ${prefix}.samples.tsv
     touch ${prefix}.groups.tsv
     touch ${prefix}.html
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        somalier: 0.3.2
+    END_VERSIONS
     """
 }

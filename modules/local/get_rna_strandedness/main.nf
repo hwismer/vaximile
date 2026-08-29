@@ -11,6 +11,7 @@ process GET_RNA_STRANDEDNESS {
 
     output:
         tuple val(meta), path("*_strandedness.txt"), emit: strand_txt
+        path "versions.yml", topic: versions
 
     script:
     def prefix = task.ext.prefix ?: "${meta.sample_name}"
@@ -39,12 +40,20 @@ process GET_RNA_STRANDEDNESS {
     with open("${prefix}_strandedness.txt", "w") as f:
         f.write(strandedness + "\\n")
 
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        python: 3.10
+    END_VERSIONS
     """
 
     stub:
     def prefix = task.ext.prefix ?: "${meta.sample_name}"
     """
     touch ${prefix}_strandedness.txt
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        python: 3.10
+    END_VERSIONS
     """
 
 

@@ -19,6 +19,7 @@ process PHASE_VCF_VEP {
 
     output:
         tuple val(meta), path("phased_vcf_vep.vcf"), emit: vcf
+        path "versions.yml", topic: versions
 
     script:
         def args = task.ext.args ?: ''
@@ -34,11 +35,19 @@ process PHASE_VCF_VEP {
             --fork ${task.cpus} \
             --dir_plugins $vep_plugins
 
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            ensembl-vep: \$(vep --help 2>&1 | grep -Eo 'ensembl-vep +: *[0-9.]+' | grep -Eo '[0-9.]+$')
+        END_VERSIONS
         """
 
     stub:
         """
         touch phased_vcf_vep.vcf
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            ensembl-vep: 115
+        END_VERSIONS
         """
 
 }

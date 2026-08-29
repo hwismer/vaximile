@@ -19,6 +19,7 @@ process POSTPROCESS_STRELKA {
 
     output:
         tuple val(somatic_meta), path("*_strelka_snvs_indels.vcf.gz"), path("*_strelka_snvs_indels.vcf.gz.tbi"), emit: vcf
+        path "versions.yml", topic: versions
 
 
     script:
@@ -46,6 +47,10 @@ process POSTPROCESS_STRELKA {
             strelka_merged.vcf.gz
 
         bcftools index -t --threads $task.cpus ${prefix}_strelka_snvs_indels.vcf.gz
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            bcftools: \$(bcftools --version 2>&1 | head -1 | sed 's/bcftools //')
+        END_VERSIONS
         """
 
     stub:
@@ -53,5 +58,9 @@ process POSTPROCESS_STRELKA {
         """
         touch ${prefix}_strelka_snvs_indels.vcf.gz
         touch ${prefix}_strelka_snvs_indels.vcf.gz.tbi
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            bcftools: 1.23.1
+        END_VERSIONS
         """
 }

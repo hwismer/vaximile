@@ -25,7 +25,7 @@ workflow RNASEQ_WORKFLOW {
         if ( star_index ) {
             star_index_ch = Channel.fromPath(star_index).collect()
         } else {
-            star_index_ch = CREATE_STAR_INDEX(reference_genome, gtf)
+            star_index_ch = CREATE_STAR_INDEX(reference_genome, gtf).star_index
         }
 
         // Align fastqs to genome
@@ -41,7 +41,7 @@ workflow RNASEQ_WORKFLOW {
         if ( kallisto_index ) {
             kallisto_index_ch = Channel.fromPath(kallisto_index).collect()
         } else {
-            kallisto_index_ch = CREATE_KALLISTO_INDEX(transcriptome_fa)
+            kallisto_index_ch = CREATE_KALLISTO_INDEX(transcriptome_fa).index
         }
 
         // Perform quantification with kallisto
@@ -53,7 +53,7 @@ workflow RNASEQ_WORKFLOW {
         if ( salmon_index ) {
             salmon_index_ch = Channel.fromPath(salmon_index).collect()
         } else {
-            salmon_index_ch = CREATE_SALMON_INDEX(transcriptome_fa)
+            salmon_index_ch = CREATE_SALMON_INDEX(transcriptome_fa).dir
         }
         // Perform quantification and strandedness prediction with salmon
         salmon = SALMON_QUANT(fastqs, salmon_index_ch)

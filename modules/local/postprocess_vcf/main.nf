@@ -21,6 +21,7 @@ process POSTPROCESS_VCF {
         tuple val(meta), val(caller),
             path("${meta.somatic_name}_${caller}_variants.vcf.gz"),
             path("${meta.somatic_name}_${caller}_variants.vcf.gz.tbi"), emit: vt_vcf
+        path "versions.yml", topic: versions
 
     script:
         // ext.prefix intentionally omitted: the output stem "*_variants.vcf.gz" would also
@@ -30,6 +31,10 @@ process POSTPROCESS_VCF {
         bcftools norm $args -f $reference_fa $somatic_vcf -Oz -o norm_vcf.vcf.gz
         bcftools sort norm_vcf.vcf.gz -Oz -o "${somatic_name}_${caller}_variants.vcf.gz"
         bcftools index -t "${somatic_name}_${caller}_variants.vcf.gz"
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            bcftools: \$(bcftools --version 2>&1 | head -1 | sed 's/bcftools //')
+        END_VERSIONS
         """
 
     stub:
@@ -38,5 +43,9 @@ process POSTPROCESS_VCF {
         """
         touch ${meta.somatic_name}_${caller}_variants.vcf.gz
         touch ${meta.somatic_name}_${caller}_variants.vcf.gz.tbi
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            bcftools: 1.23
+        END_VERSIONS
         """
 }
