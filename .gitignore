@@ -5,6 +5,9 @@ catpure_kits.csv
 inputs/
 run_vax_wf.sh
 resources/
+# storeDir for the PULL_* modules. A -stub-run writes empty placeholders here, and
+# committing those would overwrite a real downloaded resource set on the next pull.
+vaximile_resources/
 *out
 
 # Nextflow
