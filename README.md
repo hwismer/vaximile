@@ -24,12 +24,19 @@ number, RNA expression, and RNA fusion calls.
 4. **HLA typing** — [`OptiType`](https://github.com/FRED-2/OptiType) (class I) and
    [`HLA-HD`](https://www.genome.med.kyoto-u.ac.jp/HLA-HD/) (class I and II), run per library
    and on a merged per-pair BAM
-5. **Somatic variant calling** — [`Mutect2`](https://gatk.broadinstitute.org),
+5. **Somatic variant calling** — three callers on the tumour/normal pair:
+   [`Mutect2`](https://gatk.broadinstitute.org),
    [`Strelka2`](https://github.com/Illumina/strelka) with
    [`Manta`](https://github.com/Illumina/manta), and
-   [`DeepSomatic`](https://github.com/google/deepsomatic); merged into a consensus callset
-6. **Germline variant calling** — GATK `HaplotypeCaller` with CNN variant scoring on the
-   normal sample, also used for proximal variant phasing
+   [`DeepSomatic`](https://github.com/google/deepsomatic). Each callset is filtered to
+   `PASS`, normalised, then combined into an **n−1 consensus**: a variant is retained if at
+   least two of the three callers report it
+6. **Germline variant calling** — three callers on the normal sample: GATK
+   `HaplotypeCaller` with CNN variant scoring,
+   [`Strelka2`](https://github.com/Illumina/strelka) in germline mode, and
+   [`DeepVariant`](https://github.com/google/deepvariant). Combined into an **n−1
+   consensus** on the same 2-of-3 rule. The consensus germline callset is also what drives
+   proximal variant phasing for pVACseq
 7. **Copy number** — [`ASCAT`](https://github.com/VanLoo-lab/ascat) (vendored nf-core module)
 8. **RNA processing** — [`STAR`](https://github.com/alexdobin/STAR),
    [`kallisto`](https://pachterlab.github.io/kallisto/) and

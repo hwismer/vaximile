@@ -46,13 +46,17 @@ the tumour and normal of each pair relate to each other before trusting downstre
 ### Variant calling
 
 `variants/` holds the merged, filtered and annotated somatic callset. Three callers
-contribute: Mutect2, Strelka2 (with Manta for indel candidates) and DeepSomatic. Calls are
-merged and postprocessed before annotation, so the published VCF is a consensus product
-rather than any single caller's raw output. The `.tsv` alongside it is the same content
-flattened for spreadsheet use.
+contribute: Mutect2, Strelka2 (with Manta for indel candidates) and DeepSomatic. Each is
+filtered to `PASS` and normalised, then combined with GATK3 `CombineVariants` under
+`--minimumN 2` - an **n-1 consensus**, so a variant is kept when at least two of the three
+callers report it. The published VCF is therefore a consensus product rather than any
+single caller's raw output. The `.tsv` alongside it is the same content flattened for
+spreadsheet use.
 
-`germline/` holds HaplotypeCaller output for the normal sample, CNN-scored and filtered.
-This VCF is also used as the phasing input for proximal variant detection in pVACseq.
+`germline/` holds the consensus germline callset for the normal sample, built the same way
+from three callers: GATK `HaplotypeCaller` (CNN-scored and tranche-filtered), Strelka2 in
+germline mode, and DeepVariant, combined under the same 2-of-3 rule. This VCF is also the
+phasing input for proximal variant detection in pVACseq.
 
 ### HLA typing
 
