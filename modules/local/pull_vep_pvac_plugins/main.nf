@@ -15,7 +15,10 @@ process PULL_VEP_PVAC_PLUGINS {
 
     output:
         path("VEP_plugins"), emit: plugins
-        path "versions.yml", topic: versions
+        // No versions.yml here: storeDir only short-circuits when EVERY declared
+        // output is already in the store. An absent versions.yml made this process
+        // re-run on a populated store and then fail moving its result on top of the
+        // copy already there ("unable to remove target: Directory not empty").
 
     script:
     """
@@ -23,19 +26,11 @@ process PULL_VEP_PVAC_PLUGINS {
 
     pvacseq install_vep_plugin VEP_plugins
 
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        pvactools: \$(pvacseq --version 2>&1 | tail -1)
-    END_VERSIONS
     """
 
     stub:
     """
     mkdir -p VEP_plugins
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        pvactools: 6.0.3
-    END_VERSIONS
     """
 
 }

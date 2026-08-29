@@ -48,6 +48,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Removed `versions.yml` from the three `storeDir` modules (`PULL_VEP_PVAC_PLUGINS`,
+  `PULL_ARRIBA_RESOURCES`, `PULL_CTAT_RESOURCE_BUNDLE`). `storeDir` only short-circuits
+  when *every* declared output is already in the store, so adding a `versions.yml` the
+  store had never held made these re-download on each run and then fail moving the result
+  on top of the copy already there - `mv: inter-device move failed ... unable to remove
+  target: Directory not empty`. These processes fetch reference data; their tool version
+  was not meaningful anyway.
 - `CREATE_BWA_INDEX` published with Nextflow's default `publishDir` mode, which is
   **symlink**, so `./resources/bwa/` held links into `work/`. After `work/` was cleaned
   those dangled, and passing that directory to `--bwa_index` failed validation with a
