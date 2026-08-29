@@ -48,6 +48,14 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `CREATE_BWA_INDEX` published with Nextflow's default `publishDir` mode, which is
+  **symlink**, so `./resources/bwa/` held links into `work/`. After `work/` was cleaned
+  those dangled, and passing that directory to `--bwa_index` failed validation with a
+  contradictory message: files reported missing while being listed as present in the same
+  error. `exists()` follows symlinks and returns false for a broken one, whereas `list()`
+  still shows the name. The module now copies, and validation reports broken symlinks
+  separately from absent files with the actual remedy. The other three index builders
+  already used `mode: "copy"`.
 - Pinned OptiType to 1.5.0 (`quay.io/biocontainers/optitype:1.5.0--pyhdfd78af_1`, plus a
   matching conda spec). The previous image, `fred2/optitype:latest`, is a floating tag last
   pushed in 2018 and that repo's newest tag is `release-v1.3.1`, so runs were neither

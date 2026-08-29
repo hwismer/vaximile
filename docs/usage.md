@@ -200,6 +200,13 @@ The pipeline validates this at launch and names any missing file, rather than le
 bwa-mem2 fail per-sample once alignment starts. The easiest way to get a valid directory
 is to run once without `--bwa_index` and reuse `./resources/bwa/`.
 
+Note for indices published before this was fixed: `CREATE_BWA_INDEX` used to publish with
+Nextflow's default `publishDir` mode, which is **symlink**, so `./resources/bwa/` held
+links into `work/`. Once `work/` was cleaned those links dangled - they still list in the
+directory but no longer resolve, which is why validation could report a file as missing
+while showing it in the same message. The module now copies. If you have such a directory,
+rebuild the index by running once without `--bwa_index`.
+
 ### GATK versions are pinned deliberately — do not unify them
 
 Three different GATK generations are in use, and the split is load-bearing. Each conda

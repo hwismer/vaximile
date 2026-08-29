@@ -10,7 +10,11 @@ process CREATE_BWA_INDEX {
 
     tag "Creating BWA index for $reference_fa"
 
-    publishDir "./resources/bwa/"
+    // mode: "copy" - without it Nextflow defaults to "symlink", so ./resources/bwa/ ends
+    // up holding links into work/. Those dangle as soon as work/ is cleaned, and a later
+    // run passing --bwa_index at this directory then sees files that list but do not
+    // resolve. The other three index builders already copy.
+    publishDir "./resources/bwa/", mode: "copy"
 
     cache 'lenient'
 

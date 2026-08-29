@@ -30,20 +30,35 @@ def prebuilt_bwa_index(index_dir) {
 
     def prefix = expected_index_prefix()
     def wanted = extensions.collect { ext -> file("${dir}/${prefix}${ext}") }
-    def missing = wanted.findAll { f -> !f.exists() }
 
-    if ( missing ) {
+    // Distinguish "not there" from "there but unusable". A dangling symlink lists by name
+    // but fails exists(), so reporting it as merely missing produces the contradictory
+    // message of naming a file the very next line shows in the directory.
+    def dangling = wanted.findAll { f ->
+        !f.exists() && java.nio.file.Files.exists(f, java.nio.file.LinkOption.NOFOLLOW_LINKS)
+    }
+    def absent = wanted.findAll { f ->
+        !f.exists() && !java.nio.file.Files.exists(f, java.nio.file.LinkOption.NOFOLLOW_LINKS)
+    }
+
+    if ( dangling || absent ) {
         def present = dir.list().sort()
-        error(
-            "--bwa_index '${index_dir}' is not a usable bwa-mem2 index.\n\n" +
-            "Missing:\n" + missing.collect { f -> "  ${f.name}" }.join('\n') + "\n\n" +
-            "BWA_MAP uses the prepared reference FASTA as the bwa-mem2 index prefix, so the\n" +
-            "index files must be named '${prefix}.<ext>'. An index built from a FASTA with a\n" +
-            "different name will not be found, even if it is otherwise valid.\n\n" +
-            "Directory contains: " + (present ? present.join(', ') : '(empty)') + "\n\n" +
-            "To get a directory in the right shape, run once without --bwa_index and reuse\n" +
-            "what CREATE_BWA_INDEX publishes to ./resources/bwa/."
-        )
+        def report = "--bwa_index '${index_dir}' is not a usable bwa-mem2 index.\n\n"
+        if ( dangling ) {
+            report += "Broken symlinks (present, but their target is gone):\n" +
+                dangling.collect { f -> "  ${f.name}" }.join('\n') + "\n\n" +
+                "This is what an index published by an older run looks like after work/ has\n" +
+                "been cleaned: publishDir used to default to symlinks. Rebuild the index by\n" +
+                "running once without --bwa_index; it is now copied rather than linked.\n\n"
+        }
+        if ( absent ) {
+            report += "Missing:\n" + absent.collect { f -> "  ${f.name}" }.join('\n') + "\n\n" +
+                "BWA_MAP uses the prepared reference FASTA as the bwa-mem2 index prefix, so\n" +
+                "the index files must be named '${prefix}.<ext>'. An index built from a FASTA\n" +
+                "with a different name will not be found, even if it is otherwise valid.\n\n"
+        }
+        report += "Directory contains: " + (present ? present.join(', ') : '(empty)')
+        error(report)
     }
 
     return wanted
