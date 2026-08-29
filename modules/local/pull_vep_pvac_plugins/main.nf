@@ -22,4 +22,9 @@ process PULL_VEP_PVAC_PLUGINS {
 
     """
 
+    stub:
+    """
+    mkdir -p VEP_plugins
+    """
+
 }

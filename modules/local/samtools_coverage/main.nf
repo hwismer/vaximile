@@ -16,4 +16,10 @@ process SAMTOOLS_COVERAGE {
     """
     samtools coverage $bam > ${prefix}_coverage.tsv
     """
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
+    """
+    touch ${prefix}_coverage.tsv
+    """
+
 }

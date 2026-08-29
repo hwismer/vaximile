@@ -22,4 +22,10 @@ process INDEX_VCF {
         bcftools index -t ${vcf_name}_${filename_suffix}.vcf.gz
         """
 
+    stub:
+        """
+        touch ${vcf_name}_${filename_suffix}.vcf.gz
+        touch ${vcf_name}_${filename_suffix}.vcf.gz.tbi
+        """
+
 }

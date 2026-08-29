@@ -26,4 +26,10 @@ process ANNOTATE_VCF_TRANSCRIPT_EXPRESSION {
             -o ${prefix}_tx_expression.vcf
         """
 
+    stub:
+        def prefix = task.ext.prefix ?: "${somatic_name}"
+        """
+        touch ${prefix}_tx_expression.vcf
+        """
+
 }

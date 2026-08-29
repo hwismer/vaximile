@@ -23,4 +23,9 @@ process BASE_RECALIBRATOR_GATHER {
         -O "${sample_name}_${molecule}_recal_table.table"
     """
 
+    stub:
+    """
+    touch "${meta.sample_name}_${meta.molecule}_recal_table.table"
+    """
+
 }

@@ -37,4 +37,11 @@ process PHASE_VCF_RBPHASING {
                 -o ${prefix}_phased.vcf
 
         """
+    stub:
+
+        def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
+        """
+        touch ${prefix}_phased.vcf
+        """
+
 }

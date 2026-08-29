@@ -24,4 +24,12 @@ process MUTECT2_LEARN_READ_ORIENTATION {
         $f1r2_as_input \
         -O "${prefix}_orientmodel.tar.gz"
     """
+
+    stub:
+
+    def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
+
+    """
+    touch ${prefix}_orientmodel.tar.gz
+    """
 }

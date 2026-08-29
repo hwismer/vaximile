@@ -21,4 +21,9 @@ process MUTECT2_GATHER_SELECT_VARIANTS {
         -O "${somatic_name}_${interval_shard}.vcf.gz"
     """
 
+    stub:
+    """
+    touch "${somatic_name}_${interval_shard}.vcf.gz"
+    """
+
 }

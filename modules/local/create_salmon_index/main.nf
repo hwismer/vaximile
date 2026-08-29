@@ -24,5 +24,11 @@ process CREATE_SALMON_INDEX {
         $args
     """
 
+    stub:
+    def prefix = task.ext.prefix ?: "${transcripts_fa}"
+    """
+    mkdir -p "${prefix}_salmon_index"
+    """
+
 
 }

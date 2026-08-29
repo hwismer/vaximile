@@ -69,4 +69,14 @@ process STAR_ALIGN {
 
         """
 
+    stub:
+        def prefix = task.ext.prefix ?: "${sample_name}_${meta.molecule}"
+        """
+        touch ${prefix}_Aligned.out.bam
+        touch ${prefix}_ReadsPerGene.out.tab
+        touch ${prefix}_Log.final.out
+        touch ${prefix}_SJ.out.tab
+        touch ${prefix}_Chimeric.out.junction
+        """
+
 }

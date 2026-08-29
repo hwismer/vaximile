@@ -47,4 +47,11 @@ process POSTPROCESS_STRELKA {
 
         bcftools index -t --threads $task.cpus ${prefix}_strelka_snvs_indels.vcf.gz
         """
+
+    stub:
+        def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
+        """
+        touch ${prefix}_strelka_snvs_indels.vcf.gz
+        touch ${prefix}_strelka_snvs_indels.vcf.gz.tbi
+        """
 }

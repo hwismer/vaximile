@@ -27,4 +27,12 @@ process KALLISTO_QUANT {
         """
         kallisto quant -i $kallisto_index -o ${prefix}_kallisto -t ${task.cpus} $read1 $read2 > "${prefix}_kallist_stdout.out"
         """
+
+    stub:
+        def prefix = task.ext.prefix ?: "${meta.sample_name}"
+        """
+        mkdir -p ${prefix}_kallisto
+        touch ${prefix}_kallisto/abundance.tsv
+        touch ${prefix}_kallist_stdout.out
+        """
 }

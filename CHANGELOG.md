@@ -48,6 +48,17 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Added a `stub:` block to all 94 local modules, and made `-profile test` self-contained,
+  so `nextflow run . -profile test -stub-run` exercises the whole DAG - 132 tasks - in
+  ~10 seconds offline with no containers, conda or data. This is the first check in this
+  repo that actually executes tasks, and therefore the first that can catch a wrong output
+  declaration, a tuple-arity mismatch, or a process running the wrong number of times.
+- Fixed capture-kit BED paths being passed as bare strings. A relative path in
+  `capture_kits.csv` failed with "Not a valid path value" once a task was submitted; they
+  are now `file(..., checkIfExists: true)`, so a wrong path is a startup error.
+- Fixed `MHCFLOW` declaring `output: tuple path(meta), ...` where `meta` is the metadata
+  map, not a file. Nextflow looked for a file named by the map's string form and failed
+  with "Missing output file(s) [somatic_name:..., patient:...]". Found by the first stub run.
 - Fixed `--bwa_index` causing `BWA_MAP` to align only one sample. The prebuilt index was
   emitted with `channel.fromList`, a one-item *queue* channel, which the first `BWA_MAP`
   task consumes - so every other sample was silently skipped. It is now `channel.value`,

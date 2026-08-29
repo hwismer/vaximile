@@ -43,4 +43,11 @@ process MERGE_GERMLINE_VCFS {
             -o "${prefix}_germline_variants.vcf.gz"
         """
 
+    stub:
+
+        def prefix = task.ext.prefix ?: "${sample_meta.sample_name}"
+        """
+        touch ${prefix}_germline_variants.vcf.gz
+        """
+
 }

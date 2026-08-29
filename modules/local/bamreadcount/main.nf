@@ -32,4 +32,12 @@ process BAMREADCOUNT {
             ${prefix}_bamrc_helper
         """
 
+    stub:
+        def prefix = task.ext.prefix ?: "${sample_name}_${molecule}"
+        """
+        mkdir -p ${prefix}_bamrc_helper
+        touch ${prefix}_bamrc_helper/${prefix}_indel.tsv
+        touch ${prefix}_bamrc_helper/${prefix}_snv.tsv
+        """
+
 }

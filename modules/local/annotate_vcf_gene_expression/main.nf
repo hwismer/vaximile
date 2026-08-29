@@ -31,4 +31,11 @@ process ANNOTATE_VCF_GENE_EXPRESSION {
             -o "${prefix}_gene_expression.vcf"
         """
 
+    stub:
+        def prefix = task.ext.prefix ?: "${somatic_name}"
+
+        """
+        touch ${prefix}_gene_expression.vcf
+        """
+
 }

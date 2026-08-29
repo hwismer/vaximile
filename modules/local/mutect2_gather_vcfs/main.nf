@@ -27,4 +27,11 @@ process MUTECT2_GATHER_VCFS {
     
     """
 
+    stub:
+
+    def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
+    """
+    touch "${prefix}_merged.vcf"
+    """
+
 }

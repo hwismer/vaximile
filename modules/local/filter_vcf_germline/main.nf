@@ -26,6 +26,13 @@ process FILTER_VCF {
         bcftools index -t "${prefix}_filtered_variants.vcf.gz"
         """
 
+    stub:
+        def prefix = task.ext.prefix ?: "${meta.sample_name}_${caller}"
+        """
+        touch ${prefix}_filtered_variants.vcf.gz
+        touch ${prefix}_filtered_variants.vcf.gz.tbi
+        """
+
 
 
 }

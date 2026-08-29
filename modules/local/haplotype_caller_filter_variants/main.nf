@@ -31,4 +31,11 @@ process HAPLOTYPE_CALLER_FILTER_VARIANTS {
         -O ${prefix}_germline_filtered.vcf.gz \
         --create-output-variant-index
     """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}"
+    """
+    touch ${prefix}_germline_filtered.vcf.gz
+    touch ${prefix}_germline_filtered.vcf.gz.tbi
+    """
 }

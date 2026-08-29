@@ -40,4 +40,11 @@ process HAPLOTYPE_CALLER_SCATTER {
             -ip $interval_padding \
             --create-output-variant-index
         """
+
+    stub:
+        def prefix = task.ext.prefix ?: "${meta.sample_name}_${interval_shard}"
+        """
+        touch ${prefix}.vcf.gz
+        touch ${prefix}.vcf.gz.tbi
+        """
 }

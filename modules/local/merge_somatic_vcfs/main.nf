@@ -42,5 +42,10 @@ process MERGE_SOMATIC_VCFS {
             -o "${somatic_name}_variants.vcf.gz"
 
         """
-    
+
+    stub:
+        """
+        touch ${somatic_meta.somatic_name}_variants.vcf.gz
+        """
+
 }

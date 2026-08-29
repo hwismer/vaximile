@@ -38,4 +38,11 @@ process VEP_ANNOTATE {
             --dir_plugins $vep_plugins \
             --dir_cache $vep_cache
         """
+
+    stub:
+        def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
+        """
+        touch ${prefix}_vep.vcf
+        touch ${prefix}_vep.vcf_summary.html
+        """
 }

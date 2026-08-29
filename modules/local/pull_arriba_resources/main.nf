@@ -26,4 +26,13 @@ process PULL_ARRIBA_RESOURCES {
 
     """
 
+    stub:
+
+    """
+    mkdir -p ./arriba_v2.5.1/database
+    touch ./arriba_v2.5.1/database/blacklist_hg38_GRCh38_v2.5.1.tsv.gz
+    touch ./arriba_v2.5.1/database/known_fusions_hg38_GRCh38_v2.5.1.tsv.gz
+    touch ./arriba_v2.5.1/database/protein_domains_hg38_GRCh38_v2.5.1.gff3
+    """
+
 }

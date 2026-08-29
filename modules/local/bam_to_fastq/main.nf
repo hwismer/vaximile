@@ -20,4 +20,11 @@ process BAM_TO_FASTQ {
         samtools fastq --threads $task.cpus -1 ${prefix}_R1.fastq -2 ${prefix}_R2.fastq -n $bam
         """
 
+    stub:
+        def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
+        """
+        touch ${prefix}_R1.fastq
+        touch ${prefix}_R2.fastq
+        """
+
 }

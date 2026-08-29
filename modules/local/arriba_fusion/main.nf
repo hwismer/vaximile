@@ -28,4 +28,11 @@ process ARRIBA_FUSION {
             -O "${prefix}_arriba_fusions.discarded.tsv"
         """
 
+    stub:
+        def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
+        """
+        touch ${prefix}_arriba_fusions.tsv
+        touch ${prefix}_arriba_fusions.discarded.tsv
+        """
+
 }

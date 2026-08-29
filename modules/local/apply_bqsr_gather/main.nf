@@ -28,4 +28,9 @@ process APPLY_BQSR_GATHER {
         -O "${sample_name}_${molecule}_bqsr.bam"
     """
 
+    stub:
+    """
+    touch "${sample_name}_${molecule}_bqsr.bam"
+    """
+
 }

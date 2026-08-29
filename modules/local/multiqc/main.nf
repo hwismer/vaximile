@@ -59,4 +59,10 @@ EOF
 		-b "Info | Patient: ${patient} \n | VEP Outputs: Germline (normal sample name) and Somatic (tumor/normal pair, e.g. Patient1_T1_N1)" \
         .
     """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${patient}"
+    """
+    touch ${prefix}_report.html
+    """
 }

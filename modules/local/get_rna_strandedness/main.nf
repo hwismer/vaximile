@@ -41,5 +41,11 @@ process GET_RNA_STRANDEDNESS {
 
     """
 
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}"
+    """
+    touch ${prefix}_strandedness.txt
+    """
+
 
 }

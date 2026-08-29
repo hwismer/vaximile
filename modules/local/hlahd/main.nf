@@ -38,4 +38,11 @@ process HLAHD {
             ./
         """
 
+    stub:
+        def prefix = task.ext.prefix ?: "${meta.sample_name}"
+        """
+        mkdir -p ${prefix}/result
+        touch ${prefix}/result/${prefix}_final.result.txt
+        """
+
 }

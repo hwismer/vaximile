@@ -23,4 +23,13 @@ process SOMALIER_RELATE {
         -o $prefix \
         *.somalier
     """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${patient}"
+    """
+    touch ${prefix}.pairs.tsv
+    touch ${prefix}.samples.tsv
+    touch ${prefix}.groups.tsv
+    touch ${prefix}.html
+    """
 }

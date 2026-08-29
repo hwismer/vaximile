@@ -35,4 +35,11 @@ process MARK_DUPLICATES_SPARK {
         --conf spark.driver.memory=8g
     """
 
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
+    """
+    touch ${prefix}_markdup.bam
+    touch ${prefix}_markdup.bam.bai
+    """
+
 }

@@ -24,7 +24,15 @@ process HAPLOTYPE_CALLER_GATHER_VCFS {
     gatk GatherVcfs \
         $vcf_as_input \
         -O "${prefix}_merged.vcf"
-    
+
+    """
+
+    stub:
+
+    def prefix = task.ext.prefix ?: "${sample_meta.sample_name}"
+
+    """
+    touch ${prefix}_merged.vcf
     """
 
 }

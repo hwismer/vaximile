@@ -31,4 +31,12 @@ process POSTPROCESS_VCF {
         bcftools sort norm_vcf.vcf.gz -Oz -o "${somatic_name}_${caller}_variants.vcf.gz"
         bcftools index -t "${somatic_name}_${caller}_variants.vcf.gz"
         """
+
+    stub:
+        // The output paths are literal names built from meta.somatic_name, so the stub
+        // must use the same expression rather than the somatic_name val the script uses.
+        """
+        touch ${meta.somatic_name}_${caller}_variants.vcf.gz
+        touch ${meta.somatic_name}_${caller}_variants.vcf.gz.tbi
+        """
 }

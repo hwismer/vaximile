@@ -26,4 +26,12 @@ process PREPARE_FASTA {
         	cp ${fasta} ${prefix}_prc.fa
     	fi
     	"""
+    stub:
+
+        def prefix = task.ext.prefix ?: fasta.name.replaceFirst(/\.(fasta|fa)(\.gz)?$/, '')
+
+        """
+        touch ${prefix}_prc.fa
+        """
+
 }

@@ -38,4 +38,11 @@ process HAPLOTYPE_CALLER_CNN_SCORE_VARIANTS {
             --create-output-variant-index \
             -O "${prefix}_CNN.vcf.gz"
         """
+
+    stub:
+        def prefix = task.ext.prefix ?: "${meta.sample_name}_${interval_shard}"
+        """
+        touch ${prefix}_CNN.vcf.gz
+        touch ${prefix}_CNN.vcf.gz.tbi
+        """
 }

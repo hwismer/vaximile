@@ -27,4 +27,11 @@ process MUTECT2_FILTER_MUTECT_CALLS {
         --create-output-variant-index \
         -O "${prefix}_mutect_filtered.vcf.gz"
     """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
+    """
+    touch ${prefix}_mutect_filtered.vcf.gz
+    touch ${prefix}_mutect_filtered.vcf.gz.tbi
+    """
 }

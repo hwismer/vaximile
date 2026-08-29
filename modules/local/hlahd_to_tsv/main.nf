@@ -33,4 +33,10 @@ process HLAHD_TO_TSV {
               )
     wide.to_csv("${prefix}_hlahd.tsv", sep = "\t", index = False)
     """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${sample_name}"
+    """
+    touch ${prefix}_hlahd.tsv
+    """
 }

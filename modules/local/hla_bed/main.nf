@@ -17,4 +17,9 @@ process HLA_BED {
     """
     printf '%s\\t%d\\t%d\\t%s\\n' '${contig}' ${start} ${end} 'MHC' > hla_region.bed
     """
+
+    stub:
+    """
+    touch hla_region.bed
+    """
 }

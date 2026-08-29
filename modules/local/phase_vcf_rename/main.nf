@@ -36,5 +36,12 @@ process PHASE_VCF_RENAME {
         bcftools index -t --threads $task.cpus ${prefix}_germline_rename.vcf.gz
         """
 
+    stub:
+        def prefix = task.ext.prefix ?: "${tumor_sample_name}"
+        """
+        touch ${prefix}_germline_rename.vcf.gz
+        touch ${prefix}_germline_rename.vcf.gz.tbi
+        """
+
 
 }

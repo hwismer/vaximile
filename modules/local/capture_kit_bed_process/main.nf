@@ -22,6 +22,13 @@ process CAPTURE_KIT_BED_PROCESS {
     tabix -p bed ${prefix}_sorted.bed.gz
     """
 
+    stub:
+    def prefix = task.ext.prefix ?: "${bed.baseName}"
+    """
+    touch ${prefix}_sorted.bed.gz
+    touch ${prefix}_sorted.bed.gz.tbi
+    """
+
 }
 
 //*******************************************************************************************************************

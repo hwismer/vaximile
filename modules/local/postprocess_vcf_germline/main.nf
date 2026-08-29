@@ -29,4 +29,10 @@ process POSTPROCESS_VCF {
         bcftools sort norm_vcf.vcf.gz -Oz -o "${sample_name}_${caller}_variants.vcf.gz"
         bcftools index -t "${sample_name}_${caller}_variants.vcf.gz"
         """
+
+    stub:
+        """
+        touch "${sample_name}_${caller}_variants.vcf.gz"
+        touch "${sample_name}_${caller}_variants.vcf.gz.tbi"
+        """
 }

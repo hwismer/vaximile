@@ -38,4 +38,13 @@ process STRELKA {
     ./strelka/runWorkflow.py -m local -j $task.cpus
     """
 
+    stub:
+    """
+    mkdir -p ./strelka/results/variants
+    touch ./strelka/results/variants/somatic.snvs.vcf.gz
+    touch ./strelka/results/variants/somatic.snvs.vcf.gz.tbi
+    touch ./strelka/results/variants/somatic.indels.vcf.gz
+    touch ./strelka/results/variants/somatic.indels.vcf.gz.tbi
+    """
+
 }

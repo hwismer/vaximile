@@ -53,5 +53,11 @@ process KALLISTO_TXIMPORT {
     
     """
 
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}"
+    """
+    touch ${prefix}.gene_tpm.tsv
+    """
+
 
 }

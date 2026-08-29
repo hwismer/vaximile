@@ -71,4 +71,11 @@ process MHC_REGION_FASTQS {
 			-s /dev/null \
             -
     """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}"
+    """
+    touch ${prefix}_R1.fastq
+    touch ${prefix}_R2.fastq
+    """
 }

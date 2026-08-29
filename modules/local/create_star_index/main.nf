@@ -35,5 +35,10 @@ process CREATE_STAR_INDEX {
 
         """
 
+    stub:
+        """
+        mkdir -p STARGenomeDir
+        """
+
 
 }

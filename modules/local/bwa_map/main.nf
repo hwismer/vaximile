@@ -29,4 +29,10 @@ process BWA_MAP {
     bwa-mem2 mem -t $task.cpus -R \$NEW_RG $reference_fa $fastq1 $fastq2 > "${prefix}.sam"
 
     """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${sample_name}_${molecule}"
+    """
+    touch ${prefix}.sam
+    """
 }

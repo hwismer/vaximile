@@ -29,4 +29,10 @@ process SALMON_QUANT {
         -o "${prefix}_salmon_quant"
     """
 
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
+    """
+    mkdir -p "${prefix}_salmon_quant"
+    """
+
 }

@@ -19,6 +19,11 @@ process PULL_CTAT_RESOURCE_BUNDLE {
 
     """
 
+    stub:
+    """
+    mkdir -p ./GRCh38_gencode_v44_CTAT_lib_Oct292023.plug-n-play/ctat_genome_lib_build_dir
+    """
+
 }
 
 

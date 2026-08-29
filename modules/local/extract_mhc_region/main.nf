@@ -17,4 +17,10 @@ process EXTRACT_MHC_REGION {
         samtools collate --threads $task.cpus -o "${prefix}_hla_regions.bam" hla_regions.bam
         """
 
+    stub:
+        def prefix = task.ext.prefix ?: "${meta.sample_name}"
+        """
+        touch ${prefix}_hla_regions.bam
+        """
+
 }

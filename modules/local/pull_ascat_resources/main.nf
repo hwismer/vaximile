@@ -43,5 +43,13 @@ process PULL_ASCAT_RESOURCES {
     unzip RT_G1000_WGS_hg38.zip -d RT_G1000_hg38
     """
 
+    stub:
+    """
+    mkdir -p G1000_loci_hg38
+    mkdir -p G1000_alleles_hg38
+    mkdir -p GC_G1000_hg38
+    mkdir -p RT_G1000_hg38
+    """
+
 
 }

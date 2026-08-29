@@ -28,4 +28,10 @@ process APPLY_BQSR_SCATTER {
         -O "${prefix}_bqsr.bam"
     """
 
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}_${interval_shard}"
+    """
+    touch ${prefix}_bqsr.bam
+    """
+
 }

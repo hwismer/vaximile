@@ -32,4 +32,10 @@ process VEP_POPULATION_FILTER {
             --format vcf \
             $args
         """
+    stub:
+        def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
+        """
+        touch "${prefix}_vep_filter.vcf"
+        """
+
 }

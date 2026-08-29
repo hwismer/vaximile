@@ -33,4 +33,11 @@ process MANTA {
     ./${prefix}_manta/runWorkflow.py -j $task.cpus
     """
 
+    stub:
+    def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
+    """
+    mkdir -p ${prefix}_manta/results/variants
+    touch ${prefix}_manta/results/variants/candidateSmallIndels.vcf.gz
+    """
+
 }

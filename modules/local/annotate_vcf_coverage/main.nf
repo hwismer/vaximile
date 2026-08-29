@@ -33,4 +33,9 @@ process ANNOTATE_VCF_COVERAGE {
             -o ${somatic_name}_${sample_name}_${molecule}_coverage.vcf
         """
 
+    stub:
+        """
+        touch ${somatic_meta.somatic_name}_${sample_meta.sample_name}_${sample_meta.molecule}_coverage.vcf
+        """
+
 }

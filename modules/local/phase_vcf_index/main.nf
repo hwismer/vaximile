@@ -27,4 +27,11 @@ process PHASE_VCF_INDEX {
         tabix -p vcf ${prefix}_phased_annotated.vcf.gz
         """
 
+    stub:
+        def prefix = task.ext.prefix ?: "${somatic_name}"
+        """
+        touch ${prefix}_phased_annotated.vcf.gz
+        touch ${prefix}_phased_annotated.vcf.gz.tbi
+        """
+
 }

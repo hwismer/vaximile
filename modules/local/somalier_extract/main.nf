@@ -22,4 +22,9 @@ process SOMALIER_EXTRACT {
         -f $reference_fa \
         $bam 
     """
+
+    stub:
+    """
+    touch ${meta.sample_name}.somalier
+    """
 }

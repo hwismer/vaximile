@@ -17,4 +17,10 @@ process SAMTOOLS_FLAGSTAT {
     samtools flagstat --threads $task.cpus $bam > ${prefix}.flagstat
     """
 
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
+    """
+    touch ${prefix}.flagstat
+    """
+
 }

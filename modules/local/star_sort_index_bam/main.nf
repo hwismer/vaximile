@@ -22,4 +22,11 @@ process STAR_SORT_INDEX_BAM {
         samtools index -@ $task.cpus  "${prefix}_STAR_sorted.bam"
         """
 
+    stub:
+        def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
+        """
+        touch ${prefix}_STAR_sorted.bam
+        touch ${prefix}_STAR_sorted.bam.bai
+        """
+
 }

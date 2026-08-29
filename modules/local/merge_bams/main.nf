@@ -28,4 +28,10 @@ process MERGE_BAMS {
         -@ ${task.cpus} \
         ${sample_name}.bam
     """
+
+    stub:
+    """
+    touch ${sample_name}.bam
+    touch ${sample_name}.bam.bai
+    """
 }

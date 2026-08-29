@@ -26,7 +26,14 @@ process FILTER_VCF {
         bcftools view -f PASS -Oz -o "${prefix}_filtered_variants.vcf.gz" $somatic_vcf
         bcftools index -t "${prefix}_filtered_variants.vcf.gz"
         """
-        
+
+    stub:
+        def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}_${caller}"
+        """
+        touch ${prefix}_filtered_variants.vcf.gz
+        touch ${prefix}_filtered_variants.vcf.gz.tbi
+        """
+
 
 
 }

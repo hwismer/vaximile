@@ -14,4 +14,8 @@ process NOVOALIGN_HLA_FASTA {
     """
 
     """
+
+    stub:
+    """
+    """
 }

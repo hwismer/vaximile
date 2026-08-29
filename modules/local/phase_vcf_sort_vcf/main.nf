@@ -30,4 +30,10 @@ process PHASE_VCF_SORT_VCF {
                 -SD $reference_dict
         """
 
+    stub:
+        def prefix = task.ext.prefix ?: "${somatic_meta.tumor_meta.sample_name}"
+        """
+        touch ${prefix}_combined.sorted.vcf
+        """
+
 }

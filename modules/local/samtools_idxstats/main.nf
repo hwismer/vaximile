@@ -16,4 +16,10 @@ process SAMTOOLS_IDXSTATS {
     """
     samtools idxstats $bam > ${prefix}_idxstats.tsv
     """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
+    """
+    touch ${prefix}_idxstats.tsv
+    """
 }

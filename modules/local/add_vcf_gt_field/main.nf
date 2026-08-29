@@ -26,4 +26,11 @@ process ADD_VCF_GT_FIELD {
             0/1 \
             -o "${prefix}_gt.vcf"
         """
+
+    stub:
+        def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
+        """
+        touch ${prefix}_gt.vcf
+        touch ${prefix}_gt.vcf.tbi
+        """
 }

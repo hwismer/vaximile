@@ -38,4 +38,11 @@ process VEP_ANNOTATE {
             --dir_cache $vep_cache \
             $args
         """
+
+    stub:
+        def prefix = task.ext.prefix ?: "${sample_meta.sample_name}"
+        """
+        touch ${prefix}_vep.vcf
+        touch ${prefix}_vep.vcf_summary.html
+        """
 }

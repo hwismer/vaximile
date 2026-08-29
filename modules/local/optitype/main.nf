@@ -49,4 +49,13 @@ process OPTITYPE {
             --prefix "${prefix}" \
             --outdir optitype_out
         """
+
+    stub:
+
+        def prefix = task.ext.prefix ?: "${meta.sample_name}_${molecule}"
+        """
+        mkdir -p optitype_out
+        touch optitype_out/${prefix}_result.tsv
+        touch optitype_out/${prefix}_coverage_plot.pdf
+        """
 }

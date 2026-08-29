@@ -27,4 +27,10 @@ process GET_PILEUP_SUMMARIES {
         -O "${prefix}_pileups.table"
 
     """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
+    """
+    touch "${prefix}_pileups.table"
+    """
 }

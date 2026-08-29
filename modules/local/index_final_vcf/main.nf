@@ -23,4 +23,10 @@ process INDEX_FINAL_VCF {
         tabix -p vcf "${vcf}.gz"
         """
 
+    stub:
+        """
+        touch "${vcf}.gz"
+        touch "${vcf}.gz.tbi"
+        """
+
 }

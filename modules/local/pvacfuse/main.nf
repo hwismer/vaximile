@@ -31,4 +31,10 @@ process PVACFUSE {
             -t $task.cpus
         """
 
+    stub:
+        def prefix = task.ext.prefix ?: "${somatic_name}"
+        """
+        mkdir -p ${prefix}_pvacfuse
+        """
+
 }

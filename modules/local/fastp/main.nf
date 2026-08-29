@@ -28,4 +28,12 @@ process FASTP {
               $args
 
         """
+
+    stub:
+        def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
+        """
+        touch ${prefix}_R1_fastp.fastq.gz
+        touch ${prefix}_R2_fastp.fastq.gz
+        touch ${prefix}.json
+        """
 }

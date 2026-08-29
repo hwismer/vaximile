@@ -44,4 +44,13 @@ process MUTECT2_SCATTER {
             -O "${prefix}_mutect.vcf.gz" \
             --native-pair-hmm-threads $task.cpus
         """
+
+    stub:
+        def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}_${interval_shard}"
+        """
+        touch ${prefix}_mutect.vcf.gz
+        touch ${prefix}_mutect.vcf.gz.tbi
+        touch ${prefix}_mutect.vcf.gz.stats
+        touch ${prefix}_mutect_f1r2.tar.gz
+        """
 }

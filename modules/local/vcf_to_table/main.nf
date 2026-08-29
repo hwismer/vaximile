@@ -23,5 +23,11 @@ process VCF_TO_TABLE {
             -O "${prefix}.tsv"
         """
 
+    stub:
+        def prefix = task.ext.prefix ?: "${file_name}"
+        """
+        touch "${prefix}.tsv"
+        """
+
 
 }

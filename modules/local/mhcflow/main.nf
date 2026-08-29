@@ -12,7 +12,10 @@ process MHCFLOW {
         path hla_freqs
 
     output:
-        tuple path(meta), path("${meta.sample_name}")
+        // val(meta), not path(meta): meta is the metadata map, not a file. Declaring it
+        // as a path makes Nextflow look for a file literally named by the map's toString,
+        // which fails with "Missing output file(s) [somatic_name:..., patient:...]".
+        tuple val(meta), path("${meta.sample_name}")
 
     script:
     def args = task.ext.args ?: ''
@@ -26,5 +29,10 @@ process MHCFLOW {
         $args \
         --outdir ${sample_name}
 	ls
+    """
+
+    stub:
+    """
+    mkdir -p ${meta.sample_name}
     """
 }

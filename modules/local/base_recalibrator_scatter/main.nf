@@ -37,4 +37,10 @@ process BASE_RECALIBRATOR_SCATTER {
         -L $interval_shard
 
     """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}_${interval_shard}"
+    """
+    touch "${prefix}_recal_table.table"
+    """
 }

@@ -46,4 +46,12 @@ process COMBINE_PVACSEQ_AGGREGATED_REPORT {
     df.to_csv("${prefix}_pvacseq_reports.tsv", sep = "\\t", index = False)
     """
 
+    stub:
+
+    def prefix = task.ext.prefix ?: "${patient}"
+
+    """
+    touch ${prefix}_pvacseq_reports.tsv
+    """
+
 }

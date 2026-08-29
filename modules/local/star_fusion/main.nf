@@ -31,4 +31,12 @@ process STAR_FUSION {
 
         """
 
+    stub:
+        def prefix = task.ext.prefix ?: "${meta.sample_name}"
+        """
+        mkdir -p ${prefix}_starfusion
+        touch ${prefix}_starfusion/star-fusion.fusion_predictions.tsv
+        touch ${prefix}_starfusion/star-fusion.fusion_predictions.abridged.tsv
+        """
+
 }

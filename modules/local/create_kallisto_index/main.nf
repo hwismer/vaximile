@@ -27,4 +27,10 @@ process CREATE_KALLISTO_INDEX {
         kallisto index -i "${prefix}_kallisto_index.idx" $transcriptome_fa
         """
 
+    stub:
+        def prefix = task.ext.prefix ?: "${transcriptome_fa}"
+        """
+        touch ${prefix}_kallisto_index.idx
+        """
+
 }

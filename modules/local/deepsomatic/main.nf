@@ -42,4 +42,11 @@ process DEEPSOMATIC {
 
     """
 
+    stub:
+    def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
+    """
+    touch ${prefix}_deepsomatic.vcf.gz
+    touch ${prefix}_deepsomatic.vcf.gz.tbi
+    """
+
 }

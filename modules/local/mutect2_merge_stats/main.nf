@@ -24,4 +24,10 @@ process MUTECT2_MERGE_STATS {
         $stat_as_input \
         -O "${prefix}_merged.stats"
     """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
+    """
+    touch ${prefix}_merged.stats
+    """
 }

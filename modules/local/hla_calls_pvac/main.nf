@@ -93,4 +93,10 @@ process HLA_CALLS_PVAC {
         writer.writerow(alleles)
 
     """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}"
+    """
+    touch "${prefix}_hla_calls.csv"
+    """
 }

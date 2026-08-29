@@ -18,9 +18,13 @@ workflow PIPELINE_INITIALISATION {
     log.info(paramsSummaryAll())
     validateReferenceInputs()
 
+    // file(), not the raw string: downstream processes declare `path(bed)`, and a bare
+    // string only resolves if it happens to be absolute - a relative path in the CSV
+    // fails with "Not a valid path value" once a task is submitted. checkIfExists also
+    // turns a wrong BED path into a startup error instead of a mid-run one.
     ch_capture_kits = Channel.fromPath(capture_kits, checkIfExists: true)
         .splitCsv(header: true)
-        .map { row -> tuple(row.kit, row.bed) }
+        .map { row -> tuple(row.kit, file(row.bed, checkIfExists: true)) }
 
     ch_samplesheet = Channel.fromPath(samplesheet, checkIfExists: true)
         .splitCsv(header: true)

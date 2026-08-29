@@ -35,4 +35,13 @@ process DEEPVARIANT {
         --regions $bed \
         $args
     """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.sample_name}"
+    """
+    touch ${prefix}_deepvariant.vcf.gz
+    touch ${prefix}_deepvariant.vcf.gz.tbi
+    touch ${prefix}_deepvariant.gvcf.gz
+    touch ${prefix}_deepvariant.gvcf.gz.tbi
+    """
 }

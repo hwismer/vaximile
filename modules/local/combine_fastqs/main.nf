@@ -20,6 +20,13 @@ process COMBINE_FASTQS {
     """
 
 
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.somatic_name}"
+    """
+    touch ${prefix}_R1.merged.fastq.gz
+    touch ${prefix}_R2.merged.fastq.gz
+    """
+
 }
 
 //***************************************************************************************************************************

@@ -33,4 +33,11 @@ process STRELKA_GERMLINE {
     ./strelka/runWorkflow.py -m local -j $task.cpus
     """
 
+    stub:
+    """
+    mkdir -p ./strelka/results/variants
+    touch ./strelka/results/variants/variants.vcf.gz
+    touch ./strelka/results/variants/variants.vcf.gz.tbi
+    """
+
 }

@@ -52,4 +52,11 @@ process PVACSEQ {
             --peptide-fasta $human_ref_peptides \
             -t $task.cpus
         """
+
+    stub:
+        def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
+        """
+        mkdir -p ${prefix}_pvacseq/MHC_Class_I
+        touch ${prefix}_pvacseq/MHC_Class_I/${prefix}_MHC_I.all_epitopes.aggregated.tsv
+        """
 }

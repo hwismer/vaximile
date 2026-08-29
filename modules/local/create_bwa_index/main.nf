@@ -24,4 +24,14 @@ process CREATE_BWA_INDEX {
         """
         bwa-mem2 index $reference_fa
         """
+
+    stub:
+        """
+        touch ${reference_fa}.bwt.2bit.64
+        touch ${reference_fa}.sa
+        touch ${reference_fa}.pac
+        touch ${reference_fa}.amb
+        touch ${reference_fa}.ann
+        touch ${reference_fa}.0123
+        """
 }

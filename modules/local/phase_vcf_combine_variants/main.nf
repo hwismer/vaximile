@@ -38,4 +38,10 @@ process PHASE_VCF_COMBINE_VARIANTS {
                 --assumeIdenticalSamples
         """
 
+    stub:
+        def prefix = task.ext.prefix ?: "${somatic_meta.tumor_meta.sample_name}"
+        """
+        touch ${prefix}_combined_somatic_plus_germline.vcf
+        """
+
 }

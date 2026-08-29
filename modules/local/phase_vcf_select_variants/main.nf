@@ -33,4 +33,11 @@ process PHASE_VCF_SELECT_VARIANTS {
             -O ${prefix}_tumor_only.vcf.gz
         """
 
+    stub:
+        def prefix = task.ext.prefix ?: "${tumor_sample_name}"
+        """
+        touch ${prefix}_tumor_only.vcf.gz
+        touch ${prefix}_tumor_only.vcf.gz.tbi
+        """
+
 }

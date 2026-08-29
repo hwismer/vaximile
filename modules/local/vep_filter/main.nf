@@ -32,4 +32,9 @@ process VEP_FILTER {
             $args
 
         """
+
+    stub:
+        """
+        touch "${somatic_name}_vep.vcf"
+        """
 }

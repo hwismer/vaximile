@@ -21,6 +21,12 @@ process MAKE_FASTA_DICT {
         R=${fasta} \
         O=${prefix}.dict
     """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${fasta.baseName}"
+    """
+    touch ${prefix}.dict
+    """
 }
 
 //*******************************************************************************************************************

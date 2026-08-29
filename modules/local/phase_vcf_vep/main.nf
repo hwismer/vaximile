@@ -36,4 +36,9 @@ process PHASE_VCF_VEP {
 
         """
 
+    stub:
+        """
+        touch phased_vcf_vep.vcf
+        """
+
 }

@@ -88,6 +88,38 @@ nextflow run . -profile conda -params-file assets/params_example.json -resume
 resource files and the MHC region coordinates used for HLA typing. Setting it wrongly
 produces empty extractions rather than an error.
 
+## Fast checks before a real run
+
+```bash
+nextflow run . -profile test -stub-run
+```
+
+Every module has a `stub:` block, so this executes the **entire DAG** - all 132 tasks -
+in about 10 seconds, offline, with no containers, no conda and no data. Stubs only create
+the files each process declares as output, so what it verifies is the wiring, not the
+science:
+
+- every output declaration actually resolves (a glob that matches nothing fails here)
+- tuple arities line up between each process and its call sites
+- **how many times each process runs**
+
+That last one matters. A reference channel built as a queue instead of a value channel is
+consumed by the first task, so an aligner silently processes one sample and skips the
+rest - which no amount of linting, `nextflow inspect` or `-preview` will reveal, because
+none of them execute tasks. Check counts against your samplesheet:
+
+```bash
+grep -oE 'Submitted process > [A-Za-z0-9_:]+' .nextflow.log | sed 's/.*://' | sort | uniq -c | sort -rn
+```
+
+The `test` profile points every reference at an empty placeholder under
+`assets/test/refs/`, purely so the stub run stays offline - Nextflow stages inputs even
+under `-stub-run`, and the real defaults are remote `https://` and `gs://` URIs.
+
+ASCAT is skipped via `ext.when = false` in `conf/test.config`: it is the one vendored
+nf-core module, and its stub still runs `Rscript -e "library(ASCAT)"` to capture a
+version, which needs its container.
+
 ## Profiles
 
 Use `-profile` to select a software provisioning method. Multiple profiles are

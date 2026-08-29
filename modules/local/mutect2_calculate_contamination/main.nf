@@ -22,4 +22,11 @@ process MUTECT2_CALCULATE_CONTAMINATION {
         -O "${prefix}_contamination.table"
     """
 
+    stub:
+    def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
+
+    """
+    touch "${prefix}_contamination.table"
+    """
+
 }

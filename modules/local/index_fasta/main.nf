@@ -18,4 +18,9 @@ process INDEX_FASTA {
         set -euo pipefail
     	samtools faidx $fasta
         """
+
+    stub:
+        """
+        touch ${fasta}.fai
+        """
 }

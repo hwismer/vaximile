@@ -20,4 +20,10 @@ process HAPLOTYPE_CALLER_GATHER_SELECT_VARIANTS {
         -L $interval_shard \
         -O "${sample_name}_${interval_shard}.vcf.gz"
     """
+    stub:
+
+    """
+    touch "${sample_meta.sample_name}_${interval_shard}.vcf.gz"
+    """
+
 }

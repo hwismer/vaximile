@@ -33,6 +33,13 @@ process SPLIT_INTERVALS {
         -O .
 
     """
+
+    stub:
+    """
+    for i in \$(seq 1 ${scatter_count}); do
+        touch "\$(printf '%04d' \$((i - 1)))-scattered.interval_list"
+    done
+    """
 }
 
 //***************************************************************************************************************************
