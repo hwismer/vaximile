@@ -129,8 +129,15 @@ time; the rest report the version pinned in their own `conda`/`container` direct
 
 Two things that file will show you, both worth acting on:
 
-- `optitype: latest` - `fred2/optitype:latest` is an unpinned container tag, so this
-  module is not reproducible across time. It should be pinned to a digest or release.
+- `optitype: 1.3.1` - pinned to `fred2/optitype:release-v1.3.1`, that repo's newest tag.
+  It was previously `:latest`, a floating tag last pushed in 2018.
+
+  Upgrading to the current OptiType (1.5.0, on bioconda) is a **migration, not a repin**:
+  1.5.0 is a CLI rewrite. The entry point became a click group (`optitype run` rather than
+  `OptiTypePipeline.py`), and the `OptiType.ini` config this module writes is replaced by
+  `--solver` / `--mapper` / `--razers3` / `--threads` flags. Output file naming has not been
+  verified against the module's `optitype_out/*_result.tsv` glob either. Worth doing, but it
+  needs a real HLA-typing run to validate.
 - `unknown: unknown` - the four modules that declare neither `conda` nor `container`
   (plus two whose tool could not be identified) rely on whatever is on the host `PATH`.
 

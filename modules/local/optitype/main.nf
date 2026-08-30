@@ -7,12 +7,12 @@ process OPTITYPE {
 
     */
     
-    // Pinned to OptiType 1.5.0. The previous image, fred2/optitype:latest, was a floating
-    // tag last pushed in 2018 (that repo's newest tag is release-v1.3.1), so runs were
-    // neither reproducible nor current. The biocontainer puts OptiTypePipeline.py and
-    // razers3 on PATH rather than under /usr/local/bin/OptiType, hence the script change.
-    conda "bioconda::optitype=1.5.0"
-    container "quay.io/biocontainers/optitype:1.5.0--pyhdfd78af_1"
+    // Pinned to the image's newest published tag rather than the floating `latest`,
+    // which that repo last pushed in 2018. Deliberately NOT bumped to OptiType 1.5.0:
+    // 1.5.0 is a CLI rewrite - a click group (`optitype run`) whose flags replace the
+    // OptiType.ini config this script writes - so moving to it is a migration that needs
+    // validating against real data, not a version pin. See docs/usage.md.
+    container "fred2/optitype:release-v1.3.1"
     label 'process_high'
 
     tag "Optitype calls for ${meta.sample_name}"
@@ -31,7 +31,7 @@ process OPTITYPE {
         """
         cat << EOF > OptiType.ini
         [mapping]
-        razers3=\$(which razers3)
+        razers3=/usr/local/bin/razers3
         threads=${task.cpus}
         [ilp]
         solver=cbc
@@ -42,7 +42,10 @@ process OPTITYPE {
         use_discordant=false
         EOF
 
-        OptiTypePipeline.py \
+        # No `which` probes here: the script runs under `set -e`, and
+        # `which OptiTypePipeline.py` exits non-zero in this image (the tool lives at an
+        # absolute path, not on PATH), which would abort the task before OptiType ran.
+        python /usr/local/bin/OptiType/OptiTypePipeline.py \
             -i $fastq1 $fastq2 \
             --$molecule_flag \
             -c OptiType.ini \
@@ -50,7 +53,7 @@ process OPTITYPE {
             --outdir optitype_out
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            optitype: 1.5.0
+            optitype: 1.3.1
         END_VERSIONS
         """
 
@@ -63,7 +66,7 @@ process OPTITYPE {
         touch optitype_out/${prefix}_coverage_plot.pdf
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            optitype: 1.5.0
+            optitype: 1.3.1
         END_VERSIONS
         """
 }

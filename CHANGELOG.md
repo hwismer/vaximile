@@ -63,10 +63,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   still shows the name. The module now copies, and validation reports broken symlinks
   separately from absent files with the actual remedy. The other three index builders
   already used `mode: "copy"`.
-- Pinned OptiType to 1.5.0 (`quay.io/biocontainers/optitype:1.5.0--pyhdfd78af_1`, plus a
-  matching conda spec). The previous image, `fred2/optitype:latest`, is a floating tag last
-  pushed in 2018 and that repo's newest tag is `release-v1.3.1`, so runs were neither
-  reproducible nor current. HLA calls may change: this is a real version jump, not a repin.
+- Pinned OptiType to `fred2/optitype:release-v1.3.1`, that repo's newest tag, replacing the
+  floating `:latest` (last pushed 2018). An attempt to move to OptiType 1.5.0 via
+  biocontainers was reverted: 1.5.0 is a CLI rewrite - the entry point is now a click group
+  (`optitype run`, not `OptiTypePipeline.py`) and `OptiType.ini` is replaced by flags - so
+  it needs validating against real data rather than being swapped in blind. Also removed
+  `which`/`pwd`/`ls` debug probes from the script; under `set -e`,
+  `which OptiTypePipeline.py` exits non-zero in this image and would abort the task.
 - Fixed a bash `versions.yml` heredoc being appended to five modules whose script runs
   under `python3`/`Rscript` (`get_rna_strandedness`, `hla_calls_pvac`, `hlahd_to_tsv`,
   `combine_pvacseq_aggregated_report`, `kallisto_tximport`). They now write the file from
