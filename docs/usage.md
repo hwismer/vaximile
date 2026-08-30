@@ -129,15 +129,12 @@ time; the rest report the version pinned in their own `conda`/`container` direct
 
 Two things that file will show you, both worth acting on:
 
-- `optitype: 1.3.1` - pinned to `fred2/optitype:release-v1.3.1`, that repo's newest tag.
-  It was previously `:latest`, a floating tag last pushed in 2018.
-
-  Upgrading to the current OptiType (1.5.0, on bioconda) is a **migration, not a repin**:
-  1.5.0 is a CLI rewrite. The entry point became a click group (`optitype run` rather than
-  `OptiTypePipeline.py`), and the `OptiType.ini` config this module writes is replaced by
-  `--solver` / `--mapper` / `--razers3` / `--threads` flags. Output file naming has not been
-  verified against the module's `optitype_out/*_result.tsv` glob either. Worth doing, but it
-  needs a real HLA-typing run to validate.
+- `optitype: 1.5.0` - migrated from the floating `fred2/optitype:latest` (last pushed
+  2018) to pinned conda + biocontainer. This was a CLI rewrite, not a repin: the entry
+  point is now `optitype run` rather than `OptiTypePipeline.py`, `-i` must be repeated per
+  read file, and the `OptiType.ini` config the module used to write is replaced by
+  `--solver`/`--threads`/`--ilp-threads` flags. Output naming is unchanged, so the
+  `optitype_out/*_result.tsv` globs still hold. HLA calls may differ from the 2018 build.
 - `unknown: unknown` - the four modules that declare neither `conda` nor `container`
   (plus two whose tool could not be identified) rely on whatever is on the host `PATH`.
 
@@ -151,12 +148,12 @@ Of the 94 local modules:
 
 | Provisioning declared     | Modules |
 | ------------------------- | ------- |
-| Both `conda` and `container` | 39   |
+| Both `conda` and `container` | 40   |
 | `conda` only              | 31      |
-| `container` only          | 20      |
+| `container` only          | 19      |
 | Neither                   | 4       |
 
-`-profile conda` now resolves software for 70 of 94 modules. The 20 container-only ones
+`-profile conda` now resolves software for 71 of 94 modules. The 19 container-only ones
 still need a container engine, so a run today wants **both** conda and a container engine
 enabled, which is what `conf/ucsf_krummellab.config` does.
 

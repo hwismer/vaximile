@@ -63,13 +63,18 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   still shows the name. The module now copies, and validation reports broken symlinks
   separately from absent files with the actual remedy. The other three index builders
   already used `mode: "copy"`.
-- Pinned OptiType to `fred2/optitype:release-v1.3.1`, that repo's newest tag, replacing the
-  floating `:latest` (last pushed 2018). An attempt to move to OptiType 1.5.0 via
-  biocontainers was reverted: 1.5.0 is a CLI rewrite - the entry point is now a click group
-  (`optitype run`, not `OptiTypePipeline.py`) and `OptiType.ini` is replaced by flags - so
-  it needs validating against real data rather than being swapped in blind. Also removed
-  `which`/`pwd`/`ls` debug probes from the script; under `set -e`,
-  `which OptiTypePipeline.py` exits non-zero in this image and would abort the task.
+- Migrated OptiType to a pinned 1.5.0, with both a conda spec and the matching
+  biocontainer, replacing the floating `fred2/optitype:latest` (last pushed 2018). This
+  required rewriting the invocation: 1.5.0's entry point is the click group `optitype run`
+  rather than `OptiTypePipeline.py`, `-i` is `multiple=True` so each read file needs its
+  own flag, and the `OptiType.ini` file the module wrote is replaced by
+  `--solver`/`--threads`/`--ilp-threads`. Output naming is unchanged, so the module's
+  `optitype_out/*_result.tsv` globs still match. Also removed `which`/`pwd`/`ls` debug
+  probes: under `set -e`, `which OptiTypePipeline.py` exits non-zero and aborted the task.
+- Fixed the `ensembl-vep` version command in five modules. It ended `grep -Eo '[0-9.]+$'`,
+  and Groovy consumed the unescaped `$'` during interpolation, so bash received an
+  unterminated quote and the task died with "unexpected EOF while looking for matching `''".
+  The `$` anchor is gone. Every other version command was audited for the same hazard.
 - Fixed a bash `versions.yml` heredoc being appended to five modules whose script runs
   under `python3`/`Rscript` (`get_rna_strandedness`, `hla_calls_pvac`, `hlahd_to_tsv`,
   `combine_pvacseq_aggregated_report`, `kallisto_tximport`). They now write the file from

@@ -40,7 +40,7 @@ process VEP_ANNOTATE {
             --dir_cache $vep_cache
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            ensembl-vep: \$(vep --help 2>&1 | grep -Eo 'ensembl-vep +: *[0-9.]+' | grep -Eo '[0-9.]+$')
+            ensembl-vep: \$(vep --help 2>&1 | grep -Eo 'ensembl-vep +: *[0-9.]+' | tr -d ' ' | cut -d: -f2)
         END_VERSIONS
         """
 
