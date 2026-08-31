@@ -7,7 +7,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Bumped `nf-schema` from 2.1.1 to 2.8.0, fixing `--help`. Every run printed
+- Bumped `nf-schema` from 2.1.1 to 2.8.0 in **both** places that pin it. Every run printed
 
   ```
   WARN: Unrecognized config option 'validation.help.enabled'
@@ -20,10 +20,23 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   recognise the way that version registers it. Under 2.8.0 the warnings are gone and the
   help message renders, including the custom `validation.help.command`.
 
-  Verified: `--help` prints the parameter listing, the stub run is 134 tasks with a DAG
-  identical to the previous commit and no warnings of any kind, and parameter validation
-  still rejects an unknown `--notaparam`, so samplesheet and schema handling survived the
-  jump across seven minor versions.
+  `conf/ucsf_krummellab.config` carries its own `plugins` block, because a merged one
+  replaces rather than extends the block in `nextflow.config`. It was still pinned to 2.1.1,
+  and being the more specific config it won - so anyone running with it kept both warnings
+  and the broken help even on a checkout whose `nextflow.config` said 2.8.0. The two pins
+  have to move together.
+
+  Verified: with `-c conf/ucsf_krummellab.config` the warnings are gone and the help message
+  renders, where before the fix that exact command reproduced both warnings and the
+  `Specified param 'true'` error. The stub run is 134 tasks with a DAG identical to the
+  previous commit, and parameter validation still rejects an unknown `--notaparam`.
+
+  Not fixed here: `--help` prints the help and then **carries on**, either failing parameter
+  validation or, if the required parameters are supplied, launching the pipeline. The plugin
+  is emitting the help text but not halting the run, and `PIPELINE_INITIALISATION` calls
+  `validateParameters()` unconditionally. Removing the pipeline's own redundant `params.help`
+  makes no difference. This predates the bump - before it, `--help` failed outright - so the
+  bump improved the situation without completing it.
 
 - Cleaned out dead and redundant work found by auditing the DAG.
 
