@@ -24,8 +24,8 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
         deepsomatic_vcf
         preproc_bams
         star_bam
-        kallisto_tx_abundance
-        kallisto_gene_abundance
+        salmon_tx_abundance
+        salmon_gene_abundance
         reference_genome
         reference_dict
         vep_cache
@@ -115,8 +115,8 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
 
 
     somatic_name_vcf_coverage = tumor_rna_ndna_tdna.map{meta, vcf -> tuple(meta.somatic_name, meta, vcf) }
-    // kallisto output is RNA sample-level, so fan out to key it by pair.
-    somatic_name_tx = fan_out_pairs(kallisto_tx_abundance)
+    // salmon output is RNA sample-level, so fan out to key it by pair.
+    somatic_name_tx = fan_out_pairs(salmon_tx_abundance)
     annotate_vcf_transcript_expression_input = somatic_name_vcf_coverage.join(somatic_name_tx)
         .map { somatic_name, somatic_meta, vcf, sample_meta, tx ->
             tuple(somatic_name, somatic_meta, sample_meta.sample_name, vcf, sample_meta, tx)
@@ -125,7 +125,7 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
     tx_vcf = ANNOTATE_VCF_TRANSCRIPT_EXPRESSION(annotate_vcf_transcript_expression_input).vcf
 
     tx_vcf_somatic_name = tx_vcf.map{ meta, vcf -> tuple(meta.somatic_name, meta, vcf) }
-    somatic_name_gene = fan_out_pairs(kallisto_gene_abundance)
+    somatic_name_gene = fan_out_pairs(salmon_gene_abundance)
     annotate_vcf_gene_expression_input = tx_vcf_somatic_name.join(somatic_name_gene)
         .map { somatic_name, somatic_meta, vcf, sample_meta, gene ->
             tuple(somatic_name, somatic_meta, sample_meta.sample_name, vcf, sample_meta, gene)

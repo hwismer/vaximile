@@ -2,7 +2,10 @@ process ANNOTATE_VCF_GENE_EXPRESSION {
 
     /*
 
-    Use the abundance estimates from kallist to annotate gene expression in a vcf file.
+    Annotate gene expression in a VCF from salmon's quant.genes.sf.
+
+    The ID column is Name, holding gene IDs: salmon's --geneMap aggregation reuses the
+    quant.sf column names. The previous tximport table called that column ENSEMBLID.
 
     */
     label 'process_low'
@@ -25,7 +28,7 @@ process ANNOTATE_VCF_GENE_EXPRESSION {
             $vcf \
             $gene_abundance \
             custom gene \
-            -i ENSEMBLID \
+            -i Name \
             -e TPM \
             -s ${sample_name} \
             --ignore-ensembl-id-version \

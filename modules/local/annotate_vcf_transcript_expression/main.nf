@@ -2,7 +2,12 @@ process ANNOTATE_VCF_TRANSCRIPT_EXPRESSION {
 
     /*
 
-    Use the abundance estimates from kallist to annotate transcript expression in a vcf file.
+    Annotate transcript expression in a VCF from salmon's quant.sf.
+
+    salmon has no native parser in vcf-expression-annotator, so this goes through `custom`:
+    quant.sf is Name/Length/EffectiveLength/TPM/NumReads where the kallisto parser expects
+    target_id/.../tpm. --ignore-ensembl-id-version is needed because the Ensembl cDNA FASTA
+    salmon was run against carries versioned transcript IDs (ENST...\.N).
 
     */
     label 'process_low'
@@ -23,7 +28,10 @@ process ANNOTATE_VCF_TRANSCRIPT_EXPRESSION {
             $vcf \
             -s ${sample_name} \
             $tx_abundance \
-            kallisto transcript \
+            custom transcript \
+            -i Name \
+            -e TPM \
+            --ignore-ensembl-id-version \
             -o ${prefix}_tx_expression.vcf
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

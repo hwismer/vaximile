@@ -212,16 +212,15 @@ workflow VAXIMILE {
         reference_genome,
         gtf,
         params.star_index,
-        params.kallisto_index,
         params.salmon_index,
         transcriptome_reference
     )
 
     star_bam = rna.star_bam // RNAseq BAM from STAR (meta, bam, bai)
     star_chimeric_out = rna.star_chimeric_out // (meta, chimeric out)
-    kallisto_tx = rna.kallisto_tx // (meta, kallisto abundance)
-    kallisto_gene = rna.kallisto_gene // (meta, kallisto gene abundance)
-    salmon_tx = rna.salmon_tx // (meta, salmon quant abundance)
+    salmon_tx = rna.salmon_tx // (meta, salmon quant.sf - transcript TPM)
+    salmon_gene = rna.salmon_gene // (meta, salmon quant.genes.sf - gene TPM)
+    salmon_dir = rna.salmon_dir // (meta, salmon run directory, for MultiQC)
     rna_strandedness = rna.rna_strand // (meta, rna strand prediction)
     
     //**************************************************************************************************************************************
@@ -398,8 +397,8 @@ workflow VAXIMILE {
         deepsomatic_vcf,
         markdup_bams,
         star_bam,
-        kallisto_tx,
-        kallisto_gene,
+        salmon_tx,
+        salmon_gene,
         reference_genome,
         reference_dict,
         vep_cache,
@@ -455,7 +454,7 @@ workflow VAXIMILE {
     mqc_rna_fastp_reports = rna_fastp.fastp_reports.map{ meta, json -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name + "_" + meta.molecule ,json) }.unique{meta, som,sample, x -> sample}
     mqc_base_recal = preproc_bam_workflow.base_recal.map{ meta, table -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name + "_" + meta.molecule ,table) } .unique{meta, som,sample, x -> sample} 
     mqc_optitype = optitype.map{ meta, tsv_file, pdf -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name + "_" + meta.molecule, tsv_file) }.unique{meta, som,sample, x -> sample}
-    mqc_salmon_tx = salmon_tx.map{ meta, quant -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name+ "_" + meta.molecule ,quant) }.unique{meta, som,sample, x -> sample}
+    mqc_salmon_tx = salmon_dir.map{ meta, quant -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name+ "_" + meta.molecule ,quant) }.unique{meta, som,sample, x -> sample}
     mqc_star_log = rna.star_final_log.map{ meta, log -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name+ "_" + meta.molecule, log) }.unique{meta, som,sample, x -> sample}
     mqc_vep_report = vep_report.map{meta, html -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.tumor_meta.sample_name+ "_" + meta.molecule, html) }.unique{meta, som,sample, x -> sample}
     mqc_flagstats = flagstats.map{meta, tsv -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name+ "_" + meta.molecule, tsv) }.unique{meta, som,sample, x -> sample}
@@ -502,5 +501,5 @@ workflow VAXIMILE {
     pvacseq = pvacseq
     pvacseq_mhc_i_combined = pvacseq_mhc_i_combined
     pvacfuse = pvacfuse
-    kallisto_gene = kallisto_gene
+    salmon_gene = salmon_gene
 }

@@ -44,7 +44,6 @@
 ### RNA quantification and fusion calling
 
 - [STAR](https://pubmed.ncbi.nlm.nih.gov/23104886/) — Dobin A, Davis CA, Schlesinger F, et al. STAR: ultrafast universal RNA-seq aligner. Bioinformatics. 2013;29(1):15-21.
-- [kallisto](https://pubmed.ncbi.nlm.nih.gov/27043002/) — Bray NL, Pimentel H, Melsted P, Pachter L. Near-optimal probabilistic RNA-seq quantification. Nat Biotechnol. 2016;34(5):525-7.
 - [salmon](https://pubmed.ncbi.nlm.nih.gov/28263959/) — Patro R, Duggal G, Love MI, Irizarry RA, Kingsford C. Salmon provides fast and bias-aware quantification of transcript expression. Nat Methods. 2017;14(4):417-419.
 - [Arriba](https://pubmed.ncbi.nlm.nih.gov/33500328/) — Uhrig S, Ellermann J, Walther T, et al. Accurate and efficient detection of gene fusions from RNA sequencing data. Genome Res. 2021;31(3):448-460.
 - [STAR-Fusion](https://www.biorxiv.org/content/10.1101/120295v1) — Haas BJ, Dobin A, Stransky N, et al. STAR-Fusion: Fast and Accurate Fusion Transcript Detection from RNA-Seq. bioRxiv. 2017.

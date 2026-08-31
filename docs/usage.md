@@ -44,7 +44,6 @@ run, which adds substantial wall time to a first run.
 | ------------------ | --------------------- |
 | `--bwa_index`      | minibwa               |
 | `--star_index`     | STAR 2.7.10           |
-| `--kallisto_index` | kallisto              |
 | `--salmon_index`   | salmon                |
 
 ## Samplesheet input

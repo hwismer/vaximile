@@ -20,16 +20,23 @@ This document describes the output produced by the pipeline. Publishing is drive
     │   └── <patient>_report.html
     ├── pvactools_report/
     │   └── combined MHC class I aggregated report across the patient's pairs
-    └── <somatic_name>/
-        ├── variants/     somatic VCF (+ index) and its tabular form
-        ├── germline/     germline VCF (+ index) from the normal sample
+    ├── <somatic_name>/          per tumour/normal pair
+    │   ├── variants/     somatic VCF (+ index) and its tabular form
+    │   ├── hla/          pVACtools-formatted allele list for the merged pair BAM
+    │   └── pvactools/    pVACseq and pVACfuse prediction directories
+    └── <sample_name>/           per library
+        ├── germline/     germline VCF (+ index), normal samples only
         ├── hla/
         │   ├── optitype/ class I calls and coverage plot
         │   ├── hlahd/    class I and II calls
         │   └── pVACtools-formatted allele list
-        ├── pvactools/    pVACseq and pVACfuse prediction directories
-        └── kallisto/     gene-level abundance for the RNA sample
+        └── salmon/       gene-level abundance, RNA samples only
 ```
+
+Outputs split by whether they belong to a pair or to a single library. A library shared
+between pairs - a normal used as the control for several tumours - is processed once, so
+its germline calls and per-sample HLA typing sit under the sample rather than being
+duplicated under each pair.
 
 ## Results by stage
 
@@ -72,9 +79,10 @@ aggregated MHC class I report combined across the patient's tumour/normal pairs.
 
 ### Expression
 
-`kallisto/` publishes gene-level abundance. Transcript-level abundance and salmon
-quantification are produced but consumed internally for VCF expression annotation rather
-than published.
+`salmon/` publishes `quant.genes.sf`, the gene-level TPM table salmon aggregates from
+`--geneMap`. The transcript-level `quant.sf` and the rest of the salmon run directory are
+produced but consumed internally - for VCF expression annotation, strandedness prediction
+and MultiQC - rather than published.
 
 ## Not published by default
 

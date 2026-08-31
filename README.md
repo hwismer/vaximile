@@ -39,9 +39,9 @@ number, RNA expression, and RNA fusion calls.
    consensus** on the same 2-of-3 rule. The consensus germline callset is also what drives
    proximal variant phasing for pVACseq
 7. **Copy number** — [`ASCAT`](https://github.com/VanLoo-lab/ascat) (vendored nf-core module)
-8. **RNA processing** — [`STAR`](https://github.com/alexdobin/STAR),
-   [`kallisto`](https://pachterlab.github.io/kallisto/) and
-   [`salmon`](https://combine-lab.github.io/salmon/) quantification
+8. **RNA processing** — [`STAR`](https://github.com/alexdobin/STAR) and
+   [`salmon`](https://combine-lab.github.io/salmon/) quantification, transcript and gene
+   level
 9. **Fusion calling** — [`Arriba`](https://github.com/suhrig/arriba) and
    [`STAR-Fusion`](https://github.com/STAR-Fusion/STAR-Fusion)
 10. **Annotation** — [`Ensembl VEP`](https://www.ensembl.org/vep) plus DNA/RNA coverage and

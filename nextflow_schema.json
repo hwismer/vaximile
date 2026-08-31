@@ -81,7 +81,7 @@
                 "transcriptome_reference": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Transcriptome FASTA used to build the kallisto and salmon indices.",
+                    "description": "Transcriptome FASTA used to build the salmon index.",
                     "fa_icon": "fas fa-file",
                     "default": "https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz"
                 },
@@ -112,12 +112,6 @@
                     "format": "directory-path",
                     "description": "Directory containing a prebuilt STAR 2.7.10 index.",
                     "fa_icon": "fas fa-folder-open"
-                },
-                "kallisto_index": {
-                    "type": "string",
-                    "format": "file-path",
-                    "description": "Prebuilt kallisto index.",
-                    "fa_icon": "fas fa-file"
                 },
                 "salmon_index": {
                     "type": "string",

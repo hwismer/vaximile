@@ -63,7 +63,7 @@ workflow {
     pvacseq = VAXIMILE.out.pvacseq
     pvacseq_mhc_i_combined = VAXIMILE.out.pvacseq_mhc_i_combined
     pvacfuse = VAXIMILE.out.pvacfuse
-    kallisto_gene = VAXIMILE.out.kallisto_gene
+    salmon_gene = VAXIMILE.out.salmon_gene
 }
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -119,8 +119,8 @@ output {
     germline_vcf {
         path { meta, vcf, tbi -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/germline/" }
     }
-    kallisto_gene {
-        path { meta, gene_abundance -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/kallisto" }
+    salmon_gene {
+        path { meta, gene_abundance -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/salmon" }
     }
 
 }

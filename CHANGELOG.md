@@ -7,6 +7,36 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Dropped kallisto; salmon is now the only RNA quantifier. `CREATE_KALLISTO_INDEX`,
+  `KALLISTO_QUANT` and `KALLISTO_TXIMPORT` are removed, along with `--kallisto_index`. The
+  two ran side by side producing the same transcript and gene abundances.
+
+  Gene-level TPM comes from salmon's own `--geneMap`, which takes the GTF and writes
+  `quant.genes.sf` next to `quant.sf`, rather than from a separate tximport step. That
+  removes a whole process and its R dependency stack (tximport, rtracklayer, dplyr, readr)
+  from the conda environments. It is copied out as `<sample>_<molecule>.gene_tpm.tsv`,
+  since salmon names it identically for every sample, and published under `salmon/` where
+  `kallisto/` used to be.
+
+  The VCF expression annotators were adapted to salmon's column names. vcf-expression-annotator
+  has no salmon parser, so both now go through `custom`: transcript-level reads `quant.sf`
+  with `-i Name -e TPM` in place of the `kallisto` format, and gene-level reads
+  `quant.genes.sf` with `-i Name` where tximport's table had called that column `ENSEMBLID`.
+  Both keep `--ignore-ensembl-id-version`, since the Ensembl cDNA FASTA carries versioned IDs.
+
+  **The gene symbol column is gone.** tximport's table was ENSEMBLID/TPM/Gene; salmon's is
+  Name/Length/EffectiveLength/TPM/NumReads, with no symbol. Nothing consumed that column -
+  the annotator matches on Ensembl IDs - but it was useful in the published file. Recovering
+  it means a gene_id-to-gene_name map from the GTF, which is an awk step rather than a
+  reason to keep R.
+
+  Verified by stub run: 134 tasks, and a per-process diff against the previous commit shows
+  exactly the three kallisto processes gone and nothing else changed. `quant.sf` stages into
+  the transcript annotator and the gene TPM table into the gene annotator, and the table
+  publishes to `<patient>/<sample>/salmon/<sample>_<molecule>.gene_tpm.tsv`. The salmon run
+  itself has not been executed, so the `--geneMap` output and the annotators' parsing of it
+  are unverified against real data.
+
 - Fixed sample-level outputs publishing into a literal `null` directory. Deduplicating
   libraries replaced the scalar `somatic_name` on sample-level metas with a `somatic_names`
   list, but nine publish path closures in `main.nf` still read `meta.somatic_name`, so
