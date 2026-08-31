@@ -70,6 +70,21 @@ workflow {
     PUBLISH TARGETS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+/*
+    Where an output belongs in the published tree.
+
+    Pair-level outputs carry a somatic_meta with a scalar somatic_name and go under the
+    pair. Sample-level outputs - germline calls, per-sample HLA typing, RNA quantification -
+    carry a somatic_names list instead, because a library shared between pairs is processed
+    once and no longer belongs to exactly one of them. Those go under the sample.
+
+    Reading meta.somatic_name unconditionally is what published them to a literal "null"
+    directory once libraries began being deduplicated.
+*/
+def publish_scope(meta) {
+    return meta.somatic_name ?: meta.sample_name
+}
+
 output {
     software_versions {
         path { _v -> "${params.outdir}/pipeline_info/" }
@@ -78,34 +93,34 @@ output {
         path { patient, report -> "${params.outdir}/${patient}/multiqc/" }
     }
     somatic_vcf {
-        path { meta, vcf, vcf_index -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/variants" }
+        path { meta, vcf, vcf_index -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/variants" }
     }
     somatic_vcf_table {
-        path { meta, table -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/variants" }
+        path { meta, table -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/variants" }
     }
     optitype_calls {
-        path { meta, tsv, pdf -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/hla/optitype/" }
+        path { meta, tsv, pdf -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla/optitype/" }
     }
     hlahd_calls {
-        path { meta, calls -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/hla/hlahd/" }
+        path { meta, calls -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla/hlahd/" }
     }
     hla_pvac_input {
-        path { meta, calls -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/hla/" }
+        path { meta, calls -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla/" }
     }
     pvacseq {
-        path { meta, pvacseq_dir -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/pvactools/" }
+        path { meta, pvacseq_dir -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/pvactools/" }
     }
     pvacseq_mhc_i_combined {
         path { patient, report -> "${params.outdir}/${patient}/pvactools_report" }
     }
     pvacfuse {
-        path { meta, pvacfuse_dir -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/pvactools" }
+        path { meta, pvacfuse_dir -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/pvactools" }
     }
     germline_vcf {
-        path { meta, vcf, tbi -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/germline/" }
+        path { meta, vcf, tbi -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/germline/" }
     }
     kallisto_gene {
-        path { meta, gene_abundance -> "${params.outdir}/${meta.patient}/${meta.somatic_name}/kallisto" }
+        path { meta, gene_abundance -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/kallisto" }
     }
 
 }

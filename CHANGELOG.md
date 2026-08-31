@@ -7,6 +7,20 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Fixed sample-level outputs publishing into a literal `null` directory. Deduplicating
+  libraries replaced the scalar `somatic_name` on sample-level metas with a `somatic_names`
+  list, but nine publish path closures in `main.nf` still read `meta.somatic_name`, so
+  germline VCFs, per-sample HLA calls and the RNA gene abundance landed in
+  `<outdir>/<patient>/null/...`. Stub runs did not catch it: the paths resolve and the run
+  succeeds, it is only the directory name that is wrong.
+
+  `publish_scope()` now picks the pair for pair-level outputs and the sample for
+  sample-level ones. This changes where those files land - germline calls move from
+  `<patient>/<somatic_name>/germline/` to `<patient>/<sample_name>/germline/`, and per-sample
+  HLA likewise - which is the point: a library shared between pairs is processed once and no
+  longer belongs to exactly one of them. Pair-level outputs (somatic VCFs, pVACtools reports,
+  the merged-BAM HLA call) are unchanged.
+
 - `PULL_ASCAT_RESOURCES` now uses `storeDir`, so its four Zenodo downloads are fetched once
   and reused rather than re-downloaded on every run. It was the only `PULL_*` module without
   one; `PULL_VEP_CACHE`, `PULL_ARRIBA_RESOURCES`, `PULL_CTAT_RESOURCE_BUNDLE` and
