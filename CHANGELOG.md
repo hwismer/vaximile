@@ -7,6 +7,45 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Cleaned out dead and redundant work found by auditing the DAG.
+
+  Removed outright:
+
+  - `COMBINE_FASTQS` - imported in `workflows/vaximile/main.nf` but never invoked. The
+    module is gone with it.
+  - `--intervals_file` - declared in `nextflow.config`, the schema, `assets/params_example.json`
+    and `conf/test.config`, but never read. `SPLIT_INTERVALS` takes its intervals from
+    `--capture_kits`. Leaving it in `params_example.json` would have failed schema validation
+    for anyone copying that file once the parameter was dropped.
+  - STAR's `--quantMode GeneCounts` and the `star_gene_quant` emit - the `ReadsPerGene.out.tab`
+    it produced was consumed by nothing, and salmon now covers gene-level counts.
+  - `PULL_ASCAT_RESOURCES`'s conda spec, which declared samtools only to feed the versions.yml
+    that had to be dropped for `storeDir`.
+  - The 13 `.unique{...}` calls in the MultiQC channel mappings. They existed to absorb the
+    duplicate sample rows that library deduplication now prevents, so they had become a way
+    of hiding duplication rather than avoiding it.
+
+  `SORT_BAM` is replaced by `INDEX_BAM`. It ran a full `samtools sort` over every BQSR'd BAM,
+  but `APPLY_BQSR_GATHER` already sorts its shards by filename so `GatherBamFiles`
+  concatenates in coordinate order, and `APPLY_BQSR_SCATTER` uses `-L` with no padding
+  (`SPLIT_INTERVALS` is called with 0). The gathered BAM is therefore already sorted and only
+  needed an index. `samtools index` refuses an unsorted BAM, so if that reasoning is ever
+  wrong this fails loudly instead of writing a bad index.
+
+  The tumour/normal pairing that was hand-rolled three times - branch, join, rebuild the same
+  five-field somatic_meta - is now `pair_tumor_normal()`. It is arity-agnostic, so the BAM
+  sites (meta, bam, bai) and the pileup site (meta, pileup) share it, and about 45 lines
+  collapse to three calls.
+
+  `STAR_ALIGN` moves from `process_very_high` to `process_max`, 16 to 32 threads;
+  `--runThreadN` already took `task.cpus`. STAR scales sub-linearly past ~16 threads, so
+  expect well under 2x, and on a busy cluster the wider reservation may cost more in queue
+  time than it saves.
+
+  Verified by stub run: 134 tasks, and a per-process diff against the previous commit shows
+  exactly `SORT_BAM` replaced by `INDEX_BQSR_BAM` and nothing else moved - the somatic callers
+  still receive the same number of pairs through the new helper.
+
 - Dropped kallisto; salmon is now the only RNA quantifier. `CREATE_KALLISTO_INDEX`,
   `KALLISTO_QUANT` and `KALLISTO_TXIMPORT` are removed, along with `--kallisto_index`. The
   two ran side by side producing the same transcript and gene abundances.

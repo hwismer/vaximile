@@ -243,3 +243,45 @@ def expand_pairs(ch) {
 def fan_out_pairs(ch) {
     return expand_pairs(ch).map { item -> [item[0].somatic_name] + item }
 }
+
+
+/*
+    Pair a sample-level channel into tumour/normal pairs.
+
+    Every somatic caller needs the same shape - one item per pair, tumour payload then
+    normal payload, behind a somatic_meta - and this was hand-rolled three times in
+    workflows/vaximile/main.nf with the same five-field somatic_meta copied verbatim. Three
+    copies is how they stop agreeing.
+
+    Arity-agnostic. `ch` is (meta, payload...) with any number of payload elements, and the
+    result is (somatic_meta, tumour payload..., normal payload...). With (meta, bam, bai) in
+    that gives (somatic_meta, tumour_bam, tumour_bai, normal_bam, normal_bai); with
+    (meta, pileup) it gives (somatic_meta, tumour_pileup, normal_pileup).
+*/
+def pair_tumor_normal(ch) {
+    def branched = fan_out_pairs(ch).branch { item ->
+        tumor:  item[1].sample_type == "TUMOR"
+        normal: item[1].sample_type == "NORMAL"
+    }
+
+    return branched.tumor.join(branched.normal).map { item ->
+        // join emits [somatic_name, tumour_meta, tumour payload..., normal_meta, normal
+        // payload...]; both payloads are the same length, so size = 3 + 2n.
+        def n = (item.size() - 3).intdiv(2)
+        def somatic_name = item[0]
+        def tumor_meta = item[1]
+        def tumor_payload = n > 0 ? item[2..(1 + n)] : []
+        def normal_meta = item[2 + n]
+        def normal_payload = n > 0 ? item[(3 + n)..-1] : []
+
+        def somatic_meta = [
+            somatic_name: somatic_name,
+            patient: tumor_meta.patient,
+            capture_kit: tumor_meta.capture_kit,
+            tumor_meta: tumor_meta,
+            normal_meta: normal_meta
+        ]
+
+        [somatic_meta] + tumor_payload + normal_payload
+    }
+}

@@ -15,7 +15,6 @@ process PULL_ASCAT_RESOURCES {
 
     tag "Pulling ASCAT resources"
 
-    conda "bioconda::samtools=1.23.1 bioconda::htslib=1.23.1"
 
     input:
         val(add_chr_prefix)

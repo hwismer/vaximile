@@ -7,7 +7,12 @@ process STAR_ALIGN {
 
     */
 
-    label 'process_very_high'
+    // process_max, not process_very_high: STAR is the slowest step in the RNA path and
+    // --runThreadN takes whatever the tier gives it. Scaling is sub-linear past ~16 threads,
+    // so 32 buys well under 2x, and on a busy cluster the wider reservation may cost more in
+    // queue time than it saves. Drop back to process_very_high if that trade goes the wrong
+    // way. Memory is 96 GB in both tiers, which is what GRCh38 plus two-pass needs.
+    label 'process_max'
 
     container "alexdobin/star:2.7.10a_alpha_220506"
 
@@ -20,7 +25,6 @@ process STAR_ALIGN {
 
     output:
         tuple val(meta), path("*_Aligned.out.bam"), emit: star_bam
-        tuple val(meta), path("*_ReadsPerGene.out.tab"), emit: gene_quant
         tuple val(meta), path("*_Log.final.out"), emit:final_log
         tuple val(meta), path("*_SJ.out.tab"), emit: sj_out
         tuple val(meta), path("*_Chimeric.out.junction"), path(fastq1), path(fastq2), emit: chimeric_out
@@ -67,7 +71,6 @@ process STAR_ALIGN {
             --alignSplicedMateMapLminOverLmate 0.5 \
             --alignSplicedMateMapLmin 30 \
             --outFileNamePrefix ./${prefix}_ \
-            --quantMode GeneCounts \
             --sjdbGTFfile gencode.gtf
 
         cat <<-END_VERSIONS > versions.yml
@@ -80,8 +83,7 @@ process STAR_ALIGN {
         def prefix = task.ext.prefix ?: "${sample_name}_${meta.molecule}"
         """
         touch ${prefix}_Aligned.out.bam
-        touch ${prefix}_ReadsPerGene.out.tab
-        touch ${prefix}_Log.final.out
+            touch ${prefix}_Log.final.out
         touch ${prefix}_SJ.out.tab
         touch ${prefix}_Chimeric.out.junction
         cat <<-END_VERSIONS > versions.yml

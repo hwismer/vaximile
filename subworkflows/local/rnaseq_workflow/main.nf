@@ -55,7 +55,6 @@ workflow RNASEQ_WORKFLOW {
     emit:
         star_bam = star_sorted.bam
         star_chimeric_out = star.chimeric_out
-        star_gene_quant = star.gene_quant
         star_final_log = star.final_log
         salmon_tx = salmon.tsv            // quant.sf, transcript-level
         salmon_gene = salmon.genes_tsv    // quant.genes.sf, gene-level

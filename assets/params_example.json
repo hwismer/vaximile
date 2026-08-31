@@ -1,14 +1,10 @@
 {
-    "samplesheet" : "./samplesheet.csv", 
-    "capture_kits" : "./aux_files/capture_kits.csv",
-    "vep_cache" : "./aux_files/vep/vep_data/",
-    "outdir" : "neoantigen_vax_out",
-
-    "reference_fa" : "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta",
-    "gtf" : "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.annotation.gtf.gz",
+    "samplesheet": "./samplesheet.csv",
+    "capture_kits": "./aux_files/capture_kits.csv",
+    "vep_cache": "./aux_files/vep/vep_data/",
+    "outdir": "neoantigen_vax_out",
+    "reference_fa": "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta",
+    "gtf": "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.annotation.gtf.gz",
     "transcriptome_reference": "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.pc_transcripts.fa.gz",
-
-    "scatter_count" : 30,
-    "intervals_file" : "gs://gcp-public-data--broad-references/hg38/v0/wgs_calling_regions.hg38.interval_list"
-
+    "scatter_count": 30
 }

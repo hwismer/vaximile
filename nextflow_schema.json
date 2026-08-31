@@ -127,13 +127,6 @@
             "fa_icon": "fas fa-cut",
             "description": "Interval scattering behaviour for the GATK-based callers.",
             "properties": {
-                "intervals_file": {
-                    "type": "string",
-                    "format": "file-path",
-                    "description": "Interval list restricting variant calling. Defaults to the GATK hg38 WGS calling regions.",
-                    "fa_icon": "fas fa-file",
-                    "default": "gs://gcp-public-data--broad-references/hg38/v0/wgs_calling_regions.hg38.interval_list"
-                },
                 "interval_padding": {
                     "type": "integer",
                     "default": 100,
