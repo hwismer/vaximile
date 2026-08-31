@@ -7,6 +7,24 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Bumped `nf-schema` from 2.1.1 to 2.8.0, fixing `--help`. Every run printed
+
+  ```
+  WARN: Unrecognized config option 'validation.help.enabled'
+  WARN: Unrecognized config option 'validation.help.command'
+  ```
+
+  and the warnings were not cosmetic - `nextflow run . --help` failed with
+  `Unable to create help message: Specified param 'true' does not exist in JSON schema`.
+  2.1.1 introduced the `validation.help` scope but predates Nextflow 26, which does not
+  recognise the way that version registers it. Under 2.8.0 the warnings are gone and the
+  help message renders, including the custom `validation.help.command`.
+
+  Verified: `--help` prints the parameter listing, the stub run is 134 tasks with a DAG
+  identical to the previous commit and no warnings of any kind, and parameter validation
+  still rejects an unknown `--notaparam`, so samplesheet and schema handling survived the
+  jump across seven minor versions.
+
 - Cleaned out dead and redundant work found by auditing the DAG.
 
   Removed outright:
