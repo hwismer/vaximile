@@ -11,6 +11,13 @@
                         "installed_by": [
                             "modules"
                         ]
+                    },
+                    "samtools/sormadup": {
+                        "branch": "master",
+                        "git_sha": "9339809fcb90af8a8b7051e6cd914894d5c52002",
+                        "installed_by": [
+                            "modules"
+                        ]
                     }
                 }
             }

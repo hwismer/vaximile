@@ -1,5 +1,5 @@
 include { BWA_MAP } from "../../../modules/local/bwa_map/main"
-include { MARK_DUPLICATES_SPARK } from "../../../modules/local/mark_duplicates_spark/main"
+include { BAM_MARKDUPLICATES } from "../bam_markduplicates/main"
 include { BASE_RECALIBRATOR_SCATTER } from "../../../modules/local/base_recalibrator_scatter/main"
 include { BASE_RECALIBRATOR_GATHER } from "../../../modules/local/base_recalibrator_gather/main"
 include { APPLY_BQSR_SCATTER } from "../../../modules/local/apply_bqsr_scatter/main"
@@ -27,7 +27,7 @@ workflow DNA_ALIGN_AND_PREPROC {
         
     main:
         
-        // Map with BWA-mem2
+        // Map with minibwa
         bwa_map_input = fastqs
             .map { meta, fastq1, fastq2 ->
                 tuple(meta, meta.sample_name, meta.molecule, meta.sequencing_type, fastq1, fastq2)
@@ -38,8 +38,11 @@ workflow DNA_ALIGN_AND_PREPROC {
         // **********************************************************
         // GATK PRE-PROCESSING BEST PRACTICES
 
-        // MarkDuplicatesSpark
-        mark_dup = MARK_DUPLICATES_SPARK(bwa_sam).bam
+        // Coordinate-sort and mark duplicates (samtools collate/fixmate/sort/markdup,
+        // via the nf-core SAMTOOLS_SORMADUP module) in place of MarkDuplicatesSpark.
+        markduplicates = BAM_MARKDUPLICATES(bwa_sam, reference_genome)
+        mark_dup = markduplicates.bam
+        markdup_metrics = markduplicates.metrics
 
         // BASE RECALIBRATION
         // Call BaseRecalibrator on each interval
@@ -98,6 +101,7 @@ workflow DNA_ALIGN_AND_PREPROC {
         preproc_bams = bqsr_sort // For somatic calling
         markdup_bams = mark_dup // Non-recalibrated BAMS for callers like Strelka that don't expect recalibrated scores
         base_recal = base_recal_gathered // Recalibration metrics for MultiQC report
+        markdup_metrics = markdup_metrics // Duplicate stats from samtools markdup for MultiQC
         pileup_summaries = pileup_summaries
         flagstat = flagstat
         coverage = coverage

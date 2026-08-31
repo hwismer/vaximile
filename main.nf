@@ -29,11 +29,26 @@ workflow {
         VAXIMILE.out.multiqc_reports
     )
 
-    // Every module writes a versions.yml to the `versions` topic. A topic channel
-    // collects them with no per-process wiring, which is why versions are declared with
-    // `topic:` rather than `emit:` - 94 modules would otherwise each need threading
-    // through their subworkflow.
-    software_versions = channel.topic('versions')
+    // Every module reports to the `versions` topic. A topic channel collects them with no
+    // per-process wiring, which is why versions are declared with `topic:` rather than
+    // `emit:` - 94 modules would otherwise each need threading through their subworkflow.
+    //
+    // Two shapes arrive here. Local modules emit a versions.yml path. Unmodified nf-core
+    // modules (SAMTOOLS_SORMADUP, ASCAT) instead emit a tuple of
+    // (process, tool, version) built with eval(). Handing those tuples straight to
+    // collectFile made it read the process name as a *filename*: the version was dropped
+    // from the report and an empty file with a process-shaped name appeared in
+    // pipeline_info/. So the tuples are rendered to YAML text, and the versions.yml files
+    // are read to text alongside them: `sort: true` compares the collected items against
+    // each other, and it cannot compare a String to a Path, so both must be the same type.
+    versions = channel.topic('versions').branch { item ->
+        nf_core: item instanceof Collection
+        versions_yml: true
+    }
+
+    software_versions = versions.versions_yml
+        .map { yml -> yml.text }
+        .mix( versions.nf_core.map { process, tool, version -> "\"${process}\":\n    ${tool}: ${version}\n" } )
         .collectFile(name: 'software_versions.yml', sort: true, newLine: false)
 
     publish:

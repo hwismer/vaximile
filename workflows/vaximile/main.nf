@@ -147,6 +147,7 @@ workflow VAXIMILE {
     preproc_bams = preproc_bam_workflow.preproc_bams // GATK best practices pre-processing (meta, bam, bai)
     markdup_bams = preproc_bam_workflow.markdup_bams // Duplicates marked but no further pre-processing (meta, bam, bai)
     base_recal = preproc_bam_workflow.base_recal // Base recalibration tables from GATK (meta, recal_table)
+    markdup_metrics = preproc_bam_workflow.markdup_metrics // samtools markdup duplicate stats (meta, metrics)
     pileup_summaries = preproc_bam_workflow.pileup_summaries // Pileup summaries from GATK (meta, pileup summary)
     flagstats = preproc_bam_workflow.flagstat // samtools flagstat output (meta, flagstat)
     coverage = preproc_bam_workflow.coverage // samtools coverage output (meta, coverage tsv)
@@ -452,6 +453,10 @@ workflow VAXIMILE {
     mqc_somalier_pairs = somalier_pairs.map{patient, pairs -> tuple(patient, null, null,pairs) }
     mqc_somalier_samples = somalier_samples.map{patient, samples -> tuple(patient, null, null,samples) }
     mqc_hlahd_tsv = hlahd_tsv.map{meta, tsv -> tuple(meta.patient, meta.somatic_name, meta.sample_name + "_" + meta.molecule, tsv)}.unique{meta, som,sample, x -> sample}
+    // New with SAMTOOLS_SORMADUP: MarkDuplicatesSpark was not run with --metrics-file, so
+    // the report had no duplicate rate at all. MultiQC's samtools module parses markdup
+    // text output.
+    mqc_markdup = markdup_metrics.map{meta, metrics -> tuple(meta.patient, meta.somatic_name, meta.sample_name + "_" + meta.molecule, metrics)}.unique{meta, som,sample, x -> sample}
 
 
     mqc_reports = mqc_dna_fastp_reports
@@ -468,6 +473,7 @@ workflow VAXIMILE {
         .mix(mqc_somalier_pairs)
         .mix(mqc_somalier_samples)
         .mix(mqc_hlahd_tsv)
+        .mix(mqc_markdup)
         .groupTuple()
     multiqc = MULTIQC(mqc_reports).html
     

@@ -18,7 +18,8 @@ number, RNA expression, and RNA fusion calls.
 
 1. **Read QC** — [`fastp`](https://github.com/OpenGene/fastp) on all DNA and RNA libraries
 2. **DNA alignment and pre-processing** — [`minibwa`](https://github.com/lh3/minibwa),
-   then GATK best-practices duplicate marking and base recalibration
+   then `samtools markdup` duplicate marking (nf-core `SAMTOOLS_SORMADUP`) and GATK
+   best-practices base recalibration
 3. **Alignment QC** — `samtools flagstat`/`coverage`/`idxstats`, and
    [`somalier`](https://github.com/brentp/somalier) relatedness checks to catch sample swaps
 4. **HLA typing** — [`OptiType`](https://github.com/FRED-2/OptiType) (class I) and

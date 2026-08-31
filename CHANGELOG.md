@@ -7,6 +7,46 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Replaced `GATK MarkDuplicatesSpark` with the nf-core `SAMTOOLS_SORMADUP` module
+  (samtools 1.24: cat | collate | fixmate | sort | markdup). The module is vendored
+  unmodified at `modules/nf-core/samtools/sormadup/` and recorded in `modules.json`; a local
+  `BAM_MARKDUPLICATES` subworkflow adapts it to this pipeline's conventions.
+
+  **Duplicate marking results will change.** samtools markdup and MarkDuplicatesSpark use
+  different algorithms, so duplicate flags, and therefore depth and variant calls, will
+  shift. `-S` is set so supplementary alignments of a duplicate template are also flagged,
+  which is what the Spark tool did. Optical duplicate tagging (`-d`) is not set, as it needs
+  a flowcell-specific pixel distance.
+
+  Output names (`<sample>_<molecule>_markdup.bam`) and the downstream
+  `tuple(meta, bam, bai)` shape are unchanged, so no consuming module was touched.
+
+  Three things the swap required:
+
+  - **A `.bai`, not a `.csi`.** The nf-core module's `--write-index` produces a `.csi`;
+    every downstream module here declares `path(bai)`, and Strelka and Manta read `.bai`
+    specifically. A local `INDEX_BAM` step makes the `.bai`, which keeps the nf-core module
+    unpatched and updatable.
+  - **Meta bridging.** The module tags and names from `meta.id`, which this pipeline's meta
+    map lacks. `BAM_MARKDUPLICATES` adds an `id` for the call and strips it from the output
+    again - the meta map is the join key in `DNA_ALIGN_AND_PREPROC` and the grouping key for
+    HLA typing and somatic pairs, so an extra key would have silently broken those joins.
+  - **Mixed `versions` topic shapes.** Local modules emit a `versions.yml` path; unmodified
+    nf-core modules emit a `(process, tool, version)` tuple from `eval()`. `collectFile` read
+    the process name in those tuples as a filename, dropping the version from
+    `software_versions.yml` and writing a process-shaped junk file into `pipeline_info/`.
+    The collector in `main.nf` now renders tuples to YAML and reads the `.yml` files to text
+    so both shapes merge. This also fixes the same latent bug for the vendored ASCAT module,
+    which does not run under the test profile.
+
+  MultiQC now reports a duplicate rate, which it previously could not: MarkDuplicatesSpark
+  was not run with `--metrics-file`, so no duplicate metrics existed at all.
+
+  Resourcing drops from `process_very_high` (16 CPU / 96 GB) plus a
+  `--gres=scratch:600G` reservation to the module's `process_medium` (4 CPU / 32 GB) with no
+  scratch request. Raise it for WGS if sorting proves slow; note that samtools sort writes
+  its temporary files into the task work directory rather than a cluster scratch mount.
+
 - Switched DNA alignment from `bwa-mem2` 2.2.1 to [`minibwa`](https://github.com/lh3/minibwa)
   0.7 (`quay.io/biocontainers/minibwa:0.7--h118bc1c_0`). `BWA_MAP` now runs `minibwa map`
   and `CREATE_BWA_INDEX` runs `minibwa index`; the `-R` read-group string, threading and
