@@ -7,6 +7,26 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Switched DNA alignment from `bwa-mem2` 2.2.1 to [`minibwa`](https://github.com/lh3/minibwa)
+  0.7 (`quay.io/biocontainers/minibwa:0.7--h118bc1c_0`). `BWA_MAP` now runs `minibwa map`
+  and `CREATE_BWA_INDEX` runs `minibwa index`; the `-R` read-group string, threading and
+  SAM-to-stdout behaviour are unchanged, so no downstream module was touched.
+
+  **Alignments are not identical to bwa-mem2.** Minibwa uses a different algorithm - bwa-mem
+  seeding with minimap2 chaining and base alignment - so variant calls will shift slightly.
+  Do not mix BAMs from the two aligners within a cohort; re-align rather than resume.
+
+  The index is now two files (`.l2b`, `.mbw`) instead of five, so an existing
+  `./resources/bwa/` is **not** reusable. `--bwa_index` rejects a leftover bwa-mem2 index at
+  launch with a message naming the aligner change and telling you to rebuild, rather than the
+  generic missing-file report - the directory is a valid index, just for the wrong aligner.
+  Rebuild by running once without `--bwa_index`. Index construction needs
+  ~18x the genome size in RAM (~56 GB for GRCh38), less than bwa-mem2's, so
+  `process_high_memory` is unchanged.
+
+  Note that minibwa does not support alternate contigs. The default reference is
+  `GRCh38.primary_assembly`, which has none; a reference carrying alts must not be used.
+
 - Reorganised the repository into the nf-core directory layout: `main.nf` entry point,
   `workflows/vaximile/`, one directory per module under `modules/local/`, one directory per
   subworkflow under `subworkflows/local/`, and parameter defaults moved to

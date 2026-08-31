@@ -17,7 +17,7 @@ number, RNA expression, and RNA fusion calls.
 ## Pipeline summary
 
 1. **Read QC** — [`fastp`](https://github.com/OpenGene/fastp) on all DNA and RNA libraries
-2. **DNA alignment and pre-processing** — [`bwa-mem2`](https://github.com/bwa-mem2/bwa-mem2),
+2. **DNA alignment and pre-processing** — [`minibwa`](https://github.com/lh3/minibwa),
    then GATK best-practices duplicate marking and base recalibration
 3. **Alignment QC** — `samtools flagstat`/`coverage`/`idxstats`, and
    [`somalier`](https://github.com/brentp/somalier) relatedness checks to catch sample swaps

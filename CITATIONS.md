@@ -19,7 +19,7 @@
 
 ### Alignment and pre-processing
 
-- [BWA-MEM2](https://ieeexplore.ieee.org/document/8820962) — Vasimuddin M, Misra S, Li H, Aluru S. Efficient Architecture-Aware Acceleration of BWA-MEM for Multicore Systems. IEEE IPDPS. 2019.
+- [Minibwa](https://arxiv.org/abs/2606.15357) — Li H, Homer N. Fast genomic read alignment with minibwa. arXiv:2606.15357. 2026.
 - [GATK](https://pubmed.ncbi.nlm.nih.gov/20644199/) — McKenna A, Hanna M, Banks E, et al. The Genome Analysis Toolkit: a MapReduce framework for analyzing next-generation DNA sequencing data. Genome Res. 2010;20(9):1297-303.
 
 ### Somatic and germline variant calling

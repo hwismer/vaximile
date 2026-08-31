@@ -24,7 +24,7 @@ run, which adds substantial wall time to a first run.
 
 | Parameter          | Tool                  |
 | ------------------ | --------------------- |
-| `--bwa_index`      | bwa-mem2              |
+| `--bwa_index`      | minibwa               |
 | `--star_index`     | STAR 2.7.10           |
 | `--kallisto_index` | kallisto              |
 | `--salmon_index`   | salmon                |
@@ -178,31 +178,36 @@ The four modules with neither — `combine_fastqs`, `prepare_fasta`,
 | `pull_vep_pvac_plugins` | bioconda has no pVACtools 6.0.3 |
 | `phase_vcf_sort_vcf` | runs `java -jar /usr/picard/picard.jar`; bioconda `picard` 3.4.0 exists but needs the call rewritten to `picard SortVcf` |
 
-### Reusing a prebuilt bwa-mem2 index
+### Reusing a prebuilt minibwa index
 
 `--bwa_index` takes a directory. When it is set the pipeline skips `CREATE_BWA_INDEX`;
 when it is not, the index is built once and published to `./resources/bwa/`.
 
-The directory must contain the five files `bwa-mem2 index` produces, **named after the
+The directory must contain the two files `minibwa index` produces, **named after the
 prepared reference FASTA**:
 
 ```
-<reference_fa stem>_prc.fa.0123
-<reference_fa stem>_prc.fa.amb
-<reference_fa stem>_prc.fa.ann
-<reference_fa stem>_prc.fa.bwt.2bit.64
-<reference_fa stem>_prc.fa.pac
+<reference_fa stem>_prc.fa.l2b
+<reference_fa stem>_prc.fa.mbw
 ```
 
-The naming is not incidental. `BWA_MAP` passes the reference FASTA to bwa-mem2 as the
-index prefix, so bwa-mem2 looks for `<reference_fa>.0123` and friends. An index built from
+The naming is not incidental. `BWA_MAP` passes the reference FASTA to minibwa as the
+index prefix, so minibwa looks for `<reference_fa>.l2b` and `.mbw`. An index built from
 a FASTA with a different filename is unusable even if it is otherwise perfectly valid.
 `PREPARE_FASTA` decompresses and renames the reference to `<stem>_prc.fa`, which is why
 that suffix appears.
 
 The pipeline validates this at launch and names any missing file, rather than letting
-bwa-mem2 fail per-sample once alignment starts. The easiest way to get a valid directory
+minibwa fail per-sample once alignment starts. The easiest way to get a valid directory
 is to run once without `--bwa_index` and reuse `./resources/bwa/`.
+
+**Indices built before the switch to minibwa are not reusable.** The pipeline previously
+used bwa-mem2, whose index is a different set of five files (`.0123`, `.amb`, `.ann`,
+`.bwt.2bit.64`, `.pac`). Pointing `--bwa_index` at such a directory fails at launch with a
+message saying so explicitly, rather than the generic missing-file report - it is a valid
+index, just for the wrong aligner. Rebuild by running once without `--bwa_index`. Because
+minibwa alignments are not identical to bwa-mem2's, do not mix BAMs from before and after
+the switch within a cohort.
 
 Note for indices published before this was fixed: `CREATE_BWA_INDEX` used to publish with
 Nextflow's default `publishDir` mode, which is **symlink**, so `./resources/bwa/` held
@@ -228,12 +233,8 @@ defaults, `FilterMutectCalls` filters and the CNN tranche models all differ betw
 releases, so treat any version change as a change to results and revalidate rather than
 assuming it is a maintenance bump.
 
-### Two conda pins that are not exact
+### One conda pin that is not exact
 
-- **`bwa-mem2=2.2.1`** — the container tag (`iarcbioinfo/bwa-mem2-tools:v1.0`) names the
-  toolset, not bwa-mem2, so the bundled version is unstated. 2.2.1 is the long-standing
-  stable release and is the most likely match, but it is inferred rather than verified.
-  Confirm before trusting conda and container to produce identical alignments.
 - **`ensembl-vep=115`** — the container is `release_115.0`; bioconda publishes this as
   `115` (plus patches `115.1`, `115.2`). Same VEP release, and it matches a release-115
   cache.

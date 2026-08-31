@@ -1,16 +1,20 @@
 process BWA_MAP {
 
     /*
-        Map fastq files using BWA. Outputs a sorted BAM file and its index
+        Map fastq files using minibwa. Outputs a SAM file.
         Reads groups are created using metadata information and currently are basically just the same name.
         Creates read group solely based on provided metadata from samplesheet. Any readgroup information
         present in the FASTQs is ignored.
+
+        minibwa takes -R in the same '@RG\tID:foo\tSM:bar' form bwa-mem2 did, so the read
+        group string below is unchanged. Note that minibwa uses a different algorithm from
+        bwa-mem2 and its alignments are NOT identical to it.
     */
 
     label 'process_high'
-    conda "bioconda::bwa-mem2=2.2.1"
-    container "iarcbioinfo/bwa-mem2-tools:v1.0"
-    
+    conda "bioconda::minibwa=0.7"
+    container "quay.io/biocontainers/minibwa:0.7--h118bc1c_0"
+
     tag "BWA Alignment on ${meta.sample_name}"
 
     input:
@@ -27,11 +31,11 @@ process BWA_MAP {
     """
     NEW_RG="@RG\\tID:${sample_name}\\tSM:${sample_name}\\tLB:${sample_name}\\tPL:${molecule}_${sequencing_type}"
 
-    bwa-mem2 mem -t $task.cpus -R \$NEW_RG $reference_fa $fastq1 $fastq2 > "${prefix}.sam"
+    minibwa map -t $task.cpus -R \$NEW_RG $reference_fa $fastq1 $fastq2 > "${prefix}.sam"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        bwa-mem2: \$(bwa-mem2 version 2>&1 | tail -1)
+        minibwa: \$(minibwa version)
     END_VERSIONS
     """
 
@@ -41,7 +45,7 @@ process BWA_MAP {
     touch ${prefix}.sam
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        bwa-mem2: 2.2.1
+        minibwa: 0.7
     END_VERSIONS
     """
 }
