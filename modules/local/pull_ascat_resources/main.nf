@@ -1,5 +1,15 @@
 process PULL_ASCAT_RESOURCES {
 
+    // Not under -stub-run: the stub writes empty placeholders, and storing those
+    // would make a later real run skip the download and use empty resources.
+    //
+    // The path carries the chr-prefix flag, unlike the other PULL_* stores. This process
+    // is the only one whose output depends on an input: with add_chr_prefix set it rewrites
+    // every loci file with sed. storeDir is keyed on the path alone, not on the task hash,
+    // so a single shared directory would hand back chr-prefixed loci to a later run that
+    // asked for unprefixed ones - silently, and only visible as wrong ASCAT calls.
+    storeDir workflow.stubRun ? null : "./vaximile_resources/ascat_hg38_${add_chr_prefix ? 'chr' : 'nochr'}"
+
     label 'process_single'
     executor "local"
 
@@ -15,7 +25,10 @@ process PULL_ASCAT_RESOURCES {
         path("G1000_alleles_hg38"), emit: alleles
         path("GC_G1000_hg38"), emit: GC
         path("RT_G1000_hg38"), emit: RT
-        path "versions.yml", topic: versions
+        // No versions.yml here: storeDir only short-circuits when EVERY declared
+        // output is already in the store. An absent versions.yml made this process
+        // re-run on a populated store and then fail moving its result on top of the
+        // copy already there ("unable to remove target: Directory not empty").
 
     script:
         
@@ -42,10 +55,6 @@ process PULL_ASCAT_RESOURCES {
 
     wget https://zenodo.org/records/14008443/files/RT_G1000_WGS_hg38.zip
     unzip RT_G1000_WGS_hg38.zip -d RT_G1000_hg38
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        samtools: \$(samtools --version 2>&1 | head -1 | sed 's/samtools //')
-    END_VERSIONS
     """
 
     stub:
@@ -54,10 +63,6 @@ process PULL_ASCAT_RESOURCES {
     mkdir -p G1000_alleles_hg38
     mkdir -p GC_G1000_hg38
     mkdir -p RT_G1000_hg38
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        samtools: 1.23.1
-    END_VERSIONS
     """
 
 

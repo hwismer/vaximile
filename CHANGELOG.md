@@ -7,6 +7,28 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `PULL_ASCAT_RESOURCES` now uses `storeDir`, so its four Zenodo downloads are fetched once
+  and reused rather than re-downloaded on every run. It was the only `PULL_*` module without
+  one; `PULL_VEP_CACHE`, `PULL_ARRIBA_RESOURCES`, `PULL_CTAT_RESOURCE_BUNDLE` and
+  `PULL_VEP_PVAC_PLUGINS` already had it.
+
+  Its store path carries the chr-prefix flag - `./vaximile_resources/ascat_hg38_chr` or
+  `ascat_hg38_nochr`. This is the only `PULL_*` process whose output depends on an input:
+  with `--reference_includes_chr_prefix` it rewrites every loci file with sed. storeDir is
+  keyed on the path alone rather than on the task hash, so a single shared directory would
+  return chr-prefixed loci to a later run that asked for unprefixed ones - silently, and
+  visible only as wrong ASCAT calls.
+
+  Its `versions.yml` output was removed, as on the other four. storeDir only short-circuits
+  when every declared output is already in the store, and a `topic:`-routed versions.yml
+  never lands there, so the process would re-run on a populated store and then fail moving
+  its results on top of the existing copies. ASCAT resources therefore no longer contribute
+  a samtools version to `software_versions.yml`, matching the other `PULL_*` modules.
+
+  Verified by stub run (137 tasks, unchanged) and by evaluating the directive line directly
+  with both flag values, since `workflow.stubRun` short-circuits it during a stub run: the
+  two settings write to separate stores as intended.
+
 - `--vep_cache` is now optional. When it is not given, `PULL_VEP_CACHE` downloads the
   release-115 human GRCh38 cache (~24 GiB) from Ensembl's FTP into
   `./vaximile_resources/vep_cache`, and later runs reuse it from the `storeDir`. Passing
