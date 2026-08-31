@@ -160,6 +160,14 @@ enabled, which is what `conf/ucsf_krummellab.config` does.
 Every conda spec was checked against bioconda with `conda search` and pins the same
 version the container provides, with two exceptions noted below.
 
+`BWA_MAP` is a third exception, and the only module that is conda-only by necessity rather
+than by omission. It pipes `minibwa map` into `samtools view` in a single task, because
+SAMTOOLS_SORMADUP begins with `samtools cat`, which cannot read the SAM minibwa emits.
+Every published minibwa image (biocontainers, staphb) ships minibwa alone, so no container
+satisfies the process. Under `-profile docker`/`singularity` it falls back to the host
+`PATH`, as the four "neither" modules above already do. A combined image - a Seqera Wave
+build of `minibwa` + `samtools`, or a local Dockerfile - would close this.
+
 The four modules with neither — `combine_fastqs`, `prepare_fasta`,
 `pull_arriba_resources`, `pull_ctat_resource_bundle` — rely on tools on the host `PATH`.
 

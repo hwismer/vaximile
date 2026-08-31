@@ -7,6 +7,47 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Fixed `SAMTOOLS_SORMADUP` failing on every sample with `[main_cat] ERROR: input is not
+  BAM or CRAM`. The module's pipeline opens with `samtools cat`, which reads BAM and CRAM
+  only, and `BWA_MAP` was handing it the SAM minibwa writes. MarkDuplicatesSpark accepted
+  SAM, so nothing had needed a BAM before. Stub runs could not catch this: a stub `touch`es
+  its outputs, so no tool ever saw the file's format.
+
+  `BWA_MAP` now pipes `minibwa map` into `samtools view -1` and emits an unsorted BAM.
+  Converting in the pipe rather than in a following process means the SAM is never written
+  at all, which for WGS removes a multi-hundred-GB intermediate - so this is now faster than
+  the bwa-mem2 pipeline it replaced, not merely fixed. `-1` (fast compression) is used
+  because SORMADUP reads the file once.
+
+  `BWA_MAP` consequently has no container: it needs minibwa and samtools in one task, and
+  every published minibwa image carries minibwa alone. It is conda-only, falling back to the
+  host `PATH` under the container profiles as several modules already do. See docs/usage.md.
+
+  Verified against real samtools rather than stubs: the failure reproduces exactly on a SAM,
+  the new BAM feeds the full cat/collate/fixmate/sort/markdup chain to exit 0, the @RG line
+  survives it, output is SO:coordinate, a planted duplicate pair is flagged (2 of 6 reads),
+  and `samtools index` produces the .bai INDEX_BAM expects.
+
+- Gave the two per-sample alignment steps more cores. `BWA_MAP` moves from
+  `process_high` to `process_very_high` (8 -> 16 CPU, 48 -> 96 GB), matching `STAR_ALIGN`
+  and the tier's stated purpose. minibwa's `-t` scales well, so this is close to a
+  straight speedup.
+
+  `SAMTOOLS_SORMADUP` gets the same 16 CPU / 96 GB, but set by name in `conf/base.config`
+  rather than by label: it is a vendored nf-core module kept byte-identical to upstream so
+  `nf-core modules update` keeps working, its `process_medium` label lives in that file,
+  and a label cannot be added from config.
+
+  Expect less from the extra cores here than from the aligner's. The module pipes five
+  samtools stages and passes `--threads` to four of them, so the nominal thread request is
+  4x this number, and only `samtools sort` really parallelises - the middle stages hand off
+  uncompressed BAM and stay mostly idle. If sorting is still the bottleneck, the next lever
+  is `ext.args4 = '-m 2G'`, which cuts temp-file spilling, rather than more cores.
+
+  Both now request 96 GB where they previously asked for 48 and 32. Neither tool needs that
+  much; it comes bundled with the tier. On a busy cluster the larger reservation may cost
+  more in queue time than it saves in runtime.
+
 - Replaced `GATK MarkDuplicatesSpark` with the nf-core `SAMTOOLS_SORMADUP` module
   (samtools 1.24: cat | collate | fixmate | sort | markdup). The module is vendored
   unmodified at `modules/nf-core/samtools/sormadup/` and recorded in `modules.json`; a local

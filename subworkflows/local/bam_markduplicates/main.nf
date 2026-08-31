@@ -2,7 +2,7 @@ include { SAMTOOLS_SORMADUP } from "../../../modules/nf-core/samtools/sormadup/m
 include { INDEX_BAM         } from "../../../modules/local/index_bam/main"
 
 /*
-    Coordinate-sort the aligned SAM and mark duplicates, replacing MarkDuplicatesSpark.
+    Coordinate-sort the aligned BAM and mark duplicates, replacing MarkDuplicatesSpark.
 
     SAMTOOLS_SORMADUP is an unmodified nf-core module, so it expects nf-core conventions
     this pipeline does not otherwise follow, and this wrapper is what bridges them:
@@ -26,14 +26,14 @@ include { INDEX_BAM         } from "../../../modules/local/index_bam/main"
 workflow BAM_MARKDUPLICATES {
 
     take:
-        aligned_sam        // tuple(meta, sam) from BWA_MAP
+        aligned_bam        // tuple(meta, bam) from BWA_MAP, unsorted
         reference_genome   // tuple(prepared_fasta, fai)
 
     main:
         // `id` is what SAMTOOLS_SORMADUP tags with; ext.prefix in conf/modules.config
         // appends the _markdup suffix, keeping the output names the Spark module used.
-        sormadup_input = aligned_sam.map { meta, sam ->
-            tuple(meta + [id: "${meta.sample_name}_${meta.molecule}"], sam)
+        sormadup_input = aligned_bam.map { meta, bam ->
+            tuple(meta + [id: "${meta.sample_name}_${meta.molecule}"], bam)
         }
 
         sormadup_reference = reference_genome.map { fasta, fai ->

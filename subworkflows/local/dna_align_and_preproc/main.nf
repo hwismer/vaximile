@@ -33,14 +33,14 @@ workflow DNA_ALIGN_AND_PREPROC {
                 tuple(meta, meta.sample_name, meta.molecule, meta.sequencing_type, fastq1, fastq2)
             }
 
-        bwa_sam = BWA_MAP(bwa_map_input, reference_genome, bwa_index).sam
+        bwa_bam = BWA_MAP(bwa_map_input, reference_genome, bwa_index).bam
 
         // **********************************************************
         // GATK PRE-PROCESSING BEST PRACTICES
 
         // Coordinate-sort and mark duplicates (samtools collate/fixmate/sort/markdup,
         // via the nf-core SAMTOOLS_SORMADUP module) in place of MarkDuplicatesSpark.
-        markduplicates = BAM_MARKDUPLICATES(bwa_sam, reference_genome)
+        markduplicates = BAM_MARKDUPLICATES(bwa_bam, reference_genome)
         mark_dup = markduplicates.bam
         markdup_metrics = markduplicates.metrics
 
