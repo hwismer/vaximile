@@ -9,6 +9,7 @@ include { PULL_ARRIBA_RESOURCES } from "../../modules/local/pull_arriba_resource
 include { PULL_ASCAT_RESOURCES } from "../../modules/local/pull_ascat_resources/main"
 include { MULTIQC } from "../../modules/local/multiqc/main"
 include { ASCAT } from "../../modules/nf-core/ascat/main"
+include { dedupe_libraries; fan_out_pairs } from "../../subworkflows/local/utils_nfcore_vaximile_pipeline"
 
 // Subworkflows
 include { DNA_QC_WORKFLOW } from "../../subworkflows/local/dna_qc_workflow/main"
@@ -95,7 +96,12 @@ workflow VAXIMILE {
     //**************************************************************************************************************************************
 
     capture_kits = ch_capture_kits
-    samplesheet_inputs = ch_samplesheet
+
+    // Collapse samplesheet rows describing the same library before any work happens, so a
+    // normal shared by several tumours is trimmed, aligned, marked, recalibrated, germline
+    // called and HLA typed once rather than once per pair. Metas now carry a somatic_names
+    // list; fan_out_pairs() restores the scalar somatic_name at each tumour/normal join.
+    samplesheet_inputs = dedupe_libraries(ch_samplesheet)
 
     // Split DNA and RNA sequencing samples
     samples_branched = samplesheet_inputs
@@ -157,8 +163,8 @@ workflow VAXIMILE {
     // HLA Typing
     
     // Group bams by meta.somatic_name to be merged
-    bams_merged_input = markdup_bams.map{meta, bam, bai ->
-        tuple(meta.somatic_name, meta.patient, meta, bam, bai)
+    bams_merged_input = fan_out_pairs(markdup_bams).map{somatic_name, meta, bam, bai ->
+        tuple(somatic_name, meta.patient, meta, bam, bai)
     }
     .groupTuple(by: [0,1])
     .map{somatic_name, patient, metas, bams, bais ->
@@ -241,9 +247,7 @@ workflow VAXIMILE {
     // Mutect2 - Somatic Variant Calling
 
     // Groups samples into the form (somatic metamap, tumor bam, tumor bai, normal bam, normal bai)
-    preproc_bams_type_branched = preproc_bams.map{meta, bam, bai ->
-        tuple(meta.somatic_name, meta, bam, bai)
-    }
+    preproc_bams_type_branched = fan_out_pairs(preproc_bams)
     .branch {somatic_name, meta, bam, bai ->
         tumor: meta.sample_type == "TUMOR"
         normal: meta.sample_type == "NORMAL"
@@ -262,9 +266,7 @@ workflow VAXIMILE {
     }
 
     // Group pileups into the form (somatic metamap, tumor pileups, normal pileups)
-    type_pileups = pileup_summaries.map{meta,pileup_table ->
-        tuple(meta.somatic_name, meta, pileup_table)
-    }
+    type_pileups = fan_out_pairs(pileup_summaries)
     .branch {somatic_name, meta, pileup_table ->
         tumor: meta.sample_type == "TUMOR"
         normal: meta.sample_type == "NORMAL"
@@ -302,9 +304,7 @@ workflow VAXIMILE {
     // Doesn't use the BQSR bams, just the bams with duplicates marked
     // Get into the format (somatic metadata, tumor bam, tumor bai, normal bam, normal bai)
 
-    markdup_bams_type_branched = markdup_bams.map{meta, bam, bai ->
-        tuple(meta.somatic_name, meta, bam, bai)
-    }
+    markdup_bams_type_branched = fan_out_pairs(markdup_bams)
     .branch {somatic_name, meta, bam, bai ->
         tumor: meta.sample_type == "TUMOR"
         normal: meta.sample_type == "NORMAL"
@@ -419,8 +419,8 @@ workflow VAXIMILE {
     }
 
     pvacseq_input = somatic_phased.join(combined_hla_somatic_name)
-    arriba_fusion_somatic_name = arriba_fusion.map{meta, tsv -> tuple(meta.somatic_name, meta, tsv) }
-    star_fusion_somatic_name = star_fusion.map{meta, tsv -> tuple(meta.somatic_name, meta, tsv) }
+    arriba_fusion_somatic_name = fan_out_pairs(arriba_fusion)
+    star_fusion_somatic_name = fan_out_pairs(star_fusion)
 
 
     pvacfuse_input = arriba_fusion_somatic_name.join(star_fusion_somatic_name).join(combined_hla_somatic_name)
@@ -439,24 +439,24 @@ workflow VAXIMILE {
 
     //**************************************************************************************************************************************
     // MultiQC Report Creation
-    mqc_dna_fastp_reports = dna_fastp.fastp_reports.map{ meta, json -> tuple(meta.patient, meta.somatic_name, meta.sample_name + "_" + meta.molecule ,json) }.unique{meta, som, sample, x -> sample}
-    mqc_rna_fastp_reports = rna_fastp.fastp_reports.map{ meta, json -> tuple(meta.patient, meta.somatic_name,meta.sample_name + "_" + meta.molecule ,json) }.unique{meta, som,sample, x -> sample}
-    mqc_base_recal = preproc_bam_workflow.base_recal.map{ meta, table -> tuple(meta.patient, meta.somatic_name,meta.sample_name + "_" + meta.molecule ,table) } .unique{meta, som,sample, x -> sample} 
-    mqc_optitype = optitype.map{ meta, tsv_file, pdf -> tuple(meta.patient, meta.somatic_name,meta.sample_name + "_" + meta.molecule, tsv_file) }.unique{meta, som,sample, x -> sample}
-    mqc_salmon_tx = salmon_tx.map{ meta, quant -> tuple(meta.patient, meta.somatic_name,meta.sample_name+ "_" + meta.molecule ,quant) }.unique{meta, som,sample, x -> sample}
-    mqc_star_log = rna.star_final_log.map{ meta, log -> tuple(meta.patient, meta.somatic_name,meta.sample_name+ "_" + meta.molecule, log) }.unique{meta, som,sample, x -> sample}
-    mqc_vep_report = vep_report.map{meta, html -> tuple(meta.patient, meta.somatic_name,meta.tumor_meta.sample_name+ "_" + meta.molecule, html) }.unique{meta, som,sample, x -> sample}
-    mqc_flagstats = flagstats.map{meta, tsv -> tuple(meta.patient, meta.somatic_name,meta.sample_name+ "_" + meta.molecule, tsv) }.unique{meta, som,sample, x -> sample}
-    mqc_coverage = coverage.map{meta, tsv -> tuple(meta.patient, meta.somatic_name,meta.sample_name+ "_" + meta.molecule, tsv) }.unique{meta, som,sample, x -> sample}
-    mqc_idxstats = idxstats.map{meta, tsv -> tuple(meta.patient, meta.somatic_name,meta.sample_name+ "_" + meta.molecule, tsv) }.unique{meta, som,sample, x -> sample}
-    mqc_germline_vep = germline_vep_report.map{meta, html -> tuple(meta.patient, meta.somatic_name, meta.sample_name + "_" + meta.molecule, html)}.unique{meta, som,sample, x -> sample}
+    mqc_dna_fastp_reports = dna_fastp.fastp_reports.map{ meta, json -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule ,json) }.unique{meta, som, sample, x -> sample}
+    mqc_rna_fastp_reports = rna_fastp.fastp_reports.map{ meta, json -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name + "_" + meta.molecule ,json) }.unique{meta, som,sample, x -> sample}
+    mqc_base_recal = preproc_bam_workflow.base_recal.map{ meta, table -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name + "_" + meta.molecule ,table) } .unique{meta, som,sample, x -> sample} 
+    mqc_optitype = optitype.map{ meta, tsv_file, pdf -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name + "_" + meta.molecule, tsv_file) }.unique{meta, som,sample, x -> sample}
+    mqc_salmon_tx = salmon_tx.map{ meta, quant -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name+ "_" + meta.molecule ,quant) }.unique{meta, som,sample, x -> sample}
+    mqc_star_log = rna.star_final_log.map{ meta, log -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name+ "_" + meta.molecule, log) }.unique{meta, som,sample, x -> sample}
+    mqc_vep_report = vep_report.map{meta, html -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.tumor_meta.sample_name+ "_" + meta.molecule, html) }.unique{meta, som,sample, x -> sample}
+    mqc_flagstats = flagstats.map{meta, tsv -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name+ "_" + meta.molecule, tsv) }.unique{meta, som,sample, x -> sample}
+    mqc_coverage = coverage.map{meta, tsv -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name+ "_" + meta.molecule, tsv) }.unique{meta, som,sample, x -> sample}
+    mqc_idxstats = idxstats.map{meta, tsv -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name+ "_" + meta.molecule, tsv) }.unique{meta, som,sample, x -> sample}
+    mqc_germline_vep = germline_vep_report.map{meta, html -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, html)}.unique{meta, som,sample, x -> sample}
     mqc_somalier_pairs = somalier_pairs.map{patient, pairs -> tuple(patient, null, null,pairs) }
     mqc_somalier_samples = somalier_samples.map{patient, samples -> tuple(patient, null, null,samples) }
-    mqc_hlahd_tsv = hlahd_tsv.map{meta, tsv -> tuple(meta.patient, meta.somatic_name, meta.sample_name + "_" + meta.molecule, tsv)}.unique{meta, som,sample, x -> sample}
+    mqc_hlahd_tsv = hlahd_tsv.map{meta, tsv -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, tsv)}.unique{meta, som,sample, x -> sample}
     // New with SAMTOOLS_SORMADUP: MarkDuplicatesSpark was not run with --metrics-file, so
     // the report had no duplicate rate at all. MultiQC's samtools module parses markdup
     // text output.
-    mqc_markdup = markdup_metrics.map{meta, metrics -> tuple(meta.patient, meta.somatic_name, meta.sample_name + "_" + meta.molecule, metrics)}.unique{meta, som,sample, x -> sample}
+    mqc_markdup = markdup_metrics.map{meta, metrics -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, metrics)}.unique{meta, som,sample, x -> sample}
 
 
     mqc_reports = mqc_dna_fastp_reports

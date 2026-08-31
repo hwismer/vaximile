@@ -14,6 +14,7 @@ include { ANNOTATE_VCF_COVERAGE as ANNOTATE_VCF_COVERAGE_TUMOR_RNA } from "../..
 include { INDEX_VCF } from "../../../modules/local/index_vcf/main"
 
 include { PVAC_VCF_PHASING } from "../pvac_vcf_phasing/main"
+include { fan_out_pairs; expand_pairs } from "../utils_nfcore_vaximile_pipeline"
 
 workflow PVAC_INPUT_PREP_WORKFLOW {
 
@@ -72,7 +73,9 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
     vep_filtered = VEP_POPULATION_FILTER(vep.vcf, vep_cache, vep_plugins).vcf
 
     vep_filtered_somatic_name = vep_filtered.map {meta, vcf -> tuple(meta.somatic_name, meta, vcf) }
-    all_samples_somatic_name = preproc_bams.mix(star_bam).map {meta, bam, bai -> tuple(meta.somatic_name, meta, bam,bai)}
+    // preproc_bams and star_bam are sample-level, so their metas carry a somatic_names
+    // list rather than a scalar. Fan out to one entry per pair before combining below.
+    all_samples_somatic_name = fan_out_pairs(preproc_bams.mix(star_bam))
     
 
     bamreadcount_helper_input = vep_filtered_somatic_name.combine(all_samples_somatic_name, by:0)
@@ -112,7 +115,8 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
 
 
     somatic_name_vcf_coverage = tumor_rna_ndna_tdna.map{meta, vcf -> tuple(meta.somatic_name, meta, vcf) }
-    somatic_name_tx = kallisto_tx_abundance.map{meta, tx -> tuple(meta.somatic_name, meta, tx) }
+    // kallisto output is RNA sample-level, so fan out to key it by pair.
+    somatic_name_tx = fan_out_pairs(kallisto_tx_abundance)
     annotate_vcf_transcript_expression_input = somatic_name_vcf_coverage.join(somatic_name_tx)
         .map { somatic_name, somatic_meta, vcf, sample_meta, tx ->
             tuple(somatic_name, somatic_meta, sample_meta.sample_name, vcf, sample_meta, tx)
@@ -121,7 +125,7 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
     tx_vcf = ANNOTATE_VCF_TRANSCRIPT_EXPRESSION(annotate_vcf_transcript_expression_input).vcf
 
     tx_vcf_somatic_name = tx_vcf.map{ meta, vcf -> tuple(meta.somatic_name, meta, vcf) }
-    somatic_name_gene = kallisto_gene_abundance.map{ meta, gene -> tuple(meta.somatic_name, meta, gene) }
+    somatic_name_gene = fan_out_pairs(kallisto_gene_abundance)
     annotate_vcf_gene_expression_input = tx_vcf_somatic_name.join(somatic_name_gene)
         .map { somatic_name, somatic_meta, vcf, sample_meta, gene ->
             tuple(somatic_name, somatic_meta, sample_meta.sample_name, vcf, sample_meta, gene)
@@ -138,7 +142,9 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
 
 
     // CREATE PHASED VCF 
-    tumor_normal_samples = preproc_bams.branch {meta, bam, bai ->
+    // expand_pairs, not fan_out_pairs: PVAC_VCF_PHASING joins these BAMs on the meta map
+    // held in somatic_meta.tumor_meta, so the meta must match that one exactly.
+    tumor_normal_samples = expand_pairs(preproc_bams).branch {meta, bam, bai ->
         tumor:meta.sample_type == "TUMOR"
         normal:meta.sample_type == "NORMAL"
     }
@@ -147,7 +153,7 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
     phased_vcf = PVAC_VCF_PHASING(
         tumor_normal_samples.tumor,
         final_vcf,
-        germline_vcf,
+        expand_pairs(germline_vcf),
         reference_genome,
         reference_dict,
         vep_cache,

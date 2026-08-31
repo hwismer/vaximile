@@ -7,6 +7,45 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Samples shared between tumour/normal pairs are now processed once instead of once per
+  pair. The samplesheet carries one row per (library, pair), so a normal used as the control
+  for two tumours is listed twice with different `somatic_name`s. Because `somatic_name` was
+  part of the meta map, and the meta map is a channel item's identity, those rows were
+  distinct items and every sample-level process ran twice on byte-identical data.
+
+  Measured on a two-tumour/one-normal samplesheet, these all ran twice for the shared normal:
+  `FASTP`, `BWA_MAP`, `SAMTOOLS_SORMADUP`, `INDEX_BAM`, base recalibration and BQSR (scatter
+  and gather), `SORT_BAM`, `GET_PILEUP_SUMMARIES`, `SOMALIER_EXTRACT`, the samtools QC trio,
+  the whole HaplotypeCaller chain plus `DEEPVARIANT` and `STRELKA_GERMLINE`, and HLA typing
+  (`MHC_REGION_FASTQS`, `OPTITYPE`, `HLAHD`). With N tumours on one normal it was N times,
+  and the normal's germline VCF was written N times to the same published name.
+
+  `dedupe_libraries()` collapses rows sharing patient + sample_name + molecule at the entry
+  point, replacing the scalar `somatic_name` with a `somatic_names` list. `expand_pairs()`
+  and `fan_out_pairs()` restore the per-pair view at the seven tumour/normal join sites, so
+  nothing downstream of those joins changed shape - roughly 140 of the 155 `somatic_name`
+  references are past the join and untouched.
+
+  Two forms are needed because the joins are not all alike: most key on the name as a string,
+  but `PVAC_VCF_PHASING` joins `somatic_meta.normal_meta` against the germline VCF channel and
+  `somatic_meta.tumor_meta` against the tumour BAMs - whole meta maps as keys, which only
+  match if the channel side carries the scalar `somatic_name` too.
+
+  Rows treated as one library must agree. If rows sharing a `sample_name` list different
+  FastQs, or disagree on `sample_type`, `sequencing_type`, `capture_kit` or `sex`, the run
+  fails at launch naming the conflict rather than silently processing whichever row sorted
+  first. Distinct data needs a distinct `sample_name`.
+
+  Verified two ways. On the existing single-pair test samplesheet the DAG is unchanged -
+  137 tasks, and a per-process count diff against the previous commit is empty, so nothing
+  shifted for the non-shared case. On a two-tumour/one-normal sheet the total falls from 232
+  to 191 tasks (18%), every sample-level step for the shared normal drops from 2 to 1, and
+  the pair-level steps stay at 2 with each pair staging the correct BAMs: Tumor1+Normal1 and
+  Tumor2+Normal1 against the same singly-produced normal. Both validators were triggered and
+  produce the intended message.
+
+  This invalidates existing `-resume` caches, since every DNA task rehashes.
+
 - Fixed `SAMTOOLS_SORMADUP` failing on every sample with `[main_cat] ERROR: input is not
   BAM or CRAM`. The module's pipeline opens with `samtools cat`, which reads BAM and CRAM
   only, and `BWA_MAP` was handing it the SAM minibwa writes. MarkDuplicatesSpark accepted

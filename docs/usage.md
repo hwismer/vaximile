@@ -53,6 +53,30 @@ PatientX,PatientX_Tumor1_Normal1,Tumor1,Tumor,rna,XX,,t1_rna_r1.fq.gz,t1_rna_r2.
 | `fastqr1`         | Gzipped FastQ, read 1. Must end `.fq.gz` or `.fastq.gz`.                                                                                      |
 | `fastqr2`         | Gzipped FastQ, read 2. Must end `.fq.gz` or `.fastq.gz`.                                                                                      |
 
+### Samples shared between pairs
+
+A normal sequenced once but used as the control for several tumours is listed once per
+pair, with a different `somatic_name` each time:
+
+```csv
+PatientX,PatientX_Tumor1_Normal1,Normal1,Normal,exome,XX,twist_2,n1_r1.fq.gz,n1_r2.fq.gz
+PatientX,PatientX_Tumor2_Normal1,Normal1,Normal,exome,XX,twist_2,n1_r1.fq.gz,n1_r2.fq.gz
+```
+
+Rows sharing `patient` + `sample_name` + `sequencing_type`'s molecule are recognised as one
+library and processed **once**: one fastp, one alignment, one duplicate marking, one BQSR,
+one germline call, one HLA typing, one somalier extraction. The per-pair steps - Strelka,
+Mutect2, Manta, DeepSomatic, the merged-BAM HLA call - still run once per `somatic_name`.
+
+Before this, each of those rows was a separate channel item, so the normal was processed
+once per pair. With N tumours on one normal the sample-level work ran N times, and the
+normal's germline VCF was written N times to the same published name.
+
+Because those rows are treated as one library, they must agree. The pipeline checks at
+launch and fails, naming the conflict, if rows sharing a `sample_name` list different
+FastQs or disagree on `sample_type`, `sequencing_type`, `capture_kit` or `sex`. Genuinely
+different data must be given a different `sample_name`.
+
 ## Capture kit input
 
 `--capture_kits` maps kit names to their BED target files. Intervals are scattered per kit,
