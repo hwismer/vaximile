@@ -7,6 +7,30 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `--vep_cache` is now optional. When it is not given, `PULL_VEP_CACHE` downloads the
+  release-115 human GRCh38 cache (~24 GiB) from Ensembl's FTP into
+  `./vaximile_resources/vep_cache`, and later runs reuse it from the `storeDir`. Passing
+  `--vep_cache` still skips the download and uses the given directory, and it was removed
+  from the schema's required list.
+
+  The release is pinned to 115 rather than exposed as a parameter: VEP rejects a cache whose
+  version differs from its own, so it has to move with the pinned `ensembl-vep` 115 the
+  annotation modules run. Species and assembly are likewise fixed to homo_sapiens/GRCh38 to
+  match the default reference - anything else has to supply `--vep_cache`. The plain cache is
+  used rather than refseq or merged, because the VEP modules pass neither flag.
+
+  The process carries both `process_single` and `process_long`. A `time` directive written
+  in the module would have been silently overridden by the 4 h default `conf/base.config`
+  sets for every process, since config directives beat module ones; `process_long` is the
+  20 h tier, and the two labels apply cumulatively.
+
+  Verified by stub run on both branches: with `--vep_cache` supplied the DAG is unchanged at
+  137 tasks and PULL_VEP_CACHE does not run; without it the run is 138 tasks, the cache
+  directory is staged into every VEP task as `vep_cache/homo_sapiens/`, and the process
+  resolves to 20 h / 1 CPU once the test profile's 1 h resourceLimits clamp is lifted. The
+  download URL, its ~23.5 GiB size and the `homo_sapiens/115_GRCh38/` layout inside the
+  tarball were each checked against the live FTP; the tarball itself was not downloaded.
+
 - Samples shared between tumour/normal pairs are now processed once instead of once per
   pair. The samplesheet carries one row per (library, pair), so a normal used as the control
   for two tumours is listed twice with different `somatic_name`s. Because `somatic_name` was

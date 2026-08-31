@@ -13,7 +13,6 @@
             "required": [
                 "samplesheet",
                 "capture_kits",
-                "vep_cache",
                 "outdir"
             ],
             "properties": {
@@ -40,8 +39,8 @@
                 "vep_cache": {
                     "type": "string",
                     "format": "directory-path",
-                    "description": "Path to a local Ensembl VEP cache directory matching the chosen reference genome.",
-                    "help_text": "Download from https://ftp.ensembl.org/pub/release-115/variation/indexed_vep_cache/",
+                    "description": "Path to a local Ensembl VEP cache directory. Optional; downloaded if omitted.",
+                    "help_text": "Leave unset and the pipeline pulls the release-115 GRCh38 human cache (~24 GiB) from https://ftp.ensembl.org/pub/release-115/variation/indexed_vep_cache/ into ./vaximile_resources/vep_cache, reusing it on later runs. Supply this only to point at a cache you already have, or to run against an assembly or species other than human GRCh38 - the release must be 115 to match the VEP the pipeline runs.",
                     "fa_icon": "fas fa-folder-open"
                 },
                 "outdir": {

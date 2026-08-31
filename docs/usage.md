@@ -9,11 +9,29 @@ per-patient MultiQC report.
 
 ## Prerequisites
 
-### VEP cache (required)
+### VEP cache (optional)
 
-Download the Ensembl VEP cache matching your reference genome and pass the directory with
-`--vep_cache`. There is no default; the pipeline fails at startup if the directory is
-missing.
+Left unset, the pipeline downloads the Ensembl VEP cache itself on the first run -
+`PULL_VEP_CACHE` fetches the release-115 human GRCh38 cache (**~24 GiB**) into
+`./vaximile_resources/vep_cache` and later runs reuse it from there. Like the other
+`PULL_*` processes it runs on the local executor, so the head node needs outbound network
+access, and it uses the 20 h `process_long` tier because that transfer does not reliably
+fit the 4 h default.
+
+Pass `--vep_cache` to point at a cache you already have and skip the download:
+
+```bash
+--vep_cache /path/to/vep_data
+```
+
+The directory must be the one *containing* `homo_sapiens/`, which is what `--dir_cache`
+expects.
+
+Supply your own cache if you are not running human GRCh38 - the automatic download is
+fixed to `homo_sapiens_vep_115_GRCh38`, matching the pipeline's default reference. The
+release must be **115** either way, because VEP rejects a cache whose version differs from
+its own, and the annotation modules pin `ensembl-vep` 115. Use the plain cache rather than
+the `refseq` or `merged` flavour; the VEP modules pass neither `--refseq` nor `--merged`.
 
 <https://ftp.ensembl.org/pub/release-115/variation/indexed_vep_cache/>
 
@@ -95,7 +113,6 @@ nextflow run . \
     -profile conda \
     --samplesheet ./samplesheet.csv \
     --capture_kits ./capture_kits.csv \
-    --vep_cache ./vep/vep_data/ \
     --outdir ./vaximile_out \
     -resume
 ```

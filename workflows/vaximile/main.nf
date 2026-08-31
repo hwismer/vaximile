@@ -4,6 +4,7 @@ include { COMBINE_FASTQS } from "../../modules/local/combine_fastqs/main"
 include { MERGE_BAMS } from "../../modules/local/merge_bams/main"
 include { CAPTURE_KIT_BED_PROCESS } from "../../modules/local/capture_kit_bed_process/main"
 include { PULL_VEP_PVAC_PLUGINS } from "../../modules/local/pull_vep_pvac_plugins/main"
+include { PULL_VEP_CACHE } from "../../modules/local/pull_vep_cache/main"
 include { PULL_CTAT_RESOURCE_BUNDLE } from "../../modules/local/pull_ctat_resource_bundle/main"
 include { PULL_ARRIBA_RESOURCES } from "../../modules/local/pull_arriba_resources/main"
 include { PULL_ASCAT_RESOURCES } from "../../modules/local/pull_ascat_resources/main"
@@ -90,6 +91,17 @@ workflow VAXIMILE {
     ctat_bundle = PULL_CTAT_RESOURCE_BUNDLE().ctat_resource_dir
     arriba_resources = PULL_ARRIBA_RESOURCES().resources
     vep_plugins = PULL_VEP_PVAC_PLUGINS().plugins
+
+    // --vep_cache is optional: use the directory given, otherwise pull the release-115
+    // GRCh38 cache once into ./vaximile_resources/vep_cache and reuse it on later runs.
+    //
+    // MUST be a value channel either way. VEP runs once per VCF, and a queue channel
+    // holding a single item would be consumed by the first of those tasks, leaving the
+    // rest with no cache. A process output that emits exactly once is already a value
+    // channel, so both branches broadcast.
+    vep_cache = params.vep_cache
+        ? channel.value(file(params.vep_cache, checkIfExists: true))
+        : PULL_VEP_CACHE().cache
     ascat_resources = PULL_ASCAT_RESOURCES(params.reference_includes_chr_prefix)
 
 
@@ -234,7 +246,7 @@ workflow VAXIMILE {
         reference_dict,
         hapmap,
         mills,
-        params.vep_cache,
+        vep_cache,
         vep_plugins
     )
 
@@ -390,7 +402,7 @@ workflow VAXIMILE {
         kallisto_gene,
         reference_genome,
         reference_dict,
-        params.vep_cache,
+        vep_cache,
         vep_plugins,
         germline_vcf
     )
