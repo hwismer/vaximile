@@ -15,6 +15,19 @@ workflow {
 
     main:
 
+    // nf-schema's HelpObserver prints the help message in onFlowCreate - before this body
+    // runs - and then calls session.cancel(). That stops tasks from being submitted but does
+    // not stop the workflow body, so without this the run carries on to build channels from
+    // parameters a help request never supplies, and ends in a spurious validation error or
+    // parks on the output {} block. Leave immediately; the help has already been printed.
+    // containsKey, not params.helpFull: helpFull and showHidden are the plugin's own
+    // parameters and are not declared here, so reading one when it was not passed emits
+    // "Access to undefined parameter" and, with `params.help` unset, the guard then falls
+    // through to the workflow body.
+    if (params.help || params.containsKey('helpFull')) {
+        System.exit(0)
+    }
+
     PIPELINE_INITIALISATION(
         params.samplesheet,
         params.capture_kits

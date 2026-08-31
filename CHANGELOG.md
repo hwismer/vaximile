@@ -31,12 +31,23 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Specified param 'true'` error. The stub run is 134 tasks with a DAG identical to the
   previous commit, and parameter validation still rejects an unknown `--notaparam`.
 
-  Not fixed here: `--help` prints the help and then **carries on**, either failing parameter
-  validation or, if the required parameters are supplied, launching the pipeline. The plugin
-  is emitting the help text but not halting the run, and `PIPELINE_INITIALISATION` calls
-  `validateParameters()` unconditionally. Removing the pipeline's own redundant `params.help`
-  makes no difference. This predates the bump - before it, `--help` failed outright - so the
-  bump improved the situation without completing it.
+  `--help` also now exits cleanly. nf-schema's `HelpObserver` prints the message in
+  `onFlowCreate` and then calls `session.cancel()`, which stops tasks from being submitted
+  but does not stop the entry workflow's body from running. It carried on to build channels
+  from parameters a help request never supplies, so `--help` printed the help and then either
+  failed parameter validation or parked on the `output {}` block - the same
+  `DataflowVariable.get()` hang already documented for `-preview` in docs/nf-core-migration.md.
+  The entry workflow now returns immediately when help was requested, after the observer has
+  already printed it.
+
+  The guard tests `params.containsKey('helpFull')` rather than reading `params.helpFull`:
+  `helpFull` and `showHidden` belong to the plugin and are not declared here, so reading one
+  that was not passed emits "Access to undefined parameter" and lets the guard fall through.
+
+  Verified: `--help`, `--helpFull`, `--help <param>` and `--help` under
+  `-c conf/ucsf_krummellab.config` all exit 0 with no errors and no warnings, stable over
+  three repetitions; per-parameter help returns the shorter targeted message. A normal stub
+  run is unaffected at 134 tasks, and an unknown `--notaparam` is still rejected.
 
 - Cleaned out dead and redundant work found by auditing the DAG.
 
