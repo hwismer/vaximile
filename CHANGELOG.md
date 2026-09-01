@@ -7,6 +7,31 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Duplicate stats now actually reach the MultiQC report. Wiring `SAMTOOLS_SORMADUP`'s
+  metrics into MultiQC was not enough: MultiQC never parsed the file, so the report had no
+  duplicate section despite the file being staged into the task.
+
+  MultiQC's own search pattern for samtools markdup text output is broken. It matches
+
+  ```yaml
+  samtools/markdup_txt:
+    contents: ["^COMMAND:", "samtools markdup"]
+  ```
+
+  and `contents` is a **literal** substring match, so the regex anchor `^` can never match
+  real output. Confirmed against MultiQC 1.35: the file parses only if a literal `^` is
+  prepended to its first line.
+
+  `samtools markdup --json` writes the same stats as JSON, and MultiQC's
+  `samtools/markdup_json` pattern uses a genuine literal, `'"COMMAND":'`, which JSON output
+  does contain. Added `--json` to `ext.args5`. Verified end to end with real samtools and
+  MultiQC: the text file yields "No analysis results found", while the JSON file produces a
+  `multiqc_samtools_markdup` section carrying read, written, excluded, examined, paired,
+  single, duplicate_pair and duplicate_single.
+
+  The file keeps its `.metrics` name - the module hardcodes `-f <prefix>.metrics` and that
+  prefix also names the BAM - which is harmless because MultiQC matches on content.
+
 - Per-library outputs now publish under `<patient>/samples/<sample_name>/` instead of
   `<patient>/<sample_name>/`, so they no longer interleave with the tumour/normal pair
   directories at the top of the patient folder. Pair-level outputs are unchanged at
