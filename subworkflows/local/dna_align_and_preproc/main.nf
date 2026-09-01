@@ -5,7 +5,7 @@ include { BASE_RECALIBRATOR_GATHER } from "../../../modules/local/base_recalibra
 include { APPLY_BQSR_SCATTER } from "../../../modules/local/apply_bqsr_scatter/main"
 include { APPLY_BQSR_GATHER } from "../../../modules/local/apply_bqsr_gather/main"
 include { GET_PILEUP_SUMMARIES } from "../../../modules/local/get_pileup_summaries/main"
-include { INDEX_BAM as INDEX_BQSR_BAM } from "../../../modules/local/index_bam/main"
+include { SORT_BAM } from "../../../modules/local/sort_bam/main"
 include { SAMTOOLS_FLAGSTAT } from "../../../modules/local/samtools_flagstat/main"
 include { SAMTOOLS_COVERAGE } from "../../../modules/local/samtools_coverage/main"
 include { SAMTOOLS_IDXSTATS } from "../../../modules/local/samtools_idxstats/main"
@@ -88,13 +88,20 @@ workflow DNA_ALIGN_AND_PREPROC {
                 tuple(meta, meta.sample_name, meta.molecule, bams)
             }
         bqsr_gather = APPLY_BQSR_GATHER(bqsr_scattered).bam // Get final BQSR bams
-        // Index rather than re-sort. APPLY_BQSR_GATHER orders its shards by filename so
-        // GatherBamFiles concatenates in coordinate order, and APPLY_BQSR_SCATTER uses -L
-        // with no padding (SPLIT_INTERVALS is called with 0), so the gathered BAM is
-        // already coordinate-sorted and the sort SORT_BAM did was redundant work on a
-        // whole WGS BAM. samtools index refuses an unsorted BAM, so if that ever stops
-        // holding this fails here rather than producing a bad index.
-        bqsr_sort = INDEX_BQSR_BAM(bqsr_gather).bam
+        // This sort is NOT redundant, despite APPLY_BQSR_GATHER ordering its shards by
+        // filename. It was replaced with a plain `samtools index` on the theory that the
+        // gathered BAM was already coordinate-sorted, and that failed on real data:
+        //
+        //   [E::hts_idx_push] Unsorted positions on sequence #1: 52263835 followed by 52263738
+        //   samtools index: failed to create index for "..._bqsr.bam"
+        //
+        // APPLY_BQSR_SCATTER passes -L <shard>, and GATK emits every read *overlapping* the
+        // interval, not only those starting inside it. A read spanning a shard boundary is
+        // therefore written near the start of the later shard while beginning before the end
+        // of the earlier one, so concatenating the shards puts positions slightly out of
+        // order at every boundary. The offsets are small - under a read length - which is
+        // why the header still says SO:coordinate and only indexing catches it.
+        bqsr_sort = SORT_BAM(bqsr_gather).bam
 
         pileup_summaries = GET_PILEUP_SUMMARIES(bqsr_sort, common_germline).table
         

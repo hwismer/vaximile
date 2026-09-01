@@ -7,6 +7,28 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Reverted `SORT_BAM` -> `INDEX_BAM` on the BQSR path. Replacing the sort with a plain
+  `samtools index` was wrong: the gathered BQSR BAM is **not** fully coordinate-sorted, and
+  a real run failed with
+
+  ```
+  [E::hts_idx_push] Unsorted positions on sequence #1: 52263835 followed by 52263738
+  samtools index: failed to create index for "..._bqsr.bam"
+  ```
+
+  `APPLY_BQSR_SCATTER` passes `-L <shard>`, and GATK emits every read *overlapping* the
+  interval, not only those starting inside it. A read spanning a shard boundary is therefore
+  written near the start of the later shard while beginning before the end of the earlier
+  one, so concatenating the shards puts positions slightly out of order at each boundary.
+  The offsets are under one read length, which is why the header still reads `SO:coordinate`
+  and only indexing notices. `APPLY_BQSR_GATHER` ordering its shards by filename is necessary
+  but not sufficient.
+
+  The guard held: `samtools index` refused rather than writing a corrupt index, so this
+  surfaced as a task failure instead of bad downstream calls. `INDEX_BAM` is still used after
+  duplicate marking, where SAMTOOLS_SORMADUP does its own `samtools sort` and the output
+  really is sorted.
+
 - Bumped `nf-schema` from 2.1.1 to 2.8.0 in **both** places that pin it. Every run printed
 
   ```
