@@ -7,7 +7,10 @@ process HAPLOTYPE_CALLER_SCATTER {
 
     */
 
-    label 'process_medium'
+    // process_low, matching nf-core's gatk4/haplotypecaller. Runs once per normal per
+    // interval, so the footprint is multiplied by scatter_count; more concurrent shards
+    // beats more PairHMM threads per shard, which scales sublinearly.
+    label 'process_low'
     // GATK PINNED TO 4.3.0.0 - DO NOT BUMP TO MATCH THE 4.6.1.0 MODULES.
     // This module is part of the CNNScoreVariants germline chain
     // (HaplotypeCaller -> CNNScoreVariants -> FilterVariantTranches). CNNScoreVariants
@@ -30,9 +33,14 @@ process HAPLOTYPE_CALLER_SCATTER {
 
     script:
         def args = task.ext.args ?: ''
+    // Explicit heap, as nf-core's GATK4 modules do. Without --java-options the JVM picks
+    // its own maximum, which is a fraction of whatever memory it believes it has - not
+    // necessarily the amount the scheduler granted. Sizing it from task.memory keeps the
+    // heap inside the reservation, which matters more now the reservation is smaller.
+        def avail_mem = (task.memory.mega * 0.8).intValue()
         def prefix = task.ext.prefix ?: "${meta.sample_name}_${interval_shard}"
         """
-        gatk HaplotypeCaller \
+        gatk --java-options "-Xmx${avail_mem}M" HaplotypeCaller \
             -R $reference_fa \
             -I $bam \
             -L $interval_shard \

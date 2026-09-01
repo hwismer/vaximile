@@ -4,7 +4,10 @@ process APPLY_BQSR_SCATTER {
     Apply base quality score recalibration on a provided interval.
     */
     
-    label 'process_low_memory'
+    // process_low, matching nf-core's gatk4/applybqsr. ApplyBQSR just rewrites quality
+    // scores and does not need the 32 GB of process_low_memory; it also runs once per
+    // sample per interval, so the saving is multiplied by scatter_count.
+    label 'process_low'
     conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
 
@@ -19,9 +22,14 @@ process APPLY_BQSR_SCATTER {
         tuple val(meta), path("*_bqsr.bam"), emit: bam
         path "versions.yml", topic: versions
     script:
+    // Explicit heap, as nf-core's GATK4 modules do. Without --java-options the JVM picks
+    // its own maximum, which is a fraction of whatever memory it believes it has - not
+    // necessarily the amount the scheduler granted. Sizing it from task.memory keeps the
+    // heap inside the reservation, which matters more now the reservation is smaller.
+    def avail_mem = (task.memory.mega * 0.8).intValue()
     def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}_${interval_shard}"
     """
-    gatk ApplyBQSR \
+    gatk --java-options "-Xmx${avail_mem}M" ApplyBQSR \
         -R $reference_fa \
         -I $markdup_bam \
         -L $interval_shard \

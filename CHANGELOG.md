@@ -7,6 +7,31 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Halved the footprint of the per-interval scatter processes, which is the footprint that
+  gets multiplied by `--scatter_count`.
+
+  | Process | Before | After |
+  | --- | --- | --- |
+  | `MUTECT2_SCATTER` | 4 CPU / 32 GB | 2 CPU / 16 GB |
+  | `HAPLOTYPE_CALLER_SCATTER` | 4 CPU / 32 GB | 2 CPU / 16 GB |
+  | `APPLY_BQSR_SCATTER` | 2 CPU / 32 GB | 2 CPU / 16 GB |
+  | `BASE_RECALIBRATOR_SCATTER` | 2 CPU / 16 GB | unchanged |
+
+  Every nf-core GATK4 module - `mutect2`, `haplotypecaller`, `baserecalibrator`, `applybqsr` -
+  is `process_low`, and nf-core/sarek's `process_low` is 2 CPU / 12 GB, so this pipeline was
+  asking for roughly double on each of N x samples concurrent shards. PairHMM threading scales
+  sublinearly, so running twice as many shards at two threads beats half as many at four.
+
+  The three changed modules now also set an explicit heap,
+  `gatk --java-options "-Xmx${(task.memory.mega * 0.8).intValue()}M"`, as nf-core's GATK4
+  modules do. Without it the JVM chooses its own maximum from whatever memory it believes it
+  has, which is not necessarily what the scheduler granted - a gap that matters more now the
+  reservation is smaller.
+
+  Verified: stub run 132 tasks unchanged, all four scatter processes resolve to 2 CPU, and
+  the heap expression renders as `-Xmx13107M` at 16 GB (the script block is not executed by a
+  stub run, so it was evaluated directly).
+
 - Duplicate stats now actually reach the MultiQC report. Wiring `SAMTOOLS_SORMADUP`'s
   metrics into MultiQC was not enough: MultiQC never parsed the file, so the report had no
   duplicate section despite the file being staged into the task.

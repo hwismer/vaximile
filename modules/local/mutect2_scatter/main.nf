@@ -8,7 +8,11 @@ process MUTECT2_SCATTER {
 
     */
 
-    label 'process_medium'
+    // process_low, matching nf-core's gatk4/mutect2. This runs once per pair per interval,
+    // so its footprint is multiplied by scatter_count; halving CPU and memory lets twice as
+    // many shards run at once. PairHMM scaling is sublinear, so more concurrent shards beats
+    // more threads per shard.
+    label 'process_low'
     conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
 
@@ -30,9 +34,14 @@ process MUTECT2_SCATTER {
         path "versions.yml", topic: versions
 
     script:
+    // Explicit heap, as nf-core's GATK4 modules do. Without --java-options the JVM picks
+    // its own maximum, which is a fraction of whatever memory it believes it has - not
+    // necessarily the amount the scheduler granted. Sizing it from task.memory keeps the
+    // heap inside the reservation, which matters more now the reservation is smaller.
+        def avail_mem = (task.memory.mega * 0.8).intValue()
         def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}_${interval_shard}"
         """
-        gatk Mutect2 \
+        gatk --java-options "-Xmx${avail_mem}M" Mutect2 \
             -R "${reference_fa}" \
             -I ${tumor_bam} \
             -I ${normal_bam} \
