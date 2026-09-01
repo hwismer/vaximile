@@ -7,7 +7,7 @@ process PHASE_VCF_RBPHASING {
 
     */
 
-    label 'process_medium'
+    label 'process_low_memory'
     // GATK3 ONLY - deliberately has no conda spec, and must not be given a gatk4 one.
     // This tool has no GATK4 equivalent: CombineVariants and ReadBackedPhasing were both
     // dropped in GATK4. bioconda's `gatk` 3.x is only a wrapper that needs the licensed

@@ -28,7 +28,7 @@ process POSTPROCESS_VCF {
         // match the staged input "*_filtered_variants.vcf.gz", so no safe output glob exists.
         def args = task.ext.args ?: ''
         """
-        bcftools norm $args -f $reference_fa $somatic_vcf -Oz -o norm_vcf.vcf.gz
+        bcftools norm --threads $task.cpus $args -f $reference_fa $somatic_vcf -Oz -o norm_vcf.vcf.gz
         bcftools sort norm_vcf.vcf.gz -Oz -o "${somatic_name}_${caller}_variants.vcf.gz"
         bcftools index -t "${somatic_name}_${caller}_variants.vcf.gz"
         cat <<-END_VERSIONS > versions.yml

@@ -21,7 +21,7 @@ process MHC_REGION_FASTQS {
     set -euo pipefail
 
     # Build BED of non-primary contigs
-    samtools idxstats $bam \
+    samtools idxstats --threads $task.cpus $bam \
       | awk '
           \$1 != "*" &&
           \$1 != "chr6" &&
@@ -32,7 +32,7 @@ process MHC_REGION_FASTQS {
       > nonprimary.bed
 
     # chr6 MHC interval
-    samtools view \
+    samtools view --threads $task.cpus \
         -b \
         -F 0x904 \
         ${bam} \
@@ -40,7 +40,7 @@ process MHC_REGION_FASTQS {
         > chr6_mhc.bam
 
     # unmapped reads
-    samtools view \
+    samtools view --threads $task.cpus \
         -b \
         -f 4 \
         -F 0x904 \
@@ -48,7 +48,7 @@ process MHC_REGION_FASTQS {
         > unmapped.bam
 
     # reads on non-primary contigs
-    samtools view \
+    samtools view --threads $task.cpus \
         -b \
         -F 0x904 \
         -L nonprimary.bed \

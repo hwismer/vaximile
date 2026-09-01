@@ -4,7 +4,7 @@ process GET_PILEUP_SUMMARIES {
     Takes a merged post-bqsr bam and a vcf of common germline sites and gets pileup summaries at provided sites
     */
     
-    label 'process_medium'
+    label 'process_low_memory'
     conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
 

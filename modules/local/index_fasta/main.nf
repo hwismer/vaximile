@@ -2,7 +2,7 @@ process INDEX_FASTA {
 
     // Indexes a fasta file with samtools faidx
 
-    label 'process_medium'
+    label 'process_low'
     conda "bioconda::samtools=1.23.1 bioconda::bedtools=2.31.1 bioconda::htslib=1.23.1"
 
     tag "Indexing $fasta"

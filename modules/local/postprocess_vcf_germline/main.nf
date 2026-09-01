@@ -26,7 +26,7 @@ process POSTPROCESS_VCF {
     script:
 
         """
-        bcftools norm -m -any -d exact -f $reference_fa $vcf -Oz -o norm_vcf.vcf.gz
+        bcftools norm --threads $task.cpus -m -any -d exact -f $reference_fa $vcf -Oz -o norm_vcf.vcf.gz
         bcftools sort norm_vcf.vcf.gz -Oz -o "${sample_name}_${caller}_variants.vcf.gz"
         bcftools index -t "${sample_name}_${caller}_variants.vcf.gz"
         cat <<-END_VERSIONS > versions.yml

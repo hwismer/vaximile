@@ -26,7 +26,7 @@ process FILTER_VCF {
     script:
         def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}_${caller}"
         """
-        bcftools view -f PASS -Oz -o "${prefix}_filtered_variants.vcf.gz" $somatic_vcf
+        bcftools view --threads $task.cpus -f PASS -Oz -o "${prefix}_filtered_variants.vcf.gz" $somatic_vcf
         bcftools index -t "${prefix}_filtered_variants.vcf.gz"
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

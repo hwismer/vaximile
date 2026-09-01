@@ -5,7 +5,7 @@ process ANNOTATE_VCF_COVERAGE {
         Use the output of bamreadcount to annotate coverage given a particular sample.
     */
 
-    label 'process_medium'
+    label 'process_low_memory'
 
     container "griffithlab/vatools:5.2.0"
 

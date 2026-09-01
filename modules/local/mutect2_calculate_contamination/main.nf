@@ -1,6 +1,6 @@
 process MUTECT2_CALCULATE_CONTAMINATION {
 
-    label 'process_medium'
+    label 'process_low_memory'
     conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
 

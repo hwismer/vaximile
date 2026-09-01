@@ -7,7 +7,7 @@ process PHASE_VCF_SORT_VCF {
 
     */
 
-    label 'process_medium'
+    label 'process_low_memory'
     container 'broadinstitute/picard:3.4.0'
 
     tag "Sorting VCF ${combined_vcf}"

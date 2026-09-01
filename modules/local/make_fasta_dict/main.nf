@@ -2,7 +2,7 @@ process MAKE_FASTA_DICT {
 
     // Generate picard fasta.dict file for use with GATK tools
 
-    label 'process_medium'
+    label 'process_low'
     conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
 

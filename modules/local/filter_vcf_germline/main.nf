@@ -23,7 +23,7 @@ process FILTER_VCF {
     script:
         def prefix = task.ext.prefix ?: "${meta.sample_name}_${caller}"
         """
-        bcftools view -f PASS -Oz -o "${prefix}_filtered_variants.vcf.gz" $vcf
+        bcftools view --threads $task.cpus -f PASS -Oz -o "${prefix}_filtered_variants.vcf.gz" $vcf
         bcftools index -t "${prefix}_filtered_variants.vcf.gz"
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

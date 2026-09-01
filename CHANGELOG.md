@@ -7,6 +7,38 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Completed the threading audit over the remaining 22 modules that reserved more than two
+  CPUs without passing `$task.cpus` to anything. Each tool was checked against its own
+  documentation or `--help`, and against the corresponding nf-core module.
+
+  - **Arriba: 384 GB -> 96 GB.** This was the single largest reservation in the pipeline and
+    forced a whole-node allocation on most clusters. Arriba's README describes the
+    post-alignment step as "~2 minutes", and nf-core/rnafusion runs it at 6 CPU / 36 GB. 96 GB
+    keeps a wide margin over that. Arriba takes no thread option. `process_max_memory` had no
+    other user and is removed.
+  - **bcftools** now passes `--threads $task.cpus` in `POSTPROCESS_VCF`,
+    `POSTPROCESS_VCF_GERMLINE`, `FILTER_VCF` and `FILTER_VCF_GERMLINE`, matching nf-core's
+    `bcftools/norm` and `bcftools/view`.
+  - **somalier** `EXTRACT` and `RELATE`: `process_medium` -> `process_low`, matching nf-core.
+    somalier has no internal threading; its README parallelises across samples, which
+    Nextflow already does.
+  - **`MHC_REGION_FASTQS`** now passes `--threads` to its `samtools idxstats` and three
+    `samtools view` calls rather than losing the tier.
+  - **`INDEX_FASTA`, `MAKE_FASTA_DICT`**: `process_medium` -> `process_low`.
+
+  Twelve single-threaded GATK and GATK3-jar modules moved to a new `process_low_memory` tier
+  - 2 CPU, but the same 32 GB as `process_medium`. Dropping them to `process_low` would have
+  cut memory as well, and `MERGE_SOMATIC_VCFS`, `MERGE_GERMLINE_VCFS` and
+  `PHASE_VCF_RBPHASING` size their Java heap directly from it
+  (`-Xmx${task.memory.toGiga() - 1}g`), so that would have shrunk the heap. Two CPUs rather
+  than one because several are JVM tools with a parallel garbage collector.
+
+  Verified: stub run 132 tasks unchanged, and the retiered processes resolve to the intended
+  CPU counts with memory unchanged. These are reasoning-and-documentation based, not
+  measured: the CPU reductions are safe because none of those modules passed `task.cpus` to
+  anything, but the Arriba memory cut in particular is worth confirming against peak RSS in
+  an execution report from a real run.
+
 - Matched thread counts to what each tool can actually use. Audited every module for
   whether its script passes `$task.cpus` at all, and cross-checked the tools against their
   own documentation and the corresponding nf-core modules.

@@ -1,6 +1,6 @@
 process HAPLOTYPE_CALLER_FILTER_VARIANTS {
     
-    label 'process_medium'
+    label 'process_low_memory'
     // GATK PINNED TO 4.3.0.0 - DO NOT BUMP TO MATCH THE 4.6.1.0 MODULES.
     // This module is part of the CNNScoreVariants germline chain
     // (HaplotypeCaller -> CNNScoreVariants -> FilterVariantTranches). CNNScoreVariants
