@@ -7,6 +7,29 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Added five top-level outputs. All five were already computed and emitted internally; they
+  were simply never published.
+
+  - `markdup_bams` and `preproc_bams` - the duplicate-marked and recalibrated BAMs, each with
+    its index.
+  - `star_bam` - the coordinate-sorted, indexed RNA alignment.
+  - `germline_vcf_table` - the tabular form of the germline consensus VCF, matching what
+    `somatic_vcf_table` already did for the somatic set. `VCF_TO_TABLE` was already being run
+    on it inside `GERMLINE_WORKFLOW`.
+  - `ascat_results` - segments, CNVs, purity/ploidy, BAF, LogR, metrics and plots mixed into
+    one publish target rather than eight.
+
+  The three BAM sets share `alignment/` under the sample, since their filenames already
+  distinguish them (`_markdup.bam`, `_bqsr.bam`, `_STAR_sorted.bam`). The germline table sits
+  beside its VCF in `germline/`, mirroring how the somatic VCF and table share `variants/`.
+  ASCAT is pair-level, so it publishes under the somatic name.
+
+  Verified by stub run: both BAM sets, the STAR BAM, all three indexes and the germline TSV
+  appear in the expected directories. ASCAT could not be exercised - `conf/test.config` sets
+  `ext.when = false` for it because its stub needs a container for the version capture -
+  though enabling it does show the task being created for the pair, so the wiring is reached;
+  only its publishing is unverified.
+
 - Completed the threading audit over the remaining 22 modules that reserved more than two
   CPUs without passing `$task.cpus` to anything. Each tool was checked against its own
   documentation or `--help`, and against the corresponding nf-core module.

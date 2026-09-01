@@ -317,6 +317,14 @@ workflow VAXIMILE {
         ascat_resources.RT,
     )
 
+    // One publish target for the whole ASCAT result set rather than eight separate ones.
+    // Note ASCAT is disabled under -profile test (ext.when = false in conf/test.config,
+    // because its stub needs a container for the version capture), so this channel is
+    // empty there and only carries data on a real run.
+    ascat_results = ascat.segments
+        .mix(ascat.cnvs, ascat.purityploidy, ascat.metrics, ascat.png,
+             ascat.bafs, ascat.logrs, ascat.allelefreqs)
+
 
 
 
@@ -441,6 +449,11 @@ workflow VAXIMILE {
 
     emit:
     multiqc_reports = multiqc
+    markdup_bams = markdup_bams               // duplicates marked, pre-recalibration
+    preproc_bams = preproc_bams               // after BQSR
+    star_bam = star_bam                       // RNA, coordinate-sorted and indexed
+    germline_vcf_table = germline_table       // tabular germline consensus, as for somatic
+    ascat_results = ascat_results             // segments, CNVs, purity/ploidy, plots
     somatic_vcf = somatic_vcf
     somatic_vcf_table = somatic_vcf_table
     germline_vcf = germline_vcf

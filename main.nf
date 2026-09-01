@@ -67,6 +67,11 @@ workflow {
     publish:
     software_versions = software_versions
     multiqc_reports = VAXIMILE.out.multiqc_reports
+    markdup_bams = VAXIMILE.out.markdup_bams
+    preproc_bams = VAXIMILE.out.preproc_bams
+    star_bam = VAXIMILE.out.star_bam
+    germline_vcf_table = VAXIMILE.out.germline_vcf_table
+    ascat_results = VAXIMILE.out.ascat_results
     somatic_vcf = VAXIMILE.out.somatic_vcf
     somatic_vcf_table = VAXIMILE.out.somatic_vcf_table
     germline_vcf = VAXIMILE.out.germline_vcf
@@ -131,6 +136,25 @@ output {
     }
     germline_vcf {
         path { meta, vcf, tbi -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/germline/" }
+    }
+    // Alongside the VCF, matching how somatic_vcf and somatic_vcf_table share variants/.
+    germline_vcf_table {
+        path { meta, tsv -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/germline/" }
+    }
+    // All three BAM sets share alignment/; their filenames already distinguish them
+    // (_markdup.bam, _bqsr.bam, _STAR_sorted.bam).
+    markdup_bams {
+        path { meta, bam, bai -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/alignment/" }
+    }
+    preproc_bams {
+        path { meta, bam, bai -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/alignment/" }
+    }
+    star_bam {
+        path { meta, bam, bai -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/alignment/" }
+    }
+    // Pair-level: ASCAT is called on a tumour/normal pair.
+    ascat_results {
+        path { meta, result -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/ascat/" }
     }
     salmon_gene {
         path { meta, gene_abundance -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/salmon" }

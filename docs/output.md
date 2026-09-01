@@ -22,10 +22,12 @@ This document describes the output produced by the pipeline. Publishing is drive
     │   └── combined MHC class I aggregated report across the patient's pairs
     ├── <somatic_name>/          per tumour/normal pair
     │   ├── variants/     somatic VCF (+ index) and its tabular form
+    │   ├── ascat/        CNV segments, purity/ploidy, BAF/LogR, metrics and plots
     │   ├── hla/          pVACtools-formatted allele list for the merged pair BAM
     │   └── pvactools/    pVACseq and pVACfuse prediction directories
     └── <sample_name>/           per library
-        ├── germline/     germline VCF (+ index), normal samples only
+        ├── alignment/    duplicate-marked BAM, recalibrated BAM, STAR BAM (+ indexes)
+        ├── germline/     germline VCF (+ index) and its tabular form, normals only
         ├── hla/
         │   ├── optitype/ class I calls and coverage plot
         │   ├── hlahd/    class I and II calls
@@ -83,6 +85,18 @@ aggregated MHC class I report combined across the patient's tumour/normal pairs.
 `--geneMap`. The transcript-level `quant.sf` and the rest of the salmon run directory are
 produced but consumed internally - for VCF expression annotation, strandedness prediction
 and MultiQC - rather than published.
+
+### Alignments
+
+`alignment/` holds three BAMs per library, each with its index, distinguished by suffix:
+`_markdup.bam` after duplicate marking, `_bqsr.bam` after base recalibration, and
+`_STAR_sorted.bam` for RNA. The somatic callers read the recalibrated BAMs; Strelka and
+Manta read the duplicate-marked ones.
+
+### Copy number
+
+`ascat/` publishes the whole ASCAT result set for a pair - segments, CNV calls,
+purity/ploidy estimates, BAF and LogR tables, run metrics and plots.
 
 ## Not published by default
 
