@@ -20,25 +20,29 @@ This document describes the output produced by the pipeline. Publishing is drive
     │   └── <patient>_report.html
     ├── pvactools_report/
     │   └── combined MHC class I aggregated report across the patient's pairs
-    ├── <somatic_name>/          per tumour/normal pair
+    ├── <somatic_name>/          one directory per tumour/normal pair
     │   ├── variants/     somatic VCF (+ index) and its tabular form
     │   ├── ascat/        CNV segments, purity/ploidy, BAF/LogR, metrics and plots
-    │   ├── hla/          pVACtools-formatted allele list for the merged pair BAM
+    │   ├── hla/          class I/II calls from the merged pair BAM
     │   └── pvactools/    pVACseq and pVACfuse prediction directories
-    └── <sample_name>/           per library
-        ├── alignment/    duplicate-marked BAM, recalibrated BAM, STAR BAM (+ indexes)
-        ├── germline/     germline VCF (+ index) and its tabular form, normals only
-        ├── hla/
-        │   ├── optitype/ class I calls and coverage plot
-        │   ├── hlahd/    class I and II calls
-        │   └── pVACtools-formatted allele list
-        └── salmon/       gene-level abundance, RNA samples only
+    └── samples/                 everything belonging to a single library
+        └── <sample_name>/
+            ├── alignment/ duplicate-marked BAM, recalibrated BAM, STAR BAM (+ indexes)
+            ├── germline/  germline VCF (+ index) and its tabular form, normals only
+            ├── hla/
+            │   ├── optitype/ class I calls and coverage plot
+            │   ├── hlahd/    class I and II calls
+            │   └── pVACtools-formatted allele list
+            └── salmon/    gene-level abundance, RNA samples only
 ```
 
-Outputs split by whether they belong to a pair or to a single library. A library shared
-between pairs - a normal used as the control for several tumours - is processed once, so
-its germline calls and per-sample HLA typing sit under the sample rather than being
-duplicated under each pair.
+Outputs split by whether they belong to a pair or to a single library. Pair directories sit
+directly under the patient; per-library results are collected under `samples/` so they do
+not interleave with them.
+
+A library shared between pairs - a normal used as the control for several tumours - is
+processed once, so its alignments, germline calls and per-sample HLA typing appear once
+under `samples/` rather than being duplicated beneath each pair.
 
 ## Results by stage
 

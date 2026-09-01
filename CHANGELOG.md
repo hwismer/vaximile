@@ -7,6 +7,18 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Per-library outputs now publish under `<patient>/samples/<sample_name>/` instead of
+  `<patient>/<sample_name>/`, so they no longer interleave with the tumour/normal pair
+  directories at the top of the patient folder. Pair-level outputs are unchanged at
+  `<patient>/<somatic_name>/`.
+
+  One line, in `publish_scope()`: sample-level metas now return `samples/<sample_name>`
+  rather than the bare name, and every publish path closure picks it up.
+
+  Verified by stub run: `samples/Normal1/{alignment,germline,hla}` and
+  `samples/Tumor1/{alignment,hla,salmon}` alongside an unchanged
+  `PatientX_Tumor1_Normal1/{variants,hla,pvactools}`.
+
 - Added five top-level outputs. All five were already computed and emitted internally; they
   were simply never published.
 

@@ -89,18 +89,20 @@ workflow {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 /*
-    Where an output belongs in the published tree.
+    Where an output belongs in the published tree, relative to the patient directory.
 
-    Pair-level outputs carry a somatic_meta with a scalar somatic_name and go under the
-    pair. Sample-level outputs - germline calls, per-sample HLA typing, RNA quantification -
-    carry a somatic_names list instead, because a library shared between pairs is processed
-    once and no longer belongs to exactly one of them. Those go under the sample.
+    Pair-level outputs carry a somatic_meta with a scalar somatic_name and go under
+    "<somatic_name>/". Sample-level outputs - alignments, germline calls, per-sample HLA
+    typing, RNA quantification - carry a somatic_names list instead, because a library shared
+    between pairs is processed once and no longer belongs to exactly one of them. Those go
+    under "samples/<sample_name>/", which keeps the per-library results together and stops
+    them interleaving with the pair directories at the top of the patient folder.
 
     Reading meta.somatic_name unconditionally is what published them to a literal "null"
     directory once libraries began being deduplicated.
 */
 def publish_scope(meta) {
-    return meta.somatic_name ?: meta.sample_name
+    return meta.somatic_name ? "${meta.somatic_name}" : "samples/${meta.sample_name}"
 }
 
 output {
