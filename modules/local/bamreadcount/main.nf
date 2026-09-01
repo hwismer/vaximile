@@ -7,7 +7,9 @@ process BAMREADCOUNT {
 
     */
 
-    label 'process_high'
+    // bam-readcount is single-threaded and the helper script does not parallelise,
+    // so the extra cores of process_high went unused.
+    label 'process_low'
     cache "lenient"
 
     container "mgibio/bam_readcount_helper-cwl:1.2.1"

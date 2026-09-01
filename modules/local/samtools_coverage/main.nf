@@ -1,6 +1,8 @@
 process SAMTOOLS_COVERAGE {
     
-    label 'process_high'
+    // `samtools coverage` has no -@/--threads option at all, so process_high was
+    // reserving 8 CPUs it could never use. nf-core's samtools/coverage is process_single.
+    label 'process_single'
     conda "bioconda::samtools=1.23.1"
     
     tag "Samtools coverage on ${meta.sample_name}"

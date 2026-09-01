@@ -20,6 +20,7 @@ process CREATE_SALMON_INDEX {
     def prefix = task.ext.prefix ?: "${transcripts_fa}"
     """
     salmon index \
+        --threads $task.cpus \
         -t $transcripts_fa \
         -i "${prefix}_salmon_index" \
         $args

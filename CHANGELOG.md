@@ -7,6 +7,42 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Matched thread counts to what each tool can actually use. Audited every module for
+  whether its script passes `$task.cpus` at all, and cross-checked the tools against their
+  own documentation and the corresponding nf-core modules.
+
+  Tools that support threading but were given none:
+
+  - `VEP_ANNOTATE` and `VEP_ANNOTATE_GERMLINE` now pass `--fork $task.cpus`. VEP's own docs
+    say forking "can dramatically improve runtime", nf-core's `ensemblvep/vep` uses
+    `--fork ${task.cpus}`, and `PHASE_VCF_VEP` in this pipeline already did - these two were
+    simply the outliers, running single-threaded on 4 and 8 reserved cores. Likely the
+    largest single runtime win here.
+  - `CREATE_SALMON_INDEX` now passes `--threads $task.cpus`, matching nf-core's
+    `salmon/index`. It held `process_high` and used one core.
+  - `SAMTOOLS_IDXSTATS` now passes `--threads`.
+
+  Cores that were reserved and could not be used:
+
+  - `NOVOALIGN_HLA_FASTA`: `process_max` -> `process_single`. Its script body is empty - it
+    re-emits its inputs and writes versions.yml - so it was reserving **32 CPUs to do
+    nothing**.
+  - `SAMTOOLS_COVERAGE`: `process_high` -> `process_single`. `samtools coverage` has no
+    `-@`/`--threads` option at all; nf-core's module is `process_single` too.
+  - `BAMREADCOUNT`: `process_high` -> `process_low`. bam-readcount is single-threaded.
+  - `APPLY_BQSR_GATHER`: `process_very_high` -> `process_high`, 16 to 8. The k-way merge is
+    serial and the threads only serve BAM (de)compression, which flattens out well before 16.
+
+  Left alone deliberately: `FASTP` already passes `--thread` (nf-core uses `process_medium`
+  where this is `process_high`, which is generous but not wrong); `VEP_FILTER` and
+  `VEP_POPULATION_FILTER` run `filter_vep`, which has no `--fork` and is correctly on
+  `process_low`; the GATK per-interval tools are single-threaded by design and are scattered
+  instead.
+
+  Verified: stub run 132 tasks unchanged, and the retiered processes resolve to the intended
+  CPU counts. The added flags are in `script:` blocks, which a stub run does not execute, so
+  they are verified by inspection of the rendered commands rather than by running the tools.
+
 - `APPLY_BQSR_GATHER` moves from `process_medium` to `process_very_high`, 4 CPU to 16, since
   `-@` now feeds `samtools merge` and this process absorbed the compression work the removed
   `SORT_BAM` used to do. The k-way merge itself is serial - the threads go to BAM

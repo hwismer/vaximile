@@ -29,6 +29,7 @@ process VEP_ANNOTATE {
         def args = task.ext.args ?: ''
         """
         vep \
+            --fork $task.cpus \
             --input_file $vcf  \
             --output_file ${prefix}_vep.vcf \
             --format vcf --vcf \

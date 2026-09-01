@@ -1,6 +1,8 @@
 process NOVOALIGN_HLA_FASTA {
 
-    label 'process_max'
+    // process_single: the script body is empty - this only re-emits its inputs and
+    // writes versions.yml - so process_max was reserving 32 CPUs to do nothing.
+    label 'process_single'
 
     conda "bioconda::novoalign=4.03.04"
 

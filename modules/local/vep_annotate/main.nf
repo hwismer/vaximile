@@ -29,6 +29,7 @@ process VEP_ANNOTATE {
         def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
         """
         vep \
+            --fork $task.cpus \
             --input_file $vcf  \
             --output_file ${prefix}_vep.vcf \
             --format vcf --vcf \
