@@ -7,6 +7,34 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `APPLY_BQSR_GATHER` now merges its shards with `samtools merge` instead of concatenating
+  them with `gatk GatherBamFiles`, and emits an indexed BAM. `SORT_BAM` is gone with no
+  replacement.
+
+  Concatenation cannot produce a sorted BAM here. `APPLY_BQSR_SCATTER` passes `-L <shard>`
+  and GATK emits every read *overlapping* the interval, not only those starting inside it, so
+  a read spanning a boundary is written near the start of the later shard while beginning
+  before the end of the earlier one. Ordering the shards correctly is necessary but not
+  sufficient - the seams are still out of order, by less than a read length, which is why the
+  header still claimed `SO:coordinate` and only `samtools index` objected. That was
+  previously absorbed by re-sorting the entire gathered BAM; a k-way merge of
+  already-sorted shards gets there in one streaming pass instead, so the sort is eliminated
+  rather than hidden.
+
+  `-c` is required, not cosmetic. Every shard carries the same `@RG`, and without it merge
+  treats those as colliding IDs and renames all but one - verified locally, `ID:S1` became
+  `ID:S1-7A2E5CD9` and the reads split across both - which would have broken every
+  downstream GATK step. `-p` does the same for `@PG`. `--write-index` with the `##idx##`
+  output syntax produces the `.bai` in the same pass, so no separate index step is needed
+  either.
+
+  Verified against real samtools on two shards reproducing the reported overlap: concatenation
+  fails with the same `Unsorted positions on sequence #1: 52263835 followed by 52263738`,
+  while the merge command as written in the module emits positions in order, keeps a single
+  `@RG ID:S1` with all reads tagged to it, reports `SO:coordinate`, re-indexes cleanly and
+  preserves the read count. Stub run is 132 tasks, two fewer than before, with `SORT_BAM`
+  removed and nothing added, and `GET_PILEUP_SUMMARIES` still receiving bam plus bai.
+
 - Reverted `SORT_BAM` -> `INDEX_BAM` on the BQSR path. Replacing the sort with a plain
   `samtools index` was wrong: the gathered BQSR BAM is **not** fully coordinate-sorted, and
   a real run failed with
