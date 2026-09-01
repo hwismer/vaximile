@@ -27,7 +27,12 @@ process APPLY_BQSR_GATHER {
     needed is gone too.
     */
 
-    label 'process_medium'
+    // process_very_high (16 CPU) rather than process_medium (4): -@ feeds samtools merge,
+    // and this is now doing the compression work the removed SORT_BAM used to do. Note the
+    // k-way merge itself is serial - the threads go to BAM (de)compression - so the gain
+    // tapers well before 16, and the tier also reserves 96 GB that a streaming merge does
+    // not need.
+    label 'process_very_high'
     conda "bioconda::samtools=1.23.1 bioconda::htslib=1.23.1"
 
     tag "GatherBams on ${meta.sample_name}"

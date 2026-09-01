@@ -7,6 +7,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `APPLY_BQSR_GATHER` moves from `process_medium` to `process_very_high`, 4 CPU to 16, since
+  `-@` now feeds `samtools merge` and this process absorbed the compression work the removed
+  `SORT_BAM` used to do. The k-way merge itself is serial - the threads go to BAM
+  (de)compression - so the gain tapers well before 16, and the tier reserves 96 GB that a
+  streaming merge does not need.
+
 - `APPLY_BQSR_GATHER` now merges its shards with `samtools merge` instead of concatenating
   them with `gatk GatherBamFiles`, and emits an indexed BAM. `SORT_BAM` is gone with no
   replacement.
