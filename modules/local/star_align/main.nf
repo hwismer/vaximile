@@ -13,8 +13,8 @@ process STAR_ALIGN {
     // queue time than it saves. Drop back to process_very_high if that trade goes the wrong
     // way. Memory is 96 GB in both tiers, which is what GRCh38 plus two-pass needs.
     label 'process_max'
-
-    container "alexdobin/star:2.7.10a_alpha_220506"
+    
+    conda "bioconda::star=2.7.11b"
 
     tag "Aligning ${meta.sample_name} with STAR"
 

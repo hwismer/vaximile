@@ -2,14 +2,14 @@ process CREATE_STAR_INDEX {
 
     /*
     
-    Use a reference fasta and gtf to create a star index for star 2.7.10
+    Use a reference fasta and gtf to create a star index for star 2.7.11b
 
     */
 
     label 'process_max'
     cache 'lenient'
 
-    container "alexdobin/star:2.7.10a_alpha_220506"
+    conda "bioconda::star=2.7.11b"
 
     tag "Creating STAR index with ${reference_fa} and ${gtf}"
 
