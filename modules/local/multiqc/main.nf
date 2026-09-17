@@ -42,9 +42,20 @@ custom_data:
       id: "hla_calls"
       title: "HLA-HD Calls"
 
+  hla_loh:
+    file_format: tsv
+    section_name: "HLA LOH"
+    description: "Allele-level copy number and loss-of-heterozygosity statistics from lohhlamod, one row per HLA gene per tumour/normal pair"
+    plot_type: table
+    pconfig:
+      id: "hla_loh"
+      title: "HLA LOH"
+
 sp:
   hla_calls:
     fn: "*_hlahd.tsv"
+  hla_loh:
+    fn: "*_lohres.tsv"
 
 sample_names_replace_regex: true
 EOF

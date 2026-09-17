@@ -1,7 +1,7 @@
 include { MHCFLOW_REALIGN } from "../../../modules/local/mhcflow_realign/main"
 include { LOHHLAMOD } from "../../../modules/local/lohhlamod/main"
 include { LOHHLAPLOT } from "../../../modules/local/lohhlaplot/main"
-include { LOHHLA_PLOTS_MQC } from "../../../modules/local/lohhla_plots_mqc/main"
+include { LOHHLA_MQC } from "../../../modules/local/lohhla_mqc/main"
 include { fan_out_pairs } from "../utils_nfcore_vaximile_pipeline"
 
 /*
@@ -84,12 +84,15 @@ workflow HLA_LOH_WORKFLOW {
         plots = LOHHLAPLOT(plot_input).plots
 
         // The plots are PDFs, which MultiQC cannot embed, so a rasterised copy goes to the
-        // report and the PDFs stay the published artefact.
-        plots_png = LOHHLA_PLOTS_MQC(plots).png
+        // report and the PDFs stay the published artefact. The result table goes the same
+        // way, re-keyed by pair.
+        mqc_input = plots.join(loh.loh_res.map { somatic_name, _meta, res -> tuple(somatic_name, res) })
+        loh_mqc = LOHHLA_MQC(mqc_input)
 
     emit:
         loh_dir = loh.loh_dir
         loh_res = loh.loh_res
         loh_plots = plots
-        loh_plots_png = plots_png
+        loh_plots_png = loh_mqc.png
+        loh_res_mqc = loh_mqc.tsv
 }

@@ -441,6 +441,8 @@ workflow VAXIMILE {
     mqc_loh_plots = hla_loh_workflow.loh_plots_png
         .transpose()
         .map{ _somatic_name, meta, png -> tuple(meta.patient, meta.somatic_name, null, png) }
+    mqc_loh_res = hla_loh_workflow.loh_res_mqc
+        .map{ _somatic_name, meta, tsv -> tuple(meta.patient, meta.somatic_name, null, tsv) }
 
 
     mqc_reports = mqc_dna_fastp_reports
@@ -459,6 +461,7 @@ workflow VAXIMILE {
         .mix(mqc_hlahd_tsv)
         .mix(mqc_markdup)
         .mix(mqc_loh_plots)
+        .mix(mqc_loh_res)
         .groupTuple()
     multiqc = MULTIQC(mqc_reports).html
     

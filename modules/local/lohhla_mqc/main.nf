@@ -1,19 +1,20 @@
-process LOHHLA_PLOTS_MQC {
+process LOHHLA_MQC {
 
     label 'process_single'
 
     conda "conda-forge::poppler=26.09.0"
 
-    tag "Converting ${somatic_name} HLA LOH plots for MultiQC"
+    tag "Preparing ${somatic_name} HLA LOH results for MultiQC"
 
     input:
-        tuple val(somatic_name), val(meta), path(plot_dir)
+        tuple val(somatic_name), val(meta), path(plot_dir), path(loh_res)
 
     output:
         // MultiQC picks up any *_mqc.png as a custom-content image and titles the section
         // from the file name, so the pair and the plot are encoded there: it is the only
         // place that survives into the report.
         tuple val(somatic_name), val(meta), path("*_mqc.png"), emit: png
+        tuple val(somatic_name), val(meta), path("*_lohres.tsv"), emit: tsv
         path "versions.yml", topic: versions
 
     script:
@@ -35,6 +36,15 @@ process LOHHLA_PLOTS_MQC {
         pdftoppm -png -r 150 -singlefile "\$pdf" "${somatic_name}_\${name}_mqc"
     done
 
+    # The result table is keyed by HLA gene alone - hla_a, hla_b, hla_c - which is unique
+    # within a pair and not across them. MultiQC reads the first column as the row key and
+    # merges every file it matches into one table, so without the pair in the key a second
+    # pair overwrites the first rather than appending to it.
+    awk -F'\t' -v OFS='\t' -v pair="${somatic_name}" '
+        NR == 1 { \$1 = "Pair_HLAGene"; print; next }
+        { \$1 = pair "_" \$1; print }
+    ' ${loh_res} > ${somatic_name}_lohres.tsv
+
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         pdftoppm: \$(pdftoppm -v 2>&1 | head -1 | sed 's/pdftoppm version //')
@@ -44,6 +54,7 @@ process LOHHLA_PLOTS_MQC {
     stub:
     """
     touch ${somatic_name}_hla_a_logR_mqc.png
+    touch ${somatic_name}_lohres.tsv
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         pdftoppm: 26.09.0
