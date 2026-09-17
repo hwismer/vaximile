@@ -1,6 +1,5 @@
 // Helper processes used in the main workflow
 include { SPLIT_INTERVALS } from "../../modules/local/split_intervals/main"
-include { MERGE_BAMS } from "../../modules/local/merge_bams/main"
 include { CAPTURE_KIT_BED_PROCESS } from "../../modules/local/capture_kit_bed_process/main"
 include { PULL_VEP_PVAC_PLUGINS } from "../../modules/local/pull_vep_pvac_plugins/main"
 include { PULL_VEP_CACHE } from "../../modules/local/pull_vep_cache/main"
@@ -173,27 +172,13 @@ workflow VAXIMILE {
     //**************************************************************************************************************************************
     // HLA Typing
     
-    // Group bams by meta.somatic_name to be merged
-    bams_merged_input = fan_out_pairs(markdup_bams).map{somatic_name, meta, bam, bai ->
-        tuple(somatic_name, meta.patient, meta, bam, bai)
-    }
-    .groupTuple(by: [0,1])
-    .map{somatic_name, patient, metas, bams, bais ->
-            def new_meta = [
-                somatic_name: somatic_name,
-                patient: patient,
-                sample_name: "Merged_" + somatic_name,
-                sample_type: "Merged",
-                molecule: "DNA"
-            ]
-
-            tuple(new_meta, new_meta.sample_name, bams, bais)
-    }
-    
-    combined_bams = MERGE_BAMS(bams_merged_input).bam // Merge BAMs sharing somatic_name
-
-    // Call HLA alleles on individual samples AND merged samples
-    hla_input = markdup_bams.mix(combined_bams)
+    // One HLA call set per library. Merging a pair's tumour and normal BAMs to type them
+    // together used to happen here, but mhcflow rejects the result: it requires a single
+    // read group and exits on the merge's two with
+    //
+    //   [helper.py] - [_check_single_rg:132] - [ERROR]: Found more than one read group
+    //   information in BAM: [{'ID': 'N1_S1', ...}, {'ID': 'T1', ...}]
+    hla_input = markdup_bams
     hla_workflow = HLA_TYPING_WORKFLOW(hla_input, params.reference_includes_chr_prefix,
         hla_reference, hla_kmers, hla_freq)
     
@@ -372,15 +357,17 @@ workflow VAXIMILE {
     //**************************************************************************************************************************************
     // PVACtools Neoantigen Prediction - Somatic Variants / RNA Fusions /
 
-    hla_branched = hla_pvac_input.branch{meta, calls ->
-        merged: meta.sample_type == "Merged"
-        tumor: meta.sample_type == "TUMOR"
-        normal: meta.sample_type == "NORMAL"
-    }
-
-    combined_hla_somatic_name = hla_branched.merged.map{meta, calls ->
-        tuple(meta.somatic_name, meta, calls)
-    }
+    // pVACtools wants one HLA call set per tumour/normal pair, which used to be the merged
+    // sample's. With merging gone it comes from the normal: HLA type is germline, and the
+    // normal is free of the tumour's LOH at the HLA locus and of its purity, so it is the
+    // better of the two sources rather than only the available one. To predict against the
+    // tumour's calls instead, switch the filter below to "TUMOR".
+    //
+    // fan_out_pairs re-keys by somatic_name, which is what puts a normal shared by two
+    // tumours into both pairs.
+    combined_hla_somatic_name = fan_out_pairs(
+        hla_pvac_input.filter { meta, _calls -> meta.sample_type == "NORMAL" }
+    )
 
     somatic_phased = somatic_vcf.join(phased_vcf).map{meta, somatic_vcf_final, somatic_index, phased_vcf_final, phased_index ->
         tuple(meta.somatic_name, meta, somatic_vcf_final, somatic_index, phased_vcf_final, phased_index)
