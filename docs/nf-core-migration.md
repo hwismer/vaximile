@@ -118,7 +118,7 @@ chain with its own upstream sibling):
 | `merge_somatic_vcfs`, `postprocess_vcf`, `postprocess_vcf_germline` | inputs from `FILTER_VCF` are `*_variants.vcf.gz` |
 | `vep_filter` | output name is identical to what `VEP_ANNOTATE` produces |
 | `phase_vcf_vep` | its `*_vep.vcf` is what `vep_annotate` emits |
-| `haplotype_caller_gather_select_variants`, `mutect2_gather_select_variants`, `index_vcf`, `index_final_vcf`, `merge_bams` | output has no literal suffix at all, only a bare extension shared with the input |
+| `haplotype_caller_gather_select_variants`, `mutect2_gather_select_variants`, `index_vcf`, `index_final_vcf` | output has no literal suffix at all, only a bare extension shared with the input |
 | `mhcflow` | output is a bare directory named from meta; the only glob would be `*` |
 
 **The filename is not the process's to choose** — the tool derives it, or it is a fixed
