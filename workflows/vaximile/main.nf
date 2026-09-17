@@ -136,7 +136,16 @@ workflow VAXIMILE {
     //**************************************************************************************************************************************
     // Split Capture Intervals
 
-    num_intervals = params.scatter_count
+    // `as Integer` because a value from the command line arrives as a String, where the
+    // same value in -params-file arrives as an Integer. num_intervals reaches
+    // groupTuple(size:), which takes only an Integer, so `--scatter_count 20` would end the
+    // run after alignment with
+    //
+    //   Value '20' cannot be used in in parameter 'size' for operator 'groupTuple'
+    //
+    // The schema types it as an integer, but nf-schema validates params rather than
+    // rewriting them, so the coercion has to happen here.
+    num_intervals = params.scatter_count as Integer
     intervals = SPLIT_INTERVALS(reference_genome, reference_dict, capture_kits, num_intervals, 0).interval_shards
     processed_regions = CAPTURE_KIT_BED_PROCESS(capture_kits).bed
 
