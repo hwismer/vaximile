@@ -163,13 +163,13 @@
                     "type": "string",
                     "format": "file-path",
                     "description": "Unique HLA k-mer file used by the typing tools.",
-                    "default": "https://github.com/jason-weirather/hla-polysolver/blob/master/data/abc_v14.uniq"
+                    "default": "https://raw.githubusercontent.com/jason-weirather/hla-polysolver/master/data/abc_v14.uniq"
                 },
                 "hla_freq": {
                     "type": "string",
                     "format": "file-path",
                     "description": "HLA allele population frequency table.",
-                    "default": "https://github.com/jason-weirather/hla-polysolver/blob/master/data/HLA_FREQ.txt"
+                    "default": "https://raw.githubusercontent.com/jason-weirather/hla-polysolver/master/data/HLA_FREQ.txt"
                 }
             }
         },
