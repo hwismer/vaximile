@@ -45,11 +45,44 @@ custom_data:
   hla_loh:
     file_format: tsv
     section_name: "HLA LOH"
-    description: "Allele-level copy number and loss-of-heterozygosity statistics from lohhlamod, one row per HLA gene per tumour/normal pair"
+    description: "Allele-level copy number and loss-of-heterozygosity statistics from lohhlamod, one row per HLA gene per tumour/normal pair. The remaining columns - copy number bounds, the four median logR columns, bin counts and the per-allele loss percentages - are hidden by default and can be shown from Configure Columns."
     plot_type: table
     pconfig:
       id: "hla_loh"
       title: "HLA LOH"
+    headers:
+      HLA_A1:
+        title: "Allele 1"
+      HLA_A2:
+        title: "Allele 2"
+      HLA_A1_CN:
+        title: "A1 CN"
+        format: "{:,.2f}"
+      HLA_A2_CN:
+        title: "A2 CN"
+        format: "{:,.2f}"
+      MM_LogR_Paired_Pvalue:
+        title: "MM logR p"
+        format: "{:,.2e}"
+      Median_BAF:
+        title: "Median BAF"
+        format: "{:,.3f}"
+      Pct_CN_Diff_Supporting_Bins:
+        title: "% bins CN diff"
+        format: "{:,.1f}"
+      HLA_A1_CN_Lower: { hidden: True }
+      HLA_A1_CN_Upper: { hidden: True }
+      HLA_A2_CN_Lower: { hidden: True }
+      HLA_A2_CN_Upper: { hidden: True }
+      HLA_A1_Median_LogR: { hidden: True }
+      HLA_A2_Median_LogR: { hidden: True }
+      HLA_A1_MM_Median_LogR: { hidden: True }
+      HLA_A2_MM_Median_LogR: { hidden: True }
+      Num_MM: { hidden: True }
+      Num_Bins: { hidden: True }
+      Num_MM_Bins: { hidden: True }
+      Pct_A1_Loss_Supporting_Bins: { hidden: True }
+      Pct_A2_Loss_Supporting_Bins: { hidden: True }
 
 sp:
   hla_calls:
