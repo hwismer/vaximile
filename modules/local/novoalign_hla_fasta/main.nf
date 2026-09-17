@@ -4,7 +4,7 @@ process NOVOALIGN_HLA_FASTA {
     // kilobases of allele sequence, so this finishes in seconds.
     label 'process_single'
 
-    conda "bioconda::novoalign=4.03.04"
+    conda "bioconda::novoalign=3.09.04"
 
     input:
         tuple path(hla_fasta), path(hla_fai)
@@ -24,7 +24,7 @@ process NOVOALIGN_HLA_FASTA {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        novoalign: 4.03.04
+        novoalign: 3.09.04
     END_VERSIONS
     """
 
@@ -34,7 +34,7 @@ process NOVOALIGN_HLA_FASTA {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        novoalign: 4.03.04
+        novoalign: 3.09.04
     END_VERSIONS
     """
 }
