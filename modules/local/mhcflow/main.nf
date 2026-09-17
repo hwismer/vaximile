@@ -21,6 +21,15 @@ process MHCFLOW {
         // as a path makes Nextflow look for a file literally named by the map's toString,
         // which fails with "Missing output file(s) [somatic_name:..., patient:...]".
         tuple val(meta), path("${meta.sample_name}"), emit: out
+        // finalizer/ holds what an LOH analysis needs, and is not the same as realigner/.
+        // mhcflow realigns twice: once against the full HLA reference under realigner/, and
+        // again under finalizer/ against only the alleles it typed for this sample. LOH
+        // compares tumour and normal over one subject-specific reference, so it is the
+        // finalizer copy that matters here. The FASTA and its .nix travel together because
+        // the tumour's realignment is driven from this sample's reference, and mhcflow
+        // derives the index from the FASTA path rather than taking it as an argument.
+        tuple val(meta), path("${meta.sample_name}/finalizer/*.hla.fasta"), path("${meta.sample_name}/finalizer/*.hla.nix"), emit: sample_hla_ref
+        tuple val(meta), path("${meta.sample_name}/finalizer/*.hla.realn.bam"), path("${meta.sample_name}/finalizer/*.hla.realn.bam.bai"), emit: realn_bam
         path "versions.yml", topic: versions
 
     script:
@@ -42,7 +51,11 @@ process MHCFLOW {
 
     stub:
     """
-    mkdir -p ${meta.sample_name}
+    mkdir -p ${meta.sample_name}/finalizer
+    touch ${meta.sample_name}/finalizer/${meta.sample_name}.hla.fasta
+    touch ${meta.sample_name}/finalizer/${meta.sample_name}.hla.nix
+    touch ${meta.sample_name}/finalizer/${meta.sample_name}.hla.realn.bam
+    touch ${meta.sample_name}/finalizer/${meta.sample_name}.hla.realn.bam.bai
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         unknown: unknown

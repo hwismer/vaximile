@@ -72,6 +72,8 @@ workflow {
     star_bam = VAXIMILE.out.star_bam
     germline_vcf_table = VAXIMILE.out.germline_vcf_table
     ascat_results = VAXIMILE.out.ascat_results
+    hla_loh = VAXIMILE.out.hla_loh
+    hla_loh_plots = VAXIMILE.out.hla_loh_plots
     somatic_vcf = VAXIMILE.out.somatic_vcf
     somatic_vcf_table = VAXIMILE.out.somatic_vcf_table
     germline_vcf = VAXIMILE.out.germline_vcf
@@ -160,6 +162,15 @@ output {
     }
     salmon_gene {
         path { meta, gene_abundance -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/salmon" }
+    }
+    // Pair-level, and keyed by the pair rather than by a sample: LOH is a property of a
+    // tumour measured against its own normal, so the somatic_meta carries the patient and
+    // the two channels arrive as (somatic_name, meta, files).
+    hla_loh {
+        path { _somatic_name, meta, res -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla_loh/" }
+    }
+    hla_loh_plots {
+        path { _somatic_name, meta, plots -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla_loh/" }
     }
 
 }

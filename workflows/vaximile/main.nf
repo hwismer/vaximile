@@ -18,6 +18,7 @@ include { DNA_ALIGN_AND_PREPROC } from "../../subworkflows/local/dna_align_and_p
 include { BWA_INDEX } from "../../subworkflows/local/bwa_index/main"
 include { PREPARE_REFERENCE_FASTA } from "../../subworkflows/local/prepare_reference_fasta/main"
 include { HLA_TYPING_WORKFLOW } from "../../subworkflows/local/hla_typing_workflow/main"
+include { HLA_LOH_WORKFLOW } from "../../subworkflows/local/hla_loh_workflow/main"
 include { RNASEQ_WORKFLOW } from "../../subworkflows/local/rnaseq_workflow/main"
 include { MUTECT2 } from "../../subworkflows/local/mutect2/main"
 include { STRELKA_WORKFLOW } from "../../subworkflows/local/strelka_workflow/main"
@@ -315,6 +316,18 @@ workflow VAXIMILE {
     // Note ASCAT is disabled under -profile test (ext.when = false in conf/test.config,
     // because its stub needs a container for the version capture), so this channel is
     // empty there and only carries data on a real run.
+    // HLA LOH. Downstream of both HLA typing and ASCAT: it pairs each tumour with its own
+    // normal, realigns it against that normal's HLA reference, and calls loss over the two.
+    hla_loh_workflow = HLA_LOH_WORKFLOW(
+        markdup_bams,
+        hla_workflow.mhcflow_hla_ref,
+        hla_workflow.mhcflow_realn_bam,
+        ascat.purityploidy,
+        hla_workflow.hla_bed,
+        hla_kmers,
+        hla_freq
+    )
+
     ascat_results = ascat.segments
         .mix(ascat.cnvs, ascat.purityploidy, ascat.metrics, ascat.png,
              ascat.bafs, ascat.logrs, ascat.allelefreqs)
@@ -450,6 +463,8 @@ workflow VAXIMILE {
     star_bam = star_bam                       // RNA, coordinate-sorted and indexed
     germline_vcf_table = germline_table       // tabular germline consensus, as for somatic
     ascat_results = ascat_results             // segments, CNVs, purity/ploidy, plots
+    hla_loh = hla_loh_workflow.loh_res        // per-pair HLA LOH results from lohhlamod
+    hla_loh_plots = hla_loh_workflow.loh_plots // per-gene coverage/logR/BAF profiles
     somatic_vcf = somatic_vcf
     somatic_vcf_table = somatic_vcf_table
     germline_vcf = germline_vcf

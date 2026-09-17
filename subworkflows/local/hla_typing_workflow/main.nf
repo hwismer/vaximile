@@ -34,7 +34,7 @@ workflow HLA_TYPING_WORKFLOW {
         // emits more than one item.
         hla_reference_indexed = NOVOALIGN_HLA_FASTA(hla_fasta).out.first()
 
-        mhcflow = MHCFLOW(mhcflow_input, hla_reference_indexed, hla_bed, hla_kmers, hla_freqs).out
+        mhcflow = MHCFLOW(mhcflow_input, hla_reference_indexed, hla_bed, hla_kmers, hla_freqs)
 
 
         fastqs = MHC_REGION_FASTQS(bams).reads
@@ -62,6 +62,12 @@ workflow HLA_TYPING_WORKFLOW {
         hla_calls_pvac_input = HLA_CALLS_PVAC(combined_typing_results)
 
     emit:
+        // The subject-specific reference and realignment the LOH workflow builds on, and
+        // hla_bed, which HLA_LOH_WORKFLOW needs for the tumour's second mhcflow run and
+        // which is produced in here rather than by the caller.
+        mhcflow_hla_ref = mhcflow.sample_hla_ref
+        mhcflow_realn_bam = mhcflow.realn_bam
+        hla_bed = hla_bed
         optitype = optitype.hla_calls
         hlahd = hlahd.final_hla_calls
         hlahd_tsv = hlahd_tsv

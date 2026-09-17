@@ -1,0 +1,101 @@
+name: mhcflow
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.12
+  - pip=24.2
+  - samtools=1.21
+  - novoalign=3.09.04
+  - pip:
+      - mhcflow==0.2.3
+
+# NOTE: novoalign is a runtime dependency of mhcflow, not a build-time one, and
+# mhcflow does not check for it — see the notes below.
+#
+# ---------------------------------------------------------------------------
+# Usage
+# ---------------------------------------------------------------------------
+#   Standalone:
+#     conda env create -f environment.yml
+#     conda activate mhcflow
+#
+#   Nextflow (file must end in .yml or .yaml or it won't be recognised):
+#     conda "${moduleDir}/environment.yml"
+#
+# ---------------------------------------------------------------------------
+# Why pip is listed twice
+# ---------------------------------------------------------------------------
+# `- pip=24.2` installs the pip binary into the environment. `- pip:` is the
+# nested key handing packages to it. Omit the first and conda may fall back to
+# a system pip that installs into the wrong prefix.
+#
+# mhcflow's own Python deps (mhctyper, tinyscibio, pyahocorasick, pyfaidx) are
+# resolved by pip automatically — no need to list them unless you want to pin
+# them, in which case add them under the pip: block with == pins.
+#
+# ---------------------------------------------------------------------------
+# NOVOALIGN
+# ---------------------------------------------------------------------------
+# From mhcflow's install docs, verbatim:
+#
+#   "mhcflow implicitly requires samtools, novoalign, and novoindex binaries
+#    to be available in your environment. Currently, mhcflow does not check
+#    for the presence of these binaries."
+#
+# bioconda does package novoalign, which is why it is pinned above and why
+# NOVOALIGN_HLA_FASTA pins the same version to build the .nix index. The package
+# installs both `novoalign` and `novoindex`, and the two must stay on the same
+# version: a .nix written by novoindex 4.x is not readable by novoalign 3.x.
+#
+# linux-64 only at this version. bioconda stopped building osx after 3.09.00, so
+# this env does not solve on a Mac, and it fails pointing at glibc rather than at
+# novoalign.
+#
+# ---------------------------------------------------------------------------
+# WHY 3.09.04 AND NOT THE NEWER 4.03.04
+# ---------------------------------------------------------------------------
+# The licence, not the version, is the constraint. From the bioconda recipe's
+# own notes at each version, verbatim:
+#
+#   4.03.04: "Novoalign V4 will not run unless a "novoalign.lic" license file is
+#             provided in the same directory as its binaries."
+#
+#   3.09.04: "Novoalign runs in single-threaded mode by default unless a
+#             "novoalign.lic" license file is provided in the same directory as
+#             its binaries."
+#
+# V4 has no free mode: without the licence the binary exits and writes nothing.
+# Because mhcflow pipes novoalign straight into `samtools view`, the only symptom
+# is a misleading pair of errors that name samtools and a missing BAM:
+#
+#   [main_samview] fail to read the header from "-".
+#   [ERROR]: Failed to find realigned BAM: <sample>.hla.realn.N.bam
+#
+# V3 runs unlicensed, and what the licence buys there - multithreading within one
+# novoalign process - is worth nothing here: mhcflow's realigner passes no thread
+# flag at all and parallelises by running one single-threaded novoalign per fished
+# chunk, --nproc of them at a time. So V3 unlicensed and V4 licensed do the same
+# work at the same speed in this pipeline, and V3 needs no licence to be shipped,
+# renewed or mounted on a cluster.
+#
+# bioconda still rebuilds 3.09.04 (newest build December 2024, same day as the
+# 4.03.04 build), so this is not an unmaintained pin.
+#
+# novoindex is not licence-gated at either version, which is why NOVOALIGN_HLA_FASTA
+# builds the .nix index fine even where realignment cannot run.
+#
+# There is deliberately no licence parameter. Should one ever be needed - to lift
+# the single-thread default, or to move to V4 - novoalign reads it from the
+# directory holding the binary, so it has to be copied in rather than pointed at,
+# and Nextflow rebuilds this environment under a new hash on any edit here. Copy
+# it beside the binary at the top of the MHCFLOW script:
+#
+#   NOVOALIGN_BIN_DIR="$(dirname "$(command -v novoalign)")"
+#   cp /path/to/novoalign.lic "$NOVOALIGN_BIN_DIR/novoalign.lic"
+#
+# Because mhcflow does not check for these binaries, a missing or broken novoalign
+# surfaces as a confusing downstream error rather than a clean "command not found".
+# Verify with:
+#
+#   which samtools novoalign novoindex
