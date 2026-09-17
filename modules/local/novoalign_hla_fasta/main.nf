@@ -1,7 +1,7 @@
 process NOVOALIGN_HLA_FASTA {
 
-    // process_single: the script body is empty - this only re-emits its inputs and
-    // writes versions.yml - so process_max was reserving 32 CPUs to do nothing.
+    // process_single: novoindex is single-threaded and the HLA reference is a few hundred
+    // kilobases of allele sequence, so this finishes in seconds.
     label 'process_single'
 
     conda "bioconda::novoalign=4.03.04"
@@ -10,11 +10,17 @@ process NOVOALIGN_HLA_FASTA {
         tuple path(hla_fasta), path(hla_fai)
 
     output:
-        tuple path(hla_fasta), path(hla_fai), emit: out
+        // The .nix is emitted alongside the FASTA it was built from, because MHCFLOW has
+        // to stage all three into one directory: mhcflow does not take the index as an
+        // argument, it derives the path from --ref with Path.with_suffix(".nix") and then
+        // calls `novoalign -d <that path>`. The index must therefore sit next to the FASTA
+        // under exactly the same stem.
+        tuple path(hla_fasta), path(hla_fai), path("${hla_fasta.baseName}.nix"), emit: out
         path "versions.yml", topic: versions
 
     script:
     """
+    novoindex "${hla_fasta.baseName}.nix" $hla_fasta
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -24,6 +30,8 @@ process NOVOALIGN_HLA_FASTA {
 
     stub:
     """
+    touch "${hla_fasta.baseName}.nix"
+
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         novoalign: 4.03.04

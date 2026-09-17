@@ -7,6 +7,7 @@ include { MHC_REGION_FASTQS } from "../../../modules/local/mhc_region_fastqs/mai
 include { HLAHD_TO_TSV } from "../../../modules/local/hlahd_to_tsv/main"
 include { HLA_BED } from "../../../modules/local/hla_bed/main"
 include { MHCFLOW } from "../../../modules/local/mhcflow/main"
+include { NOVOALIGN_HLA_FASTA } from "../../../modules/local/novoalign_hla_fasta/main"
 
 workflow HLA_TYPING_WORKFLOW {
 
@@ -26,7 +27,14 @@ workflow HLA_TYPING_WORKFLOW {
                 tuple(meta, meta.sample_name, bam, bai)
             }
 
-        mhcflow = MHCFLOW(mhcflow_input, hla_fasta, hla_bed, hla_kmers, hla_freqs).out
+        // .first() to make the indexed reference an explicit value channel, matching how
+        // the un-indexed reference reaches this subworkflow (main.nf .first()s each HLA
+        // reference param). Nextflow would convert this single-item queue implicitly, but
+        // relying on that means the reference silently stops being reusable the day it
+        // emits more than one item.
+        hla_reference_indexed = NOVOALIGN_HLA_FASTA(hla_fasta).out.first()
+
+        mhcflow = MHCFLOW(mhcflow_input, hla_reference_indexed, hla_bed, hla_kmers, hla_freqs).out
 
 
         fastqs = MHC_REGION_FASTQS(bams).reads

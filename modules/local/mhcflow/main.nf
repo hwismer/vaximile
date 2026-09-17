@@ -6,7 +6,12 @@ process MHCFLOW {
 
     input:
         tuple val(meta), val(sample_name), path(bam), path(bai)
-        tuple path(hla_fasta), path(hla_fai)
+        // The novoalign index comes in with the FASTA rather than being passed to mhcflow:
+        // mhcflow derives it from --ref as `ref.with_suffix(".nix")` and never takes it as
+        // an argument, so it only has to be staged next to the FASTA. Built by
+        // NOVOALIGN_HLA_FASTA; without it mhcflow exits on
+        // "Failed to find HLA reference novoalign index file".
+        tuple path(hla_fasta), path(hla_fai), path(hla_nix)
         path hla_bed
         path hla_kmers
         path hla_freqs

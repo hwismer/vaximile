@@ -6,11 +6,12 @@ dependencies:
   - python=3.12
   - pip=24.2
   - samtools=1.21
+  - novoalign=4.03.04
   - pip:
       - mhcflow==0.2.3
 
-# NOTE: novoalign and novoindex are also required at runtime but are NOT
-# installable here — see the notes below.
+# NOTE: novoalign is a runtime dependency of mhcflow, not a build-time one, and
+# mhcflow does not check for it — see the notes below.
 #
 # ---------------------------------------------------------------------------
 # Usage
@@ -34,7 +35,7 @@ dependencies:
 # them, in which case add them under the pip: block with == pins.
 #
 # ---------------------------------------------------------------------------
-# THE NOVOALIGN PROBLEM
+# NOVOALIGN
 # ---------------------------------------------------------------------------
 # From mhcflow's install docs, verbatim:
 #
@@ -42,23 +43,25 @@ dependencies:
 #    to be available in your environment. Currently, mhcflow does not check
 #    for the presence of these binaries."
 #
-# novoalign is commercial and cannot be freely redistributed, so it cannot be
-# pinned in this file the way samtools can. You must supply it yourself and put
-# it on PATH. In a Nextflow process:
+# bioconda does package novoalign, which is why it is pinned above and why
+# NOVOALIGN_HLA_FASTA pins the same version to build the .nix index. The package
+# installs both `novoalign` and `novoindex`. 4.03.04 is the newest bioconda has.
 #
-#   process MHCFLOW {
-#       conda "${moduleDir}/environment.yml"
-#       containerOptions "--bind /path/to/novocraft:/opt/novocraft"
-#       script:
-#       """
-#       export PATH=/path/to/novocraft:\$PATH
-#       export NOVOALIGN_LICENSE=/path/to/novoalign.lic
-#       mhcflow ...
-#       """
-#   }
+# linux-64 only: bioconda stopped building osx after 3.09.00, so this env does
+# not solve on a Mac, and it fails pointing at glibc rather than at novoalign.
 #
-# The "does not check for the presence of these binaries" part matters: a
-# missing novoalign will surface as a confusing downstream error rather than a
-# clean "command not found". Verify before running:
+# The licence is the caveat, not the availability: novoalign is commercial, and
+# the unlicensed binary runs in free mode, which is single-threaded. mhcflow's
+# realigner runs one novoalign process per fished read pair and passes no thread
+# flag, so free mode works, but a licensed install is faster. To use a site
+# licence instead of this conda copy, put it ahead on PATH in the process script
+# and export the licence file:
+#
+#   export PATH=/path/to/novocraft:$PATH
+#   export NOVOALIGN_LICENSE=/path/to/novoalign.lic
+#
+# Because mhcflow does not check for these binaries, a missing or broken
+# novoalign surfaces as a confusing downstream error rather than a clean
+# "command not found". Verify with:
 #
 #   which samtools novoalign novoindex
