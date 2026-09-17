@@ -1,4 +1,8 @@
-samplesheet.csv
+# Anchored: an unanchored `samplesheet.csv` also matched assets/test/samplesheet.csv,
+# which kept the `-profile test` fixture out of the repo and broke the stub run on a
+# fresh clone.
+/samplesheet.csv
+/samplesheet_*.csv
 params.json
 vax_config.csv
 catpure_kits.csv
