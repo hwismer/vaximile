@@ -1,6 +1,7 @@
 include { MHCFLOW_REALIGN } from "../../../modules/local/mhcflow_realign/main"
 include { LOHHLAMOD } from "../../../modules/local/lohhlamod/main"
 include { LOHHLAPLOT } from "../../../modules/local/lohhlaplot/main"
+include { LOHHLA_PLOTS_MQC } from "../../../modules/local/lohhla_plots_mqc/main"
 include { fan_out_pairs } from "../utils_nfcore_vaximile_pipeline"
 
 /*
@@ -82,8 +83,13 @@ workflow HLA_LOH_WORKFLOW {
 
         plots = LOHHLAPLOT(plot_input).plots
 
+        // The plots are PDFs, which MultiQC cannot embed, so a rasterised copy goes to the
+        // report and the PDFs stay the published artefact.
+        plots_png = LOHHLA_PLOTS_MQC(plots).png
+
     emit:
         loh_dir = loh.loh_dir
         loh_res = loh.loh_res
         loh_plots = plots
+        loh_plots_png = plots_png
 }

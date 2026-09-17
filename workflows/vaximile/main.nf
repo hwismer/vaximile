@@ -434,6 +434,13 @@ workflow VAXIMILE {
     // the report had no duplicate rate at all. MultiQC's samtools module parses markdup
     // text output.
     mqc_markdup = markdup_metrics.map{meta, metrics -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, metrics)}
+    // Pair-level and one row per image: transpose() because LOHHLA_PLOTS_MQC emits all of a
+    // pair's plots as one list, and MultiQC's input is a flat file list. sample_name is null
+    // as it is for somalier - these belong to a pair, not a library, and a non-null value
+    // here would put a name into --replace-names that matches no sample.
+    mqc_loh_plots = hla_loh_workflow.loh_plots_png
+        .transpose()
+        .map{ _somatic_name, meta, png -> tuple(meta.patient, meta.somatic_name, null, png) }
 
 
     mqc_reports = mqc_dna_fastp_reports
@@ -451,6 +458,7 @@ workflow VAXIMILE {
         .mix(mqc_somalier_samples)
         .mix(mqc_hlahd_tsv)
         .mix(mqc_markdup)
+        .mix(mqc_loh_plots)
         .groupTuple()
     multiqc = MULTIQC(mqc_reports).html
     
