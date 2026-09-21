@@ -44,7 +44,7 @@ custom_data:
 
   hla_loh:
     file_format: tsv
-    section_name: "HLA LOH"
+    section_name: "HLA LOH Metrics"
     description: "Allele-level copy number and loss-of-heterozygosity statistics from lohhlamod, one row per HLA gene per tumour/normal pair. The remaining columns - copy number bounds, the four median logR columns, bin counts and the per-allele loss percentages - are hidden by default and can be shown from Configure Columns."
     plot_type: table
     pconfig:
@@ -84,14 +84,55 @@ custom_data:
       Pct_A1_Loss_Supporting_Bins: { hidden: True }
       Pct_A2_Loss_Supporting_Bins: { hidden: True }
 
+  ascat_metrics:
+    file_format: tsv
+    section_name: "ASCAT Metrics"
+    description: "Tumour purity, ploidy and ASCAT's own QC metrics, one row per tumour/normal pair"
+    plot_type: table
+    pconfig:
+      id: "ascat_metrics"
+      title: "ASCAT Metrics"
+EOF
+
+    # One section per pair for the tiled sheets, written here rather than declared above
+    # because the pairs are only known from what was staged. A single custom_data entry
+    # matching every sheet would read better in the config and lose data in the report:
+    # MultiQC keeps one image per section, so the second pair's sheet would replace the
+    # first. Naming the sections here also keeps the pair name intact, where letting
+    # MultiQC derive it from the file name turns TP_M1_N1 into "TP M1 N1".
+    for sheet in *_hla_loh_mqc.png; do
+        [ -e "\$sheet" ] || continue
+        pair=\$(basename "\$sheet" _hla_loh_mqc.png)
+        printf '  hla_loh_plots_%s:\n    section_name: "HLA LOH - %s"\n    plot_type: image\n' "\$pair" "\$pair" >> multiqc_config.yaml
+    done
+    for sheet in *_ascat_mqc.png; do
+        [ -e "\$sheet" ] || continue
+        pair=\$(basename "\$sheet" _ascat_mqc.png)
+        printf '  ascat_plots_%s:\n    section_name: "ASCAT - %s"\n    plot_type: image\n' "\$pair" "\$pair" >> multiqc_config.yaml
+    done
+
+    cat >> multiqc_config.yaml <<EOF
 sp:
   hla_calls:
     fn: "*_hlahd.tsv"
   hla_loh:
     fn: "*_lohres.tsv"
-
-sample_names_replace_regex: true
+  ascat_metrics:
+    fn: "*_ascatmetrics.tsv"
 EOF
+
+    for sheet in *_hla_loh_mqc.png; do
+        [ -e "\$sheet" ] || continue
+        pair=\$(basename "\$sheet" _hla_loh_mqc.png)
+        printf '  hla_loh_plots_%s:\n    fn: "%s"\n' "\$pair" "\$sheet" >> multiqc_config.yaml
+    done
+    for sheet in *_ascat_mqc.png; do
+        [ -e "\$sheet" ] || continue
+        pair=\$(basename "\$sheet" _ascat_mqc.png)
+        printf '  ascat_plots_%s:\n    fn: "%s"\n' "\$pair" "\$sheet" >> multiqc_config.yaml
+    done
+
+    printf '\nsample_names_replace_regex: true\n' >> multiqc_config.yaml
     
     cat multiqc_config.yaml
     

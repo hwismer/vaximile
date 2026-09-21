@@ -19,6 +19,7 @@ include { BWA_INDEX } from "../../subworkflows/local/bwa_index/main"
 include { PREPARE_REFERENCE_FASTA } from "../../subworkflows/local/prepare_reference_fasta/main"
 include { HLA_TYPING_WORKFLOW } from "../../subworkflows/local/hla_typing_workflow/main"
 include { HLA_LOH_WORKFLOW } from "../../subworkflows/local/hla_loh_workflow/main"
+include { ASCAT_MQC } from "../../modules/local/ascat_mqc/main"
 include { RNASEQ_WORKFLOW } from "../../subworkflows/local/rnaseq_workflow/main"
 include { MUTECT2 } from "../../subworkflows/local/mutect2/main"
 include { STRELKA_WORKFLOW } from "../../subworkflows/local/strelka_workflow/main"
@@ -318,6 +319,10 @@ workflow VAXIMILE {
     // empty there and only carries data on a real run.
     // HLA LOH. Downstream of both HLA typing and ASCAT: it pairs each tumour with its own
     // normal, realigns it against that normal's HLA reference, and calls loss over the two.
+    // Staged as a file rather than referenced through projectDir, so the tiling script
+    // travels with the task the way any other input does.
+    montage_script = Channel.value(file("${projectDir}/assets/montage_panels.py", checkIfExists: true))
+
     hla_loh_workflow = HLA_LOH_WORKFLOW(
         markdup_bams,
         hla_workflow.mhcflow_hla_ref,
@@ -325,7 +330,19 @@ workflow VAXIMILE {
         ascat.purityploidy,
         hla_workflow.hla_bed,
         hla_kmers,
-        hla_freq
+        hla_freq,
+        montage_script
+    )
+
+    // ASCAT's plots and its two one-row result files, tiled and merged for the report.
+    // join on the meta rather than mixing: the three emits are per pair and have to arrive
+    // together, and ASCAT is allowed to fail here, which drops the pair from all three.
+    ascat_mqc = ASCAT_MQC(
+        ascat.png
+            .join(ascat.purityploidy)
+            .join(ascat.metrics)
+            .map { meta, png, pp, metrics -> tuple(meta.somatic_name, meta, png, pp, metrics) },
+        montage_script
     )
 
     ascat_results = ascat.segments
@@ -443,6 +460,10 @@ workflow VAXIMILE {
         .map{ _somatic_name, meta, png -> tuple(meta.patient, meta.somatic_name, null, png) }
     mqc_loh_res = hla_loh_workflow.loh_res_mqc
         .map{ _somatic_name, meta, tsv -> tuple(meta.patient, meta.somatic_name, null, tsv) }
+    mqc_ascat_plots = ascat_mqc.png
+        .map{ _somatic_name, meta, png -> tuple(meta.patient, meta.somatic_name, null, png) }
+    mqc_ascat_metrics = ascat_mqc.tsv
+        .map{ _somatic_name, meta, tsv -> tuple(meta.patient, meta.somatic_name, null, tsv) }
 
 
     mqc_reports = mqc_dna_fastp_reports
@@ -462,6 +483,8 @@ workflow VAXIMILE {
         .mix(mqc_markdup)
         .mix(mqc_loh_plots)
         .mix(mqc_loh_res)
+        .mix(mqc_ascat_plots)
+        .mix(mqc_ascat_metrics)
         .groupTuple()
     multiqc = MULTIQC(mqc_reports).html
     

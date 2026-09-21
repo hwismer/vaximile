@@ -27,6 +27,7 @@ workflow HLA_LOH_WORKFLOW {
         hla_bed
         hla_kmers
         hla_freqs
+        montage_script
 
     main:
 
@@ -87,7 +88,7 @@ workflow HLA_LOH_WORKFLOW {
         // report and the PDFs stay the published artefact. The result table goes the same
         // way, re-keyed by pair.
         mqc_input = plots.join(loh.loh_res.map { somatic_name, _meta, res -> tuple(somatic_name, res) })
-        loh_mqc = LOHHLA_MQC(mqc_input)
+        loh_mqc = LOHHLA_MQC(mqc_input, montage_script)
 
     emit:
         loh_dir = loh.loh_dir

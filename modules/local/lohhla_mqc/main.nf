@@ -8,6 +8,7 @@ process LOHHLA_MQC {
 
     input:
         tuple val(somatic_name), val(meta), path(plot_dir), path(loh_res)
+        path montage_script
 
     output:
         // MultiQC picks up any *_mqc.png as a custom-content image and titles the section
@@ -27,6 +28,10 @@ process LOHHLA_MQC {
     // Genes across and plot types down rather than the other way round: five columns
     // squeezes each panel to a fifth of the report width, where three leaves them legible.
     // The PDFs stay the published artefact for anything needing full resolution.
+    //
+    // The tiling itself is assets/montage_panels.py, shared with ASCAT_MQC. Staged as an
+    // input rather than run from projectDir so it travels with the task under scratch and
+    // into a container.
     """
     mkdir -p panels
     for pdf in ${plot_dir}/*.pdf; do
@@ -34,56 +39,10 @@ process LOHHLA_MQC {
         pdftoppm -png -r 100 -singlefile "\$pdf" "panels/\$(basename "\$pdf" .pdf)"
     done
 
-    cat > montage.py <<'MONTAGE'
-import pathlib
-import sys
-
-from PIL import Image, ImageDraw, ImageFont
-
-pair, plot_dir, out = sys.argv[1], pathlib.Path(sys.argv[2]), sys.argv[3]
-
-# lohhlaplot's order: the two coverage tracks, their ratio, then the derived signals.
-# Anything it grows later still gets tiled, after these.
-KINDS = ["t_dp", "n_dp", "tn_dp", "logR", "baf"]
-
-panels = {}
-for png in plot_dir.glob("*.png"):
-    gene, _, kind = png.stem.partition(".")
-    panels.setdefault(gene, {})[kind] = png
-if not panels:
-    sys.exit(f"No rasterised panels found for {pair}")
-
-genes = sorted(panels)
-present = {k for gene in panels.values() for k in gene}
-kinds = [k for k in KINDS if k in present] + sorted(present - set(KINDS))
-
-CELL_W, LABEL_H, PAD = 900, 34, 8
-probe = Image.open(next(iter(panels[genes[0]].values())))
-CELL_H = round(CELL_W * probe.height / probe.width)
-font = ImageFont.load_default(size=22)
-
-sheet = Image.new(
-    "RGB",
-    (PAD + len(genes) * (CELL_W + PAD), PAD + len(kinds) * (CELL_H + LABEL_H + PAD)),
-    "white",
-)
-draw = ImageDraw.Draw(sheet)
-
-for row, kind in enumerate(kinds):
-    for col, gene in enumerate(genes):
-        x = PAD + col * (CELL_W + PAD)
-        y = PAD + row * (CELL_H + LABEL_H + PAD)
-        draw.text((x, y + 6), f"{gene}  {kind}", fill="black", font=font)
-        src = panels[gene].get(kind)
-        if src is None:
-            continue
-        panel = Image.open(src).convert("RGB").resize((CELL_W, CELL_H), Image.LANCZOS)
-        sheet.paste(panel, (x, y + LABEL_H))
-
-sheet.save(out, optimize=True)
-MONTAGE
-
-    python3 montage.py ${somatic_name} panels ${somatic_name}_hla_loh_mqc.png
+    python3 $montage_script panels/*.png \\
+        --out ${somatic_name}_hla_loh_mqc.png \\
+        --layout grid \\
+        --row-order t_dp,n_dp,tn_dp,logR,baf
 
     # The result table is keyed by HLA gene alone - hla_a, hla_b, hla_c - which is unique
     # within a pair and not across them. MultiQC reads the first column as the row key and
