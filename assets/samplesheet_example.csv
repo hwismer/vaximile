@@ -1,4 +1,0 @@
-patient,somatic_name,sample_name,sample_type,sequencing_type,capture_kit,fastqr1,fastqr2
-PatientX,PatientX_Tumor1_Normal1,Tumor1,Tumor,exome,twist2,t1_r1.fq.gz,t1_r2.fq.gz
-PatientX,PatientX_Tumor1_Normal1,Normal1,Normal,exome,twist2,n1_r1.fq.gz,n1_r2.fq.gz
-PatientX,PatientX_Tumor1_Normal1,Tumor1,Tumor,rna,,t1_rna_r1.fq.gz,t2_rna_r2.fq.gz

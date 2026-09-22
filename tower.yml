@@ -1,7 +1,0 @@
-reports:
-  "**/*_report.html":
-    display: "MultiQC HTML report"
-  "**/*_vep.html":
-    display: "VEP annotation summary"
-  "pipeline_info/execution_report.html":
-    display: "Nextflow execution report"

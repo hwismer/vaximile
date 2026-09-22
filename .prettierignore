@@ -1,8 +1,0 @@
-assets/test/
-docs/images/
-*.png
-.nextflow*
-work/
-results/
-.DS_Store
-modules.json
