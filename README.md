@@ -65,9 +65,32 @@ Indices for BWA, STAR, and Salmon are built from the provided reference unless
 `--bwa_index`, `--star_index` or `--salmon_index` are provided. 
 See [docs/usage.md](docs/usage.md#prerequisites).
 
-One row per library. A normal shared by two tumours is listed once per pair; RNA rows leave
-`capture_kit` empty:
+### Samplesheet 
+One sample per line. A complete somatic grouping consists of a tumor sample, normal sample, and a tumor RNA sample.
 
+```
+patient: identifies a shared patient field that can contain multiple somatic groups. The pipeline concludes with a patient-level MultiQc reports with all patient-specific sample metrics.
+```
+```
+somatic_name: identifies the somatic comparison being done. Each somatic_name should have a single tumor dna sample, normal dna sample, and tumor RNAseq. In the case that multiple tumor samples share one normal sample, the normal sample will still need its own line in the samplesheet.
+```
+```
+sample_name: name of the individual sample.
+```
+```
+sample_type: either Tumor or Normal.
+```
+```
+sequencing_type: one of: exome, genome, rna, exome_FFPE, genome_FFPE.
+```
+```
+capture_kit: name of the capture kit used. Must match a kit name in the capture_kits.csv. Left blank by RNA samples.
+```
+```
+fastqr{1.2}: R1 and R2 fastqs for the sample
+```
+
+#### Example:
 ```csv title="samplesheet.csv"
 patient,somatic_name,sample_name,sample_type,sequencing_type,sex,capture_kit,fastqr1,fastqr2
 PatientX,PatientX_T1_N1,Tumor1,Tumor,exome,XX,twist_2,t1_r1.fq.gz,t1_r2.fq.gz
