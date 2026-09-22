@@ -63,7 +63,7 @@ Nothing below breaks the pipeline; each is a step toward `nf-core lint` passing.
    `-profile conda` covers 70 of 94. The remaining 20 have real blockers — licensed jars
    (GATK3), absent bioconda packages (DeepSomatic, HLA-HD), major version gaps (VAtools,
    Manta), and absolute container paths baked into scripts (Strelka, DeepVariant). They
-   are tabulated with reasons in [docs/usage.md](usage.md). The four with neither
+   were tabulated with reasons in docs/usage.md, since removed. The four with neither
    (`combine_fastqs`, `prepare_fasta`, `pull_arriba_resources`,
    `pull_ctat_resource_bundle`) depend on host `PATH`.
 5. **`conf/test.config` is a stub.** It points at the example samplesheet, which references

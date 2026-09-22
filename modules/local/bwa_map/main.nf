@@ -30,7 +30,7 @@ process BWA_MAP {
         No container. The published minibwa images (biocontainers, staphb) carry minibwa
         alone, and this now needs samtools in the same task. Under -profile docker or
         singularity this process will fall back to the host, as the other samtools-only
-        modules in this pipeline already do. See docs/usage.md.
+        modules in this pipeline already do.
     */
 
     label 'process_very_high'
