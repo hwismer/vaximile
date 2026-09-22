@@ -7,7 +7,7 @@ include { PULL_CTAT_RESOURCE_BUNDLE } from "../../modules/local/pull_ctat_resour
 include { PULL_ARRIBA_RESOURCES } from "../../modules/local/pull_arriba_resources/main"
 include { PULL_ASCAT_RESOURCES } from "../../modules/local/pull_ascat_resources/main"
 include { MULTIQC } from "../../modules/local/multiqc/main"
-include { ASCAT } from "../../modules/nf-core/ascat/main"
+include { ASCAT } from "../../modules/local/ascat/main"
 include { dedupe_libraries; fan_out_pairs; pair_tumor_normal } from "../../subworkflows/local/utils_nfcore_vaximile_pipeline"
 
 // Subworkflows
