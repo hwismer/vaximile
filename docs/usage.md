@@ -1,103 +1,71 @@
 # vaximile: Usage
 
-## Introduction
-
-vaximile predicts tumour neoantigens from paired tumour/normal bulk DNA sequencing and
-matched bulk RNA sequencing. A run produces somatic and germline variant calls, HLA class I
-and II genotypes, RNA fusion calls, and pVACseq/pVACfuse neoantigen predictions, plus a
-per-patient MultiQC report.
+vaximile predicts tumour neoantigens from paired tumour/normal bulk DNA and matched tumour
+RNA sequencing. See the [README](../README.md) for what the pipeline runs.
 
 ## Prerequisites
 
-### VEP cache (optional)
+Nothing has to be downloaded by hand. The VEP cache, ASCAT and Arriba resources and the
+CTAT bundle are fetched on the first run into `./vaximile_resources/` and reused after
+that, and any index left unset is built from the reference.
 
-Left unset, the pipeline downloads the Ensembl VEP cache itself on the first run -
-`PULL_VEP_CACHE` fetches the release-115 human GRCh38 cache (**~24 GiB**) into
-`./vaximile_resources/vep_cache` and later runs reuse it from there. Like the other
-`PULL_*` processes it runs on the local executor, so the head node needs outbound network
-access, and it uses the 20 h `process_long` tier because that transfer does not reliably
-fit the 4 h default.
+Two things are worth supplying if you already have them, because both are slow to produce:
 
-Pass `--vep_cache` to point at a cache you already have and skip the download:
+| Parameter | Notes |
+| --------- | ----- |
+| `--vep_cache` | Skips a ~24 GiB download. Point at the directory *containing* `homo_sapiens/`. Must be release **115** - VEP rejects a cache whose version differs from its own - and the plain cache, not `refseq` or `merged`. Required if you are not running human GRCh38, since the automatic download is fixed to `homo_sapiens_vep_115_GRCh38`. |
+| `--bwa_index` | minibwa. See [reusing an index](#reusing-a-prebuilt-minibwa-index) - the filenames matter. |
+| `--star_index` | STAR. Built with `star=2.7.11b`, and STAR indices are version-specific, so an index built by an older STAR is not reusable. |
+| `--salmon_index` | salmon `1.11.4`. |
 
-```bash
---vep_cache /path/to/vep_data
-```
+The `PULL_*` processes run on the local executor, so the head node needs outbound network
+access.
 
-The directory must be the one *containing* `homo_sapiens/`, which is what `--dir_cache`
-expects.
+## Samplesheet
 
-Supply your own cache if you are not running human GRCh38 - the automatic download is
-fixed to `homo_sapiens_vep_115_GRCh38`, matching the pipeline's default reference. The
-release must be **115** either way, because VEP rejects a cache whose version differs from
-its own, and the annotation modules pin `ensembl-vep` 115. Use the plain cache rather than
-the `refseq` or `merged` flavour; the VEP modules pass neither `--refseq` nor `--merged`.
-
-<https://ftp.ensembl.org/pub/release-115/variation/indexed_vep_cache/>
-
-### Prebuilt indices (optional)
-
-Any index left unset is built from `--reference_fa` / `--transcriptome_reference` during the
-run, which adds substantial wall time to a first run.
-
-| Parameter          | Tool                  |
-| ------------------ | --------------------- |
-| `--bwa_index`      | minibwa               |
-| `--star_index`     | STAR 2.7.10           |
-| `--salmon_index`   | salmon                |
-
-## Samplesheet input
-
-`--samplesheet` takes a comma-separated file with the header shown below. One row per
-FastQ pair. DNA and RNA rows for the same tumour go in the same sheet.
+`--samplesheet` takes a CSV with one row per FastQ pair. DNA and RNA rows for the same
+tumour go in the same sheet.
 
 ```csv title="samplesheet.csv"
 patient,somatic_name,sample_name,sample_type,sequencing_type,sex,capture_kit,fastqr1,fastqr2
-PatientX,PatientX_Tumor1_Normal1,Tumor1,Tumor,exome,XX,twist_2,t1_r1.fq.gz,t1_r2.fq.gz
-PatientX,PatientX_Tumor1_Normal1,Normal1,Normal,exome,XX,twist_2,n1_r1.fq.gz,n1_r2.fq.gz
-PatientX,PatientX_Tumor1_Normal1,Tumor1,Tumor,rna,XX,,t1_rna_r1.fq.gz,t1_rna_r2.fq.gz
+PatientX,PatientX_T1_N1,Tumor1,Tumor,exome,XX,twist_2,t1_r1.fq.gz,t1_r2.fq.gz
+PatientX,PatientX_T1_N1,Normal1,Normal,exome,XX,twist_2,n1_r1.fq.gz,n1_r2.fq.gz
+PatientX,PatientX_T1_N1,Tumor1,Tumor,rna,XX,,t1_rna_r1.fq.gz,t1_rna_r2.fq.gz
 ```
 
-| Column            | Description                                                                                                                                  |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `patient`         | Patient identifier. Groups samples for the MultiQC report, somalier relatedness check and the combined pVACseq report.                        |
-| `somatic_name`    | Identifies the tumour/normal pair. Rows sharing a value are called together, so this is what pairs a tumour with its normal and its RNA.      |
-| `sample_name`     | Name of the individual library.                                                                                                              |
-| `sample_type`     | `Tumor` or `Normal`.                                                                                                                         |
-| `sequencing_type` | `exome`, `genome`, `exome_FFPE`, `genome_FFPE` or `rna`. Anything else leaves `meta.molecule` null and the row is dropped at the DNA/RNA branch. |
-| `sex`             | `XX` or `XY`. Passed to ASCAT for copy number calling.                                                                                       |
-| `capture_kit`     | Must match a `kit` value in the capture kit sheet. Leave blank for RNA rows.                                                                  |
-| `fastqr1`         | Gzipped FastQ, read 1. Must end `.fq.gz` or `.fastq.gz`.                                                                                      |
-| `fastqr2`         | Gzipped FastQ, read 2. Must end `.fq.gz` or `.fastq.gz`.                                                                                      |
+| Column | Description |
+| ------ | ----------- |
+| `patient` | Groups samples for the MultiQC report, the somalier relatedness check and the combined pVACseq report. |
+| `somatic_name` | Identifies the tumour/normal pair. Rows sharing a value are called together, so this is what pairs a tumour with its normal and its RNA. |
+| `sample_name` | Name of the individual library. |
+| `sample_type` | `Tumor` or `Normal`. |
+| `sequencing_type` | `exome`, `genome`, `exome_FFPE`, `genome_FFPE` or `rna`. Anything else drops the row at the DNA/RNA branch. |
+| `sex` | `XX` or `XY`, or blank. Used only by ASCAT. |
+| `capture_kit` | Must match a `kit` in the capture kit sheet. Blank for RNA rows. |
+| `fastqr1`, `fastqr2` | Gzipped FastQs, ending `.fq.gz` or `.fastq.gz`. |
 
-### Samples shared between pairs
+### A normal shared between pairs
 
-A normal sequenced once but used as the control for several tumours is listed once per
-pair, with a different `somatic_name` each time:
+List it once per pair, with a different `somatic_name` each time:
 
 ```csv
-PatientX,PatientX_Tumor1_Normal1,Normal1,Normal,exome,XX,twist_2,n1_r1.fq.gz,n1_r2.fq.gz
-PatientX,PatientX_Tumor2_Normal1,Normal1,Normal,exome,XX,twist_2,n1_r1.fq.gz,n1_r2.fq.gz
+PatientX,PatientX_T1_N1,Normal1,Normal,exome,XX,twist_2,n1_r1.fq.gz,n1_r2.fq.gz
+PatientX,PatientX_T2_N1,Normal1,Normal,exome,XX,twist_2,n1_r1.fq.gz,n1_r2.fq.gz
 ```
 
-Rows sharing `patient` + `sample_name` + `sequencing_type`'s molecule are recognised as one
-library and processed **once**: one fastp, one alignment, one duplicate marking, one BQSR,
-one germline call, one HLA typing, one somalier extraction. The per-pair steps - Strelka,
-Mutect2, Manta, DeepSomatic, the merged-BAM HLA call - still run once per `somatic_name`.
+Rows sharing `patient` + `sample_name` + molecule are one library and are processed
+**once** - one fastp, alignment, duplicate marking, BQSR, germline call, HLA typing and
+somalier extraction. Only the per-pair steps run again per `somatic_name`.
 
-Before this, each of those rows was a separate channel item, so the normal was processed
-once per pair. With N tumours on one normal the sample-level work ran N times, and the
-normal's germline VCF was written N times to the same published name.
+Because those rows are one library they have to agree. The pipeline fails at launch, naming
+the conflict, if they list different FastQs or disagree on `sample_type`,
+`sequencing_type`, `capture_kit` or `sex`. Genuinely different data needs a different
+`sample_name`.
 
-Because those rows are treated as one library, they must agree. The pipeline checks at
-launch and fails, naming the conflict, if rows sharing a `sample_name` list different
-FastQs or disagree on `sample_type`, `sequencing_type`, `capture_kit` or `sex`. Genuinely
-different data must be given a different `sample_name`.
+## Capture kits
 
-## Capture kit input
-
-`--capture_kits` maps kit names to their BED target files. Intervals are scattered per kit,
-so every kit named in the samplesheet needs a row here.
+`--capture_kits` maps kit names to BED targets. Intervals are scattered per kit, so every
+kit named in the samplesheet needs a row.
 
 ```csv title="capture_kits.csv"
 kit,bed
@@ -105,237 +73,123 @@ agilent_v7,/beds/AGV7_GRCh38_chr.bed
 twist_2,/beds/TwistExome_GRCh38_chr.bed
 ```
 
-## Running the pipeline
+## Running
 
 ```bash
-nextflow run . \
-    -profile conda \
+nextflow run . -profile conda \
     --samplesheet ./samplesheet.csv \
     --capture_kits ./capture_kits.csv \
     --outdir ./vaximile_out \
     -resume
 ```
 
-Parameters can be supplied as a file instead, which is easier to version:
+Parameters can come from a file instead, which is easier to version:
 
 ```bash
 nextflow run . -profile conda -params-file assets/params_example.json -resume
 ```
 
-### Reference contig naming
+**A real run needs both conda and a container engine enabled.** Some modules declare only
+`conda`, others only `container`, and neither profile covers the whole pipeline on its own.
+`conf/ucsf_krummellab.config` sets both up for the UCSF SLURM cluster:
 
-`--reference_includes_chr_prefix` must match your reference. It selects the correct ASCAT
-resource files and the MHC region coordinates used for HLA typing. Setting it wrongly
-produces empty extractions rather than an error.
+```bash
+nextflow run . -c conf/ucsf_krummellab.config -params-file params.json -resume
+```
 
-## Fast checks before a real run
+Use `-c` (merge), not `-C` (replace) - parameter defaults live in `nextflow.config`, which
+`-C` would skip.
+
+`--reference_includes_chr_prefix` must match your reference. It selects the ASCAT resource
+files and the MHC coordinates used for HLA typing, and setting it wrongly produces empty
+extractions rather than an error.
+
+## Before a real run
 
 ```bash
 nextflow run . -profile test -stub-run
 ```
 
-Every module has a `stub:` block, so this executes the **entire DAG** - all 132 tasks -
-in about 10 seconds, offline, with no containers, no conda and no data. Stubs only create
-the files each process declares as output, so what it verifies is the wiring, not the
-science:
-
-- every output declaration actually resolves (a glob that matches nothing fails here)
-- tuple arities line up between each process and its call sites
-- **how many times each process runs**
+Every module has a `stub:` block, so this runs the entire DAG in seconds - offline, no
+containers, no conda, no data. It verifies wiring, not science: that every output
+declaration resolves, that tuple arities match at each call site, and **how many times each
+process runs**.
 
 That last one matters. A reference channel built as a queue instead of a value channel is
-consumed by the first task, so an aligner silently processes one sample and skips the
-rest - which no amount of linting, `nextflow inspect` or `-preview` will reveal, because
-none of them execute tasks. Check counts against your samplesheet:
+consumed by the first task, so an aligner silently processes one sample and skips the rest,
+which no amount of linting or `-preview` will reveal. Check the counts against your
+samplesheet:
 
 ```bash
 grep -oE 'Submitted process > [A-Za-z0-9_:]+' .nextflow.log | sed 's/.*://' | sort | uniq -c | sort -rn
 ```
 
-The `test` profile points every reference at an empty placeholder under
-`assets/test/refs/`, purely so the stub run stays offline - Nextflow stages inputs even
-under `-stub-run`, and the real defaults are remote `https://` and `gs://` URIs.
+The `test` profile points every reference at an empty placeholder under `assets/test/refs/`
+purely to keep this offline, since Nextflow stages inputs even under `-stub-run`. ASCAT is
+skipped there via `ext.when = false`, because its stub runs `Rscript` to capture a version
+and so needs its container.
 
-ASCAT is skipped via `ext.when = false` in `conf/test.config`: it is the one vendored
-nf-core module, and its stub still runs `Rscript -e "library(ASCAT)"` to capture a
-version, which needs its container.
+## Reusing a prebuilt minibwa index
 
-## Software versions
-
-Every module writes a `versions.yml`, collected into
-`<outdir>/pipeline_info/software_versions.yml`, so a set of results records the tool
-versions that produced it. Modules whose tool has a usable version flag query it at run
-time; the rest report the version pinned in their own `conda`/`container` directive.
-
-Two things that file will show you, both worth acting on:
-
-- `optitype: 1.5.0` - migrated from the floating `fred2/optitype:latest` (last pushed
-  2018) to pinned conda + biocontainer. This was a CLI rewrite, not a repin: the entry
-  point is now `optitype run` rather than `OptiTypePipeline.py`, `-i` must be repeated per
-  read file, and the `OptiType.ini` config the module used to write is replaced by
-  `--solver`/`--threads`/`--ilp-threads` flags. Output naming is unchanged, so the
-  `optitype_out/*_result.tsv` globs still hold. HLA calls may differ from the 2018 build.
-- `unknown: unknown` - the four modules that declare neither `conda` nor `container`
-  (plus two whose tool could not be identified) rely on whatever is on the host `PATH`.
-
-## Profiles
-
-Use `-profile` to select a software provisioning method. Multiple profiles are
-comma-separated and later entries override earlier ones.
-
-Software provisioning is **mixed**, and no single profile yet covers the whole pipeline.
-Of the 94 local modules:
-
-| Provisioning declared     | Modules |
-| ------------------------- | ------- |
-| Both `conda` and `container` | 40   |
-| `conda` only              | 31      |
-| `container` only          | 19      |
-| Neither                   | 4       |
-
-`-profile conda` now resolves software for 71 of 94 modules. The 19 container-only ones
-still need a container engine, so a run today wants **both** conda and a container engine
-enabled, which is what `conf/ucsf_krummellab.config` does.
-
-Every conda spec was checked against bioconda with `conda search` and pins the same
-version the container provides, with two exceptions noted below.
-
-`BWA_MAP` is a third exception, and the only module that is conda-only by necessity rather
-than by omission. It pipes `minibwa map` into `samtools view` in a single task, because
-SAMTOOLS_SORMADUP begins with `samtools cat`, which cannot read the SAM minibwa emits.
-Every published minibwa image (biocontainers, staphb) ships minibwa alone, so no container
-satisfies the process. Under `-profile docker`/`singularity` it falls back to the host
-`PATH`, as the four "neither" modules above already do. A combined image - a Seqera Wave
-build of `minibwa` + `samtools`, or a local Dockerfile - would close this.
-
-The four modules with neither — `combine_fastqs`, `prepare_fasta`,
-`pull_arriba_resources`, `pull_ctat_resource_bundle` — rely on tools on the host `PATH`.
-
-### Why the remaining 20 are still container-only
-
-| Modules | Blocker |
-| ------- | ------- |
-| 4 × GATK3 (`merge_*_vcfs`, `phase_vcf_combine_variants`, `phase_vcf_rbphasing`) | bioconda's `gatk` 3.6 is a wrapper that needs the licensed jar registered manually; it cannot install unattended |
-| 4 × VAtools | bioconda only has 6.0.1; the container pins 5.2.0, a major-version gap |
-| 2 × STAR | bioconda only has 2.7.11b; the container pins 2.7.10a. STAR indices are version-sensitive, so switching would invalidate a prebuilt `--star_index` |
-| 2 × Strelka, 1 × Manta | scripts call `configure*Workflow.py` by absolute container path, and Manta's bioconda floor (1.28) is far above the pinned 1.6.0 |
-| `deepvariant` | bioconda has an exact 1.10.0, but the script hardcodes `/opt/deepvariant/bin/run_deepvariant`. Convertible with a one-line script change |
-| `deepsomatic`, `hlahd` | not packaged in bioconda (HLA-HD is licence-restricted) |
-| `optitype` | needs a `config.ini` and an ILP solver that the container supplies |
-| `bamreadcount` | runs `bam_readcount_helper.py`, a script that exists only in the CWL image |
-| `pull_vep_pvac_plugins` | bioconda has no pVACtools 6.0.3 |
-| `phase_vcf_sort_vcf` | runs `java -jar /usr/picard/picard.jar`; bioconda `picard` 3.4.0 exists but needs the call rewritten to `picard SortVcf` |
-
-### Reusing a prebuilt minibwa index
-
-`--bwa_index` takes a directory. When it is set the pipeline skips `CREATE_BWA_INDEX`;
-when it is not, the index is built once and published to `./resources/bwa/`.
-
-The directory must contain the two files `minibwa index` produces, **named after the
-prepared reference FASTA**:
+`--bwa_index` takes a directory holding the two files `minibwa index` produces, **named
+after the prepared reference FASTA**:
 
 ```
 <reference_fa stem>_prc.fa.l2b
 <reference_fa stem>_prc.fa.mbw
 ```
 
-The naming is not incidental. `BWA_MAP` passes the reference FASTA to minibwa as the
-index prefix, so minibwa looks for `<reference_fa>.l2b` and `.mbw`. An index built from
-a FASTA with a different filename is unusable even if it is otherwise perfectly valid.
-`PREPARE_FASTA` decompresses and renames the reference to `<stem>_prc.fa`, which is why
-that suffix appears.
+The naming is not incidental: `BWA_MAP` passes the reference FASTA to minibwa as the index
+prefix, so an index built from a differently named FASTA is unusable even if it is
+otherwise valid. `PREPARE_FASTA` renames the reference to `<stem>_prc.fa`, which is where
+that suffix comes from. The pipeline validates this at launch and names any missing file.
 
-The pipeline validates this at launch and names any missing file, rather than letting
-minibwa fail per-sample once alignment starts. The easiest way to get a valid directory
-is to run once without `--bwa_index` and reuse `./resources/bwa/`.
+The simplest way to get a valid directory is to run once without `--bwa_index` and reuse
+`./resources/bwa/`.
 
-**Indices built before the switch to minibwa are not reusable.** The pipeline previously
-used bwa-mem2, whose index is a different set of five files (`.0123`, `.amb`, `.ann`,
-`.bwt.2bit.64`, `.pac`). Pointing `--bwa_index` at such a directory fails at launch with a
-message saying so explicitly, rather than the generic missing-file report - it is a valid
-index, just for the wrong aligner. Rebuild by running once without `--bwa_index`. Because
-minibwa alignments are not identical to bwa-mem2's, do not mix BAMs from before and after
-the switch within a cohort.
+**bwa-mem2 indices are not reusable.** They are a different set of five files, and pointing
+`--bwa_index` at one fails at launch saying so. Because minibwa alignments are not
+identical to bwa-mem2's, do not mix BAMs from before and after the switch within a cohort.
 
-Note for indices published before this was fixed: `CREATE_BWA_INDEX` used to publish with
-Nextflow's default `publishDir` mode, which is **symlink**, so `./resources/bwa/` held
-links into `work/`. Once `work/` was cleaned those links dangled - they still list in the
-directory but no longer resolve, which is why validation could report a file as missing
-while showing it in the same message. The module now copies. If you have such a directory,
-rebuild the index by running once without `--bwa_index`.
+## Execution reports
 
-### GATK versions are pinned deliberately — do not unify them
-
-Three different GATK generations are in use, and the split is load-bearing. Each conda
-spec pins exactly the version its container provided, and the modules carry comments
-saying so.
-
-| Modules | GATK | Why it cannot move |
-| ------- | ---- | ------------------ |
-| 19 modules (Mutect2, BQSR, pileups, interval/VCF utilities) | `gatk4=4.6.1.0` | current baseline |
-| `haplotype_caller_scatter`, `haplotype_caller_cnn_score_variants`, `haplotype_caller_filter_variants` | `gatk4=4.3.0.0` | the CNN germline chain. `CNNScoreVariants` was deprecated in favour of `NVScoreVariants` and is not in current GATK4, so bumping these to 4.6.1.0 breaks the chain |
-| `merge_germline_vcfs`, `merge_somatic_vcfs`, `phase_vcf_combine_variants`, `phase_vcf_rbphasing` | GATK3 3.6, container only | `CombineVariants` and `ReadBackedPhasing` were dropped in GATK4 and have no equivalent. bioconda's `gatk` 3.x is a wrapper needing the licensed jar registered by hand, so no conda spec is possible |
-
-The practical rule: a GATK module's version is part of its behaviour. `HaplotypeCaller`
-defaults, `FilterMutectCalls` filters and the CNN tranche models all differ between
-releases, so treat any version change as a change to results and revalidate rather than
-assuming it is a maintenance bump.
-
-### One conda pin that is not exact
-
-- **`ensembl-vep=115`** — the container is `release_115.0`; bioconda publishes this as
-  `115` (plus patches `115.1`, `115.2`). Same VEP release, and it matches a release-115
-  cache.
-
-- `test` — minimal settings for a smoke test; see `conf/test.config`.
-
-### Execution reports and the `ps` requirement
-
-`timeline`, `report` and `trace` are **disabled** in `nextflow.config`, deliberately.
-
-Enabling any of them makes Nextflow inject a guard into every task wrapper that runs
-`command -v ps || exit 1`. It is a hard failure, not a warning — the task dies before the
-tool runs, leaving an empty `.command.out` and a single line in `.command.err`:
+`timeline`, `report` and `trace` are disabled in `nextflow.config` deliberately. Enabling
+any of them makes Nextflow inject `command -v ps || exit 1` into every task wrapper, and
+several images here have no `procps` (`alexdobin/star`, `google/deepvariant`,
+`google/deepsomatic`, `staphb/bcftools`). The task then dies before the tool runs:
 
 ```
 Command 'ps' required by nextflow to collect task metrics cannot be found
 ```
 
-Several images this pipeline uses have no `procps` (`alexdobin/star`,
-`google/deepvariant`, `google/deepsomatic`, `staphb/bcftools`), and a container cannot see
-the host's `ps`. `dag` does not inject the guard and stays enabled.
-
-If you are running a configuration where every process does have `ps`, request the reports
-per-run rather than re-enabling them globally:
+Where every process does have `ps`, request them per run instead:
 
 ```bash
 nextflow run . -profile conda -with-report -with-timeline -with-trace
 ```
 
-This is worth doing when you can, since `execution_report.html` is the only practical way
-to right-size the resource tiers in `conf/base.config`.
+Worth doing when you can - `execution_report.html` is the only practical way to right-size
+the tiers in `conf/base.config`.
 
-### Institutional configuration
+## Resources
 
-`conf/ucsf_krummellab.config` holds the SLURM/Apptainer settings for the UCSF cluster:
+`conf/base.config` defines the `process_*` tiers every module carries. To retune one
+without editing it, add a `withName:` block in a config passed with `-c`.
 
-```bash
-nextflow run . -c conf/ucsf_krummellab.config -params-file params.json -resume
-```
+## Software versions
 
-Use `-c` (merge), not the `-C` (replace) this config was previously used with. Parameter
-defaults now live in `nextflow.config`, which `-C` would skip entirely.
+Every module writes a `versions.yml`, collected into
+`<outdir>/pipeline_info/software_versions.yml`, so results record the tools that produced
+them. `unknown: unknown` marks the few modules that declare neither `conda` nor
+`container` and rely on the host `PATH`.
 
-## Resource requests
-
-Most local modules set `cpus` and `memory` inside the process body. `conf/base.config`
-provides defaults and the `process_single`/`process_low`/`process_medium`/`process_high`
-labels used by vendored nf-core modules. To retune a module without editing it, add a
-`withName:` block to a custom config passed with `-c`.
+GATK versions are pinned per module on purpose and should not be unified: the CNN germline
+chain needs 4.3.0.0, `CombineVariants` and `ReadBackedPhasing` exist only in GATK3, and
+everything else is on 4.6.1.0. Treat any GATK change as a change to results.
 
 ## Reproducibility
 
-Pin a release with `-r` so the same code runs each time:
+Pin a release so the same code runs each time:
 
 ```bash
 nextflow run hwismer/vaximile -r 1.0.0 -profile conda --samplesheet ...
