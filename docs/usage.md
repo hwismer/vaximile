@@ -57,11 +57,6 @@ Rows sharing `patient` + `sample_name` + molecule are one library and are proces
 **once** - one fastp, alignment, duplicate marking, BQSR, germline call, HLA typing and
 somalier extraction. Only the per-pair steps run again per `somatic_name`.
 
-Because those rows are one library they have to agree. The pipeline fails at launch, naming
-the conflict, if they list different FastQs or disagree on `sample_type`,
-`sequencing_type`, `capture_kit` or `sex`. Genuinely different data needs a different
-`sample_name`.
-
 ## Capture kits
 
 `--capture_kits` maps kit names to BED targets. Intervals are scattered per kit, so every
@@ -73,10 +68,10 @@ agilent_v7,/beds/AGV7_GRCh38_chr.bed
 twist_2,/beds/TwistExome_GRCh38_chr.bed
 ```
 
-## Running
+## Running Example
 
 ```bash
-nextflow run . -profile conda \
+nextflow run . -profile singularity,conda \
     --samplesheet ./samplesheet.csv \
     --capture_kits ./capture_kits.csv \
     --outdir ./vaximile_out \
@@ -88,21 +83,6 @@ Parameters can come from a file instead, which is easier to version:
 ```bash
 nextflow run . -profile conda -params-file assets/params_example.json -resume
 ```
-
-**A real run needs both conda and a container engine enabled.** Some modules declare only
-`conda`, others only `container`, and neither profile covers the whole pipeline on its own.
-`conf/ucsf_krummellab.config` sets both up for the UCSF SLURM cluster:
-
-```bash
-nextflow run . -c conf/ucsf_krummellab.config -params-file params.json -resume
-```
-
-Use `-c` (merge), not `-C` (replace) - parameter defaults live in `nextflow.config`, which
-`-C` would skip.
-
-`--reference_includes_chr_prefix` must match your reference. It selects the ASCAT resource
-files and the MHC coordinates used for HLA typing, and setting it wrongly produces empty
-extractions rather than an error.
 
 ## Before a real run
 
@@ -151,30 +131,7 @@ The simplest way to get a valid directory is to run once without `--bwa_index` a
 `--bwa_index` at one fails at launch saying so. Because minibwa alignments are not
 identical to bwa-mem2's, do not mix BAMs from before and after the switch within a cohort.
 
-## Execution reports
 
-`timeline`, `report` and `trace` are disabled in `nextflow.config` deliberately. Enabling
-any of them makes Nextflow inject `command -v ps || exit 1` into every task wrapper, and
-several images here have no `procps` (`alexdobin/star`, `google/deepvariant`,
-`google/deepsomatic`, `staphb/bcftools`). The task then dies before the tool runs:
-
-```
-Command 'ps' required by nextflow to collect task metrics cannot be found
-```
-
-Where every process does have `ps`, request them per run instead:
-
-```bash
-nextflow run . -profile conda -with-report -with-timeline -with-trace
-```
-
-Worth doing when you can - `execution_report.html` is the only practical way to right-size
-the tiers in `conf/base.config`.
-
-## Resources
-
-`conf/base.config` defines the `process_*` tiers every module carries. To retune one
-without editing it, add a `withName:` block in a config passed with `-c`.
 
 ## Software versions
 
@@ -187,10 +144,3 @@ GATK versions are pinned per module on purpose and should not be unified: the CN
 chain needs 4.3.0.0, `CombineVariants` and `ReadBackedPhasing` exist only in GATK3, and
 everything else is on 4.6.1.0. Treat any GATK change as a change to results.
 
-## Reproducibility
-
-Pin a release so the same code runs each time:
-
-```bash
-nextflow run hwismer/vaximile -r 1.0.0 -profile conda --samplesheet ...
-```
