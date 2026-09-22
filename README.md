@@ -11,41 +11,47 @@ RNA-seq and produces ranked neoantigen predictions, along with the evidence behi
 somatic and germline variants, HLA genotypes and HLA loss of heterozygosity, allele-specific
 copy number, expression, and fusions.
 
-## What it runs
+## Steps
 
-**DNA** — `fastp`, [minibwa](https://github.com/lh3/minibwa), duplicate marking and GATK
-base recalibration, then `samtools` QC and [somalier](https://github.com/brentp/somalier)
+**DNA preprocessing** — [fastp](https://github.com/OpenGene/fastp) trimming,
+[minibwa](https://github.com/lh3/minibwa) alignment, duplicate marking and GATK base
+recalibration, then `samtools` QC and [somalier](https://github.com/brentp/somalier)
 relatedness checks to catch sample swaps.
 
-**Somatic variants** — [Mutect2](https://gatk.broadinstitute.org),
+**Somatic variant calling** — [Mutect2](https://gatk.broadinstitute.org),
 [Strelka2](https://github.com/Illumina/strelka) with
 [Manta](https://github.com/Illumina/manta), and
 [DeepSomatic](https://github.com/google/deepsomatic). Each callset is filtered to `PASS`
 and normalised, then combined on an **n−1 consensus**: a variant is kept when at least two
 of the three callers report it.
 
-**Germline variants** — GATK `HaplotypeCaller` with CNN scoring,
+**Germline variant calling** — GATK `HaplotypeCaller` with CNN scoring,
 [Strelka2](https://github.com/Illumina/strelka) in germline mode, and
 [DeepVariant](https://github.com/google/deepvariant), combined on the same 2-of-3 rule. The
 consensus callset also drives proximal variant phasing for pVACseq.
 
-**HLA** — [OptiType](https://github.com/FRED-2/OptiType) (class I) and
-[HLA-HD](https://www.genome.med.kyoto-u.ac.jp/HLA-HD/) (class I and II) per library, and
-[mhcflow](https://github.com/svm-zhang/mhcflow) typing that feeds
-[lohhla-mod](https://github.com/svm-zhang/lohhla-mod) for HLA loss of heterozygosity, each
-tumour measured against its own normal.
+**HLA typing** — [OptiType](https://github.com/FRED-2/OptiType) (class I) and
+[HLA-HD](https://www.genome.med.kyoto-u.ac.jp/HLA-HD/) (class I and II) per library, whose
+calls go to pVACtools, plus [mhcflow](https://github.com/svm-zhang/mhcflow), which types
+each library against a sample-specific HLA reference for the LOH step.
 
-**Copy number** — [ASCAT](https://github.com/VanLoo-lab/ascat), which also supplies the
-purity and ploidy the LOH analysis uses.
+**CNV** — [ASCAT](https://github.com/VanLoo-lab/ascat) allele-specific copy number, which
+also supplies the tumour purity and ploidy the LOH step uses.
 
-**RNA** — [STAR](https://github.com/alexdobin/STAR) and
-[salmon](https://combine-lab.github.io/salmon/) quantification, with
-[Arriba](https://github.com/suhrig/arriba) and
-[STAR-Fusion](https://github.com/STAR-Fusion/STAR-Fusion) for fusions.
+**HLA LOH** — each tumour is realigned against the HLA reference mhcflow inferred for *its
+own normal*, and [lohhla-mod](https://github.com/svm-zhang/lohhla-mod) calls loss over the
+pair.
 
-**Neoantigens** — [Ensembl VEP](https://www.ensembl.org/vep) annotation with DNA and RNA
-coverage and expression, then [pVACseq](https://pvactools.readthedocs.io) on somatic
-variants and pVACfuse on fusions.
+**RNA alignment and quantification** — [STAR](https://github.com/alexdobin/STAR) alignment
+and [salmon](https://combine-lab.github.io/salmon/) quantification at transcript and gene
+level.
+
+**RNA fusion calling** — [Arriba](https://github.com/suhrig/arriba) and
+[STAR-Fusion](https://github.com/STAR-Fusion/STAR-Fusion).
+
+**Neoantigen prediction** — [Ensembl VEP](https://www.ensembl.org/vep) annotation with DNA
+and RNA coverage and expression, then [pVACseq](https://pvactools.readthedocs.io) on
+somatic variants and pVACfuse on fusions.
 
 **Report** — one [MultiQC](https://multiqc.info/) report per patient, including the HLA LOH
 and ASCAT results.
