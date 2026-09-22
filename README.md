@@ -58,11 +58,12 @@ and ASCAT results.
 
 ## Quick start
 
-Reference data downloads itself on the first run - the VEP cache, ASCAT and Arriba
-resources, the CTAT bundle - into `./vaximile_resources/`, and later runs reuse it from
-there. The VEP cache is the big one at ~24 GiB, so pass `--vep_cache` to point at one you
-already have. Indices are built from the reference unless you pass `--bwa_index`,
-`--star_index` or `--salmon_index`. See [docs/usage.md](docs/usage.md#prerequisites).
+Auxiliary files such as the VEP cache, ASCAT resources, Arriba resources, and the CTAT bundle - 
+are downloaded into `./vaximile_resources/`, and are automatically re-used by later runs. 
+
+Indices for BWA, STAR, and Salmon are built from the provided reference unless 
+`--bwa_index`, `--star_index` or `--salmon_index` are provided. 
+See [docs/usage.md](docs/usage.md#prerequisites).
 
 One row per library. A normal shared by two tumours is listed once per pair; RNA rows leave
 `capture_kit` empty:
@@ -80,32 +81,10 @@ twist_2,/beds/TwistExome_GRCh38_chr.bed
 ```
 
 ```bash
-nextflow run . -profile conda --samplesheet ./samplesheet.csv --capture_kits ./capture_kits.csv --outdir ./vaximile_out -resume
+nextflow run . -profile singularity,conda --samplesheet ./samplesheet.csv --capture_kits ./capture_kits.csv --outdir ./vaximile_out -resume
 ```
+Some modules are container-only while others are conda-only. To execute a full run without problems, both will need to be enabled.
 
-Some modules are container-only, so a real run wants a container engine enabled alongside
-conda. `conf/ucsf_krummellab.config` does that for the UCSF cluster:
-
-```bash
-nextflow run . -c conf/ucsf_krummellab.config -params-file params.json -resume
-```
-
-Before a real run, `nextflow run . -profile test -stub-run` exercises the whole DAG in
-seconds with no data, no containers and no conda.
-
-## Layout
-
-```text
-main.nf                  entry workflow, publishing
-nextflow.config          parameters, profiles
-nextflow_schema.json     parameter validation and --help
-conf/                    resources, per-module arguments, cluster and test profiles
-workflows/vaximile/      the pipeline body
-subworkflows/local/      grouped stages
-modules/local/           one process each
-assets/                  input schemas, tiling script, test fixtures
-docs/                    usage and output
-```
 
 ## Documentation
 
