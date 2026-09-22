@@ -85,17 +85,20 @@ One sample per line. A complete somatic grouping consists of a tumor sample, nor
 - **`fastqr{1.2}`** — R1 and R2 fastqs for the sample
 
 #### Example:
-```csv title="samplesheet.csv"
-patient,somatic_name,sample_name,sample_type,sequencing_type,sex,capture_kit,fastqr1,fastqr2
-PatientX,PatientX_T1_N1,Tumor1,Tumor,exome,XX,twist_2,t1_r1.fq.gz,t1_r2.fq.gz
-PatientX,PatientX_T1_N1,Normal1,Normal,exome,XX,twist_2,n1_r1.fq.gz,n1_r2.fq.gz
-PatientX,PatientX_T1_N1,Tumor1,Tumor,rna,XX,,t1_rna_r1.fq.gz,t1_rna_r2.fq.gz
-```
 
-```csv title="capture_kits.csv"
-kit,bed
-twist_2,/beds/TwistExome_GRCh38_chr.bed
-```
+`samplesheet.csv`
+
+| patient  | somatic_name   | sample_name | sample_type | sequencing_type | sex | capture_kit | fastqr1         | fastqr2         |
+| -------- | -------------- | ----------- | ----------- | --------------- | --- | ----------- | --------------- | --------------- |
+| PatientX | PatientX_T1_N1 | Tumor1      | Tumor       | exome           | XX  | twist_2     | t1_r1.fq.gz     | t1_r2.fq.gz     |
+| PatientX | PatientX_T1_N1 | Normal1     | Normal      | exome           | XX  | twist_2     | n1_r1.fq.gz     | n1_r2.fq.gz     |
+| PatientX | PatientX_T1_N1 | Tumor1      | Tumor       | rna             | XX  |             | t1_rna_r1.fq.gz | t1_rna_r2.fq.gz |
+
+`capture_kits.csv`
+
+| kit     | bed                             |
+| ------- | ------------------------------- |
+| twist_2 | /beds/TwistExome_GRCh38_chr.bed |
 
 ```bash
 nextflow run . -profile singularity,conda --samplesheet ./samplesheet.csv --capture_kits ./capture_kits.csv --outdir ./vaximile_out -resume
