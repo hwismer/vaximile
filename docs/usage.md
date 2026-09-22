@@ -3,26 +3,6 @@
 vaximile predicts tumour neoantigens from paired tumour/normal bulk DNA and matched tumour
 RNA sequencing. See the [README](../README.md) for what the pipeline runs.
 
-## Prerequisites
-
-Nothing has to be downloaded by hand. The VEP cache, ASCAT and Arriba resources and the
-CTAT bundle are fetched on the first run into `./vaximile_resources/` and reused after
-that, and any index left unset is built from the reference.
-
-Two things are worth supplying if you already have them, because both are slow to produce:
-
-| Parameter | Notes |
-| --------- | ----- |
-| `--vep_cache` | Skips a ~24 GiB download. Point at the directory *containing* `homo_sapiens/`. Must be release **115** - VEP rejects a cache whose version differs from its own - and the plain cache, not `refseq` or `merged`. Required if you are not running human GRCh38, since the automatic download is fixed to `homo_sapiens_vep_115_GRCh38`. |
-| `--bwa_index` | minibwa. See [reusing an index](#reusing-a-prebuilt-minibwa-index) - the filenames matter. |
-| `--star_index` | STAR. Built with `star=2.7.11b`, and STAR indices are version-specific, so an index built by an older STAR is not reusable. |
-| `--salmon_index` | salmon `1.11.4`. |
-
-The `PULL_*` processes run on the local executor, so the head node needs outbound network
-access.
-
-Every parameter is listed under [Parameters](#parameters).
-
 ## Samplesheet
 
 `--samplesheet` takes a CSV with one row per FastQ pair. DNA and RNA rows for the same
@@ -80,76 +60,7 @@ nextflow run . -profile singularity,conda \
     -resume
 ```
 
-Parameters can come from a file instead, which is easier to version:
-
-```bash
-nextflow run . -profile conda -params-file assets/params_example.json -resume
-```
-
-## Before a real run
-
-```bash
-nextflow run . -profile test -stub-run
-```
-
-Every module has a `stub:` block, so this runs the entire DAG in seconds - offline, no
-containers, no conda, no data. It verifies wiring, not science: that every output
-declaration resolves, that tuple arities match at each call site, and **how many times each
-process runs**.
-
-That last one matters. A reference channel built as a queue instead of a value channel is
-consumed by the first task, so an aligner silently processes one sample and skips the rest,
-which no amount of linting or `-preview` will reveal. Check the counts against your
-samplesheet:
-
-```bash
-grep -oE 'Submitted process > [A-Za-z0-9_:]+' .nextflow.log | sed 's/.*://' | sort | uniq -c | sort -rn
-```
-
-The `test` profile points every reference at an empty placeholder under `assets/test/refs/`
-purely to keep this offline, since Nextflow stages inputs even under `-stub-run`. ASCAT is
-skipped there via `ext.when = false`, because its stub runs `Rscript` to capture a version
-and so needs its container.
-
-## Reusing a prebuilt minibwa index
-
-`--bwa_index` takes a directory holding the two files `minibwa index` produces, **named
-after the prepared reference FASTA**:
-
-```
-<reference_fa stem>_prc.fa.l2b
-<reference_fa stem>_prc.fa.mbw
-```
-
-The naming is not incidental: `BWA_MAP` passes the reference FASTA to minibwa as the index
-prefix, so an index built from a differently named FASTA is unusable even if it is
-otherwise valid. `PREPARE_FASTA` renames the reference to `<stem>_prc.fa`, which is where
-that suffix comes from. The pipeline validates this at launch and names any missing file.
-
-The simplest way to get a valid directory is to run once without `--bwa_index` and reuse
-`./resources/bwa/`.
-
-**bwa-mem2 indices are not reusable.** They are a different set of five files, and pointing
-`--bwa_index` at one fails at launch saying so. Because minibwa alignments are not
-identical to bwa-mem2's, do not mix BAMs from before and after the switch within a cohort.
-
-
-
-## Software versions
-
-Every module writes a `versions.yml`, collected into
-`<outdir>/pipeline_info/software_versions.yml`, so results record the tools that produced
-them. `unknown: unknown` marks the few modules that declare neither `conda` nor
-`container` and rely on the host `PATH`.
-
-GATK versions are pinned per module on purpose and should not be unified: the CNN germline
-chain needs 4.3.0.0, `CombineVariants` and `ReadBackedPhasing` exist only in GATK3, and
-everything else is on 4.6.1.0. Treat any GATK change as a change to results.
-
 ## Parameters
-
-Every parameter the pipeline accepts, as validated by `nextflow_schema.json`.
-`nextflow run . --help` prints the same list with help text.
 
 ### Input/output options
 
