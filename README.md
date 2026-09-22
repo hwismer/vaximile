@@ -68,27 +68,21 @@ See [docs/usage.md](docs/usage.md#prerequisites).
 ### Samplesheet 
 One sample per line. A complete somatic grouping consists of a tumor sample, normal sample, and a tumor RNA sample.
 
-```
-patient: identifies a shared patient field that can contain multiple somatic groups. The pipeline concludes with a patient-level MultiQc reports with all patient-specific sample metrics.
-```
-```
-somatic_name: identifies the somatic comparison being done. Each somatic_name should have a single tumor dna sample, normal dna sample, and tumor RNAseq. In the case that multiple tumor samples share one normal sample, the normal sample will still need its own line in the samplesheet.
-```
-```
-sample_name: name of the individual sample.
-```
-```
-sample_type: either Tumor or Normal.
-```
-```
-sequencing_type: one of: exome, genome, rna, exome_FFPE, genome_FFPE.
-```
-```
-capture_kit: name of the capture kit used. Must match a kit name in the capture_kits.csv. Left blank by RNA samples.
-```
-```
-fastqr{1.2}: R1 and R2 fastqs for the sample
-```
+- **`patient`** — identifies a shared patient field that can contain multiple somatic groups. The pipeline concludes with a patient-level MultiQc reports with all patient-specific sample metrics.
+
+- **`somatic_name`** — identifies the somatic comparison being done. Each somatic_name should have a single tumor dna sample, normal dna sample, and tumor RNAseq. In the case that multiple tumor samples share one normal sample, the normal sample will still need its own line in the samplesheet.
+
+- **`sample_name`** — name of the individual sample.
+
+- **`sample_type`** — either Tumor or Normal.
+
+- **`sequencing_type`** — one of: exome, genome, rna, exome_FFPE, genome_FFPE.
+
+- **`sex`** — either XX or XY, or left blank. Only ASCAT uses it, taking the tumor sample's value as the genotype sex for copy number calling.
+
+- **`capture_kit`** — name of the capture kit used. Must match a kit name in the capture_kits.csv. Left blank by RNA samples.
+
+- **`fastqr{1.2}`** — R1 and R2 fastqs for the sample
 
 #### Example:
 ```csv title="samplesheet.csv"
