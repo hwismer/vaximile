@@ -199,9 +199,10 @@ Publishing is driven by the `output {}` block in `main.nf`, which nests results 
     │   └── combined MHC class I aggregated report across the patient's pairs
     ├── <somatic_name>/          one directory per tumour/normal pair
     │   ├── variants/     somatic VCF (+ index) and its tabular form
-    │   ├── ascat/        CNV segments, purity/ploidy, BAF/LogR, metrics and plots
-    │   ├── hla/          pVACtools-formatted allele list for the pair
-    │   ├── hla_loh/      lohhlamod LOH results and per-gene plots
+    │   ├── hla/
+    │   │   ├── pVACtools-formatted allele list for the pair
+    │   │   └── loh/      lohhlamod LOH results and per-gene plots, and the ASCAT
+    │   │                 result set whose purity and ploidy they are built on
     │   └── pvactools/    pVACseq and pVACfuse prediction directories
     └── samples/                 everything belonging to a single library
         └── <sample_name>/
@@ -256,8 +257,9 @@ normal's calls are what feed pVACtools, since HLA type is germline.
 
 #### HLA loss of heterozygosity
 
-`hla_loh/` holds the lohhlamod result table for the pair - per-allele copy number, the
-mismatch logR p-value and BAF - alongside per-gene coverage, logR and BAF plots. The tumour
+`hla/loh/` holds the lohhlamod result table for the pair - per-allele copy number, the
+mismatch logR p-value and BAF - alongside per-gene coverage, logR and BAF plots, and the
+ASCAT result set the copy number inference is built on. The tumour
 is realigned against the HLA reference mhcflow inferred for its own normal, so the two BAMs
 sit on one subject-specific reference.
 
@@ -283,8 +285,10 @@ Manta read the duplicate-marked ones.
 
 #### Copy number
 
-`ascat/` publishes the whole ASCAT result set for a pair - segments, CNV calls,
-purity/ploidy estimates, BAF and LogR tables, run metrics and plots.
+`hla/loh/` publishes the whole ASCAT result set for a pair - segments, CNV calls,
+purity/ploidy estimates, BAF and LogR tables, run metrics and plots. It sits with the LOH
+results because its purity and ploidy are what that copy number inference uses, and the two
+are read together.
 
 ### Not published by default
 

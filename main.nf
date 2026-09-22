@@ -156,9 +156,11 @@ output {
     star_bam {
         path { meta, bam, bai -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/alignment/" }
     }
-    // Pair-level: ASCAT is called on a tumour/normal pair.
+    // Pair-level: ASCAT is called on a tumour/normal pair. Published beside the LOH
+    // results rather than in its own directory, because its purity and ploidy estimates are
+    // what the LOH copy number inference is built on, and the two are read together.
     ascat_results {
-        path { meta, result -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/ascat/" }
+        path { meta, result -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla/loh/" }
     }
     salmon_gene {
         path { meta, gene_abundance -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/salmon" }
@@ -167,10 +169,10 @@ output {
     // tumour measured against its own normal, so the somatic_meta carries the patient and
     // the two channels arrive as (somatic_name, meta, files).
     hla_loh {
-        path { _somatic_name, meta, res -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla_loh/" }
+        path { _somatic_name, meta, res -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla/loh/" }
     }
     hla_loh_plots {
-        path { _somatic_name, meta, plots -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla_loh/" }
+        path { _somatic_name, meta, plots -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla/loh/" }
     }
 
 }
