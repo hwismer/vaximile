@@ -78,7 +78,7 @@ One sample per line. A complete somatic grouping consists of a tumor sample, nor
 
 - **`sequencing_type`** — one of: exome, genome, rna, exome_FFPE, genome_FFPE.
 
-- **`sex`** — either XX or XY, or left blank. Only ASCAT uses it, taking the tumor sample's value as the genotype sex for copy number calling.
+- **`sex`** — either XX, XY, or left blank. Used only when running ASCAT.
 
 - **`capture_kit`** — name of the capture kit used. Must match a kit name in the capture_kits.csv. Left blank by RNA samples.
 
