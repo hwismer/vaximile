@@ -315,9 +315,6 @@ workflow VAXIMILE {
     )
 
     // One publish target for the whole ASCAT result set rather than eight separate ones.
-    // Note ASCAT is disabled under -profile test (ext.when = false in conf/test.config,
-    // because its stub needs a container for the version capture), so this channel is
-    // empty there and only carries data on a real run.
     // HLA LOH. Downstream of both HLA typing and ASCAT: it pairs each tumour with its own
     // normal, realigns it against that normal's HLA reference, and calls loss over the two.
     // Staged as a file rather than referenced through projectDir, so the tiling script

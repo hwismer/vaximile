@@ -1,6 +1,5 @@
-# Anchored: an unanchored `samplesheet.csv` also matched assets/test/samplesheet.csv,
-# which kept the `-profile test` fixture out of the repo and broke the stub run on a
-# fresh clone.
+# Anchored to the repository root, so a samplesheet.csv elsewhere in the tree is not
+# ignored by accident.
 /samplesheet.csv
 /samplesheet_*.csv
 params.json

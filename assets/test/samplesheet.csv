@@ -1,4 +1,0 @@
-patient,somatic_name,sample_name,sample_type,sequencing_type,capture_kit,fastqr1,fastqr2
-TestPatient,TestPatient_T1_N1,T1,Tumor,exome,test_kit,assets/test/fastq/t1_r1.fq.gz,assets/test/fastq/t1_r2.fq.gz
-TestPatient,TestPatient_T1_N1,N1,Normal,exome,test_kit,assets/test/fastq/n1_r1.fq.gz,assets/test/fastq/n1_r2.fq.gz
-TestPatient,TestPatient_T1_N1,T1,Tumor,rna,,assets/test/fastq/t1_rna_r1.fq.gz,assets/test/fastq/t1_rna_r2.fq.gz
