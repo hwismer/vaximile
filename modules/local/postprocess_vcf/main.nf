@@ -18,8 +18,6 @@ process POSTPROCESS_VCF {
             path("${meta.somatic_name}_${caller}_variants.vcf.gz.tbi"), emit: vt_vcf
 
     script:
-        // ext.prefix intentionally omitted: the output stem "*_variants.vcf.gz" would also
-        // match the staged input "*_filtered_variants.vcf.gz", so no safe output glob exists.
         def args = task.ext.args ?: ''
         """
         bcftools norm --threads $task.cpus $args -f $reference_fa $somatic_vcf -Oz -o norm_vcf.vcf.gz
@@ -28,8 +26,6 @@ process POSTPROCESS_VCF {
         """
 
     stub:
-        // The output paths are literal names built from meta.somatic_name, so the stub
-        // must use the same expression rather than the somatic_name val the script uses.
         """
         touch ${meta.somatic_name}_${caller}_variants.vcf.gz
         touch ${meta.somatic_name}_${caller}_variants.vcf.gz.tbi
