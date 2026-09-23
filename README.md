@@ -1,6 +1,6 @@
 # vaximile
 
-<img src="docs/images/vaximile_logo.png" alt="vaximile" align="right" width="128" height="128">
+<img src="assets/images/vaximile_logo.png" alt="vaximile" align="right" width="128" height="128">
 
 **Tumour neoantigen discovery from paired tumour/normal bulk DNA and tumour RNA sequencing.**
 
