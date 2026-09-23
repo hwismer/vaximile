@@ -1,5 +1,7 @@
 process DEEPSOMATIC {
 
+	// Run DeepSomatic on a Tumor-Normal pair.
+
     label 'process_max'
     container "google/deepsomatic:1.10.0"
     
