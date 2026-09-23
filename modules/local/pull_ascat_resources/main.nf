@@ -1,13 +1,10 @@
 process PULL_ASCAT_RESOURCES {
 
-    // Not stored under -stub-run, so placeholders never stand in for real resources.
-    // The store path includes the chr-prefix setting because the loci files differ with it.
     storeDir workflow.stubRun ? null : "./vaximile_resources/ascat_hg38_${add_chr_prefix ? 'chr' : 'nochr'}"
 
     label 'process_single'
     executor "local"
 
-    // scratch false: this runs on the launch node, whose /tmp is too small for the download.
     scratch false
     tag "Pulling ASCAT resources"
 
