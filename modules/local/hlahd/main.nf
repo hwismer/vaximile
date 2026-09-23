@@ -1,6 +1,7 @@
 process HLAHD {
 
     // HLA typing with HLA-HD. FASTQs are decompressed first to avoid bowtie start-up failures.
+    // Run directory is pretty specific to this container.
     
     label 'process_high'
     container "griffithlab/hlahd:1.0"
@@ -12,8 +13,6 @@ process HLAHD {
     
     output:
         tuple val(meta), path("*/result/*_final.result.txt"), emit: final_hla_calls
-        // No trailing slash: a glob ending in "/" never matches, so `*/result/` fails
-        // with "Missing output file(s)" even when the directory is there.
         tuple val(meta), path("*/result", type: 'dir'), emit: result_dir
 
     script:
