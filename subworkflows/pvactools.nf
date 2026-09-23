@@ -11,10 +11,6 @@ include { PHASE_VCF_RENAME } from "../modules/local/phase_vcf_rename/main"
 include { PHASE_VCF_COMBINE_VARIANTS } from "../modules/local/phase_vcf_combine_variants/main"
 include { PHASE_VCF_SORT_VCF } from "../modules/local/phase_vcf_sort_vcf/main"
 include { PHASE_VCF_RBPHASING } from "../modules/local/phase_vcf_rbphasing/main"
-include { ADD_VCF_GT_FIELD } from "../modules/local/add_vcf_gt_field/main"
-include { MERGE_SOMATIC_VCFS } from "../modules/local/merge_somatic_vcfs/main"
-include { FILTER_VCF } from "../modules/local/filter_vcf/main"
-include { POSTPROCESS_VCF } from "../modules/local/postprocess_vcf/main"
 include { VCF_TO_TABLE } from "../modules/local/vcf_to_table/main"
 include { VEP_POPULATION_FILTER } from "../modules/local/vep_population_filter/main"
 include { BAMREADCOUNT } from "../modules/local/bamreadcount/main"
@@ -89,9 +85,9 @@ workflow PVAC_VCF_PHASING {
 workflow PVAC_INPUT_PREP_WORKFLOW {
 
     take:
-        mutect_vcf
-        strelka_vcf
-        deepsomatic_vcf
+        // The consensus callset, not the three caller outputs: assembling it moved to
+        // SOMATIC_CONSENSUS, where the callers themselves live.
+        somatic_vcf
         preproc_bams
         star_bam
         salmon_tx_abundance
@@ -104,42 +100,7 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
 
     main:
     
-    // Add GT to strelka calls
-    add_vcf_gt_field_input = strelka_vcf
-        .map { meta, vcf, tbi ->
-            tuple(meta, meta.tumor_meta.sample_name, vcf, tbi)
-        }
-
-    strelka_gt = ADD_VCF_GT_FIELD(add_vcf_gt_field_input).vcf
-
-    strelka = strelka_gt.map{meta, vcf -> tuple(meta, "strelka", vcf)}
-    mutect = mutect_vcf.map{meta, vcf, _tbi -> tuple(meta, "mutect", vcf)}
-    deepsomatic = deepsomatic_vcf.map{meta, vcf, _tbi -> tuple(meta, "deepsomatic", vcf) }
-
-    vcfs = mutect.mix(deepsomatic).mix(strelka)
-    vcfs_filtered = FILTER_VCF(vcfs).filtered_vcf
-    postprocess_vcf_input = vcfs_filtered
-        .map { meta, caller, vcf, tbi ->
-            tuple(meta, meta.somatic_name, caller, vcf, tbi)
-        }
-
-    vcfs_normalized = POSTPROCESS_VCF(postprocess_vcf_input, reference_genome).vt_vcf
-    
-    callers = vcfs_normalized.branch{ meta, caller, vcf, tbi ->
-        mutect: caller == "mutect"
-        strelka: caller == "strelka"
-        deepsomatic: caller == "deepsomatic"
-    }
-    
-    merged_callers = callers.mutect.join(callers.deepsomatic).join(callers.strelka)
-
-    merge_somatic_vcfs_input = merged_callers
-        .map { meta, vcf1_caller, vcf1, vcf1_index, vcf2_caller, vcf2, vcf2_index, vcf3_caller, vcf3, vcf3_index ->
-            tuple(meta, meta.somatic_name, vcf1_caller, vcf1, vcf1_index, vcf2_caller, vcf2, vcf2_index, vcf3_caller, vcf3, vcf3_index)
-        }
-
-    merged_vcf = MERGE_SOMATIC_VCFS(merge_somatic_vcfs_input, reference_genome, reference_dict).vcf
-    vep = VEP_ANNOTATE(merged_vcf, reference_genome, vep_cache, vep_plugins)
+    vep = VEP_ANNOTATE(somatic_vcf, reference_genome, vep_cache, vep_plugins)
     vep_filtered = VEP_POPULATION_FILTER(vep.vcf, vep_cache, vep_plugins).vcf
 
     vep_filtered_somatic_name = vep_filtered.map {meta, vcf -> tuple(meta.somatic_name, meta, vcf) }

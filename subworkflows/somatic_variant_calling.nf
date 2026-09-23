@@ -4,6 +4,10 @@
     One file per pipeline step. Each workflow keeps the take/emit signature it had
     as its own subworkflow directory, so callers are unchanged.
 */
+include { ADD_VCF_GT_FIELD } from "../modules/local/add_vcf_gt_field/main"
+include { FILTER_VCF } from "../modules/local/filter_vcf/main"
+include { POSTPROCESS_VCF } from "../modules/local/postprocess_vcf/main"
+include { MERGE_SOMATIC_VCFS } from "../modules/local/merge_somatic_vcfs/main"
 include { MUTECT2_SCATTER } from "../modules/local/mutect2_scatter/main"
 include { MUTECT2_GATHER_SELECT_VARIANTS } from "../modules/local/mutect2_gather_select_variants/main"
 include { MUTECT2_GATHER_VCFS } from "../modules/local/mutect2_gather_vcfs/main"
@@ -131,4 +135,68 @@ workflow DEEPSOMATIC_WORKFLOW {
 
     emit:
         deepsomatic_vcf = deepsomatic
+}
+
+
+/*
+    The n-1 consensus over the three somatic callers.
+
+    This lived in PVAC_INPUT_PREP_WORKFLOW, which meant the step that turns three callsets
+    into the pipeline's somatic callset sat in the subworkflow that consumes it rather than
+    the one that produces them. Nothing about the chain changed in the move.
+
+    Strelka's calls get a GT field first - it does not write one, and the merge needs it.
+    Each callset is then filtered to PASS and normalised before GATK3 CombineVariants
+    merges them under --minimumN 2, so a variant survives only if two of the three callers
+    report it.
+*/
+workflow SOMATIC_CONSENSUS {
+
+    take:
+        mutect_vcf
+        strelka_vcf
+        deepsomatic_vcf
+        reference_genome
+        reference_dict
+
+    main:
+
+    // Add GT to strelka calls
+    add_vcf_gt_field_input = strelka_vcf
+        .map { meta, vcf, tbi ->
+            tuple(meta, meta.tumor_meta.sample_name, vcf, tbi)
+        }
+
+    strelka_gt = ADD_VCF_GT_FIELD(add_vcf_gt_field_input).vcf
+
+    strelka = strelka_gt.map{meta, vcf -> tuple(meta, "strelka", vcf)}
+    mutect = mutect_vcf.map{meta, vcf, _tbi -> tuple(meta, "mutect", vcf)}
+    deepsomatic = deepsomatic_vcf.map{meta, vcf, _tbi -> tuple(meta, "deepsomatic", vcf) }
+
+    vcfs = mutect.mix(deepsomatic).mix(strelka)
+    vcfs_filtered = FILTER_VCF(vcfs).filtered_vcf
+    postprocess_vcf_input = vcfs_filtered
+        .map { meta, caller, vcf, tbi ->
+            tuple(meta, meta.somatic_name, caller, vcf, tbi)
+        }
+
+    vcfs_normalized = POSTPROCESS_VCF(postprocess_vcf_input, reference_genome).vt_vcf
+    
+    callers = vcfs_normalized.branch{ meta, caller, vcf, tbi ->
+        mutect: caller == "mutect"
+        strelka: caller == "strelka"
+        deepsomatic: caller == "deepsomatic"
+    }
+    
+    merged_callers = callers.mutect.join(callers.deepsomatic).join(callers.strelka)
+
+    merge_somatic_vcfs_input = merged_callers
+        .map { meta, vcf1_caller, vcf1, vcf1_index, vcf2_caller, vcf2, vcf2_index, vcf3_caller, vcf3, vcf3_index ->
+            tuple(meta, meta.somatic_name, vcf1_caller, vcf1, vcf1_index, vcf2_caller, vcf2, vcf2_index, vcf3_caller, vcf3, vcf3_index)
+        }
+
+    merged_vcf = MERGE_SOMATIC_VCFS(merge_somatic_vcfs_input, reference_genome, reference_dict).vcf
+
+    emit:
+        vcf = merged_vcf
 }

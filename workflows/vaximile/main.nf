@@ -22,6 +22,7 @@ include { HLA_LOH_WORKFLOW } from "../../subworkflows/hla.nf"
 include { ASCAT_MQC } from "../../modules/local/ascat_mqc/main"
 include { RNASEQ_WORKFLOW } from "../../subworkflows/rnaseq.nf"
 include { MUTECT2 } from "../../subworkflows/somatic_variant_calling.nf"
+include { SOMATIC_CONSENSUS } from "../../subworkflows/somatic_variant_calling.nf"
 include { STRELKA_WORKFLOW } from "../../subworkflows/somatic_variant_calling.nf"
 include { GERMLINE_WORKFLOW } from "../../subworkflows/germline_variant_calling.nf"
 include { FUSION_CALLING } from "../../subworkflows/rnaseq.nf"
@@ -372,10 +373,17 @@ workflow VAXIMILE {
     // PVACtools Input Preparation
    
 
-    pvac_input = PVAC_INPUT_PREP_WORKFLOW(
+    // The three callers become one callset here, before anything downstream sees them.
+    somatic_consensus = SOMATIC_CONSENSUS(
         mutect2_vcf,
         strelka_vcf,
         deepsomatic_vcf,
+        reference_genome,
+        reference_dict
+    ).vcf
+
+    pvac_input = PVAC_INPUT_PREP_WORKFLOW(
+        somatic_consensus,
         markdup_bams,
         star_bam,
         salmon_tx,
