@@ -1,5 +1,7 @@
 process MHCFLOW_REALIGN {
 
+    // Realign the tumor against its normal's HLA reference, so both BAMs share one reference for LOH.
+
     label 'process_max'
 
     conda "${moduleDir}/environment.yml"
@@ -7,16 +9,12 @@ process MHCFLOW_REALIGN {
     tag "Realigning ${meta.sample_name} to ${somatic_name} normal HLA reference"
 
     input:
-        // Realign the tumour against its normal's HLA reference, so both BAMs share one reference for LOH.
         tuple val(somatic_name), val(meta), path(bam), path(bai), path(hla_fasta), path(hla_nix)
         path hla_bed
         path hla_kmers
         path hla_freqs
 
     output:
-        // realigner/, not finalizer/: --realn-only returns before typing, so this run has
-        // no finalizer stage. The reference it aligned against is the normal's, which is
-        // what makes this BAM comparable to the normal's own finalizer BAM.
         tuple val(somatic_name), val(meta), path("${meta.sample_name}_realn/realigner/*.hla.realn.bam"), path("${meta.sample_name}_realn/realigner/*.hla.realn.bam.bai"), emit: realn_bam
 
     script:
