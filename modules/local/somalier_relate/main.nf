@@ -1,8 +1,5 @@
 process SOMALIER_RELATE {
 
-
-    // somalier has no internal threading - its README parallelises across samples,
-    // which Nextflow already does. nf-core's somalier modules are process_low.
     label 'process_low'
     conda "bioconda::somalier=0.3.2-0 bioconda::htslib=1.23.1"
 
