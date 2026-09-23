@@ -13,21 +13,13 @@ process SALMON_QUANT {
 
     output:
         tuple val(meta), path("*_salmon_quant"), emit: quant
-        // quant.sf on its own as well as the directory. GET_RNA_STRANDEDNESS and MultiQC
-        // want the whole run directory; SALMON_TXIMPORT and the VCF expression annotators
-        // want the transcript table, and vcf-expression-annotator takes a file, not a dir.
         tuple val(meta), path("*_salmon_quant/quant.sf"), emit: tsv
-        // Gene-level TPM from --geneMap, renamed per sample so published files don't collide.
         tuple val(meta), path("*.gene_tpm.tsv"), emit: genes_tsv
 
     script:
-    // $args MUST stay ahead of -1/-2. It carries --libType, and salmon rejects a
-    // library type that appears after the read files:
-    //   "The (--libType/-l) option must precede the input files."
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
     """
-    # salmon reads the map itself; it will not take the .gz, so decompress as STAR does.
     gzip -d -c $gtf > genes.gtf
 
     salmon quant \
