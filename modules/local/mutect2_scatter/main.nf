@@ -3,7 +3,6 @@ process MUTECT2_SCATTER {
 
     // Mutect2 on one interval shard for a tumour/normal pair.
 
-    // process_low: runs once per shard, so smaller tasks let more run at once.
     label 'process_low'
     conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
