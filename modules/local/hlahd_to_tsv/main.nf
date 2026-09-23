@@ -1,5 +1,7 @@
 process HLAHD_TO_TSV {
 
+	// Create a TSV from HLA-HD calls for use with MultiQC and other downstream tasks.
+
     label 'process_low'
 
     conda "python=3.10 pandas=2.1"
