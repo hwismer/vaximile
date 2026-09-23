@@ -4,8 +4,8 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 include { VAXIMILE } from './workflows/vaximile'
-include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_vaximile_pipeline'
-include { PIPELINE_COMPLETION } from './subworkflows/local/utils_nfcore_vaximile_pipeline'
+include { PIPELINE_INITIALISATION } from './subworkflows/pipeline_init.nf'
+include { PIPELINE_COMPLETION } from './subworkflows/pipeline_init.nf'
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW

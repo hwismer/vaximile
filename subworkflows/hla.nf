@@ -1,8 +1,90 @@
-include { MHCFLOW_REALIGN } from "../../../modules/local/mhcflow_realign/main"
-include { LOHHLAMOD } from "../../../modules/local/lohhlamod/main"
-include { LOHHLAPLOT } from "../../../modules/local/lohhlaplot/main"
-include { LOHHLA_MQC } from "../../../modules/local/lohhla_mqc/main"
-include { fan_out_pairs } from "../utils_nfcore_vaximile_pipeline"
+/*
+    hla: hla_typing_workflow, hla_loh_workflow
+
+    One file per pipeline step. Each workflow keeps the take/emit signature it had
+    as its own subworkflow directory, so callers are unchanged.
+*/
+include { OPTITYPE } from "../modules/local/optitype/main"
+include { HLAHD } from "../modules/local/hlahd/main"
+include { HLA_CALLS_PVAC } from "../modules/local/hla_calls_pvac/main"
+include { EXTRACT_MHC_REGION } from "../modules/local/extract_mhc_region/main"
+include { BAM_TO_FASTQ } from "../modules/local/bam_to_fastq/main"
+include { MHC_REGION_FASTQS } from "../modules/local/mhc_region_fastqs/main"
+include { HLAHD_TO_TSV } from "../modules/local/hlahd_to_tsv/main"
+include { HLA_BED } from "../modules/local/hla_bed/main"
+include { MHCFLOW } from "../modules/local/mhcflow/main"
+include { NOVOALIGN_HLA_FASTA } from "../modules/local/novoalign_hla_fasta/main"
+include { MHCFLOW_REALIGN } from "../modules/local/mhcflow_realign/main"
+include { LOHHLAMOD } from "../modules/local/lohhlamod/main"
+include { LOHHLAPLOT } from "../modules/local/lohhlaplot/main"
+include { LOHHLA_MQC } from "../modules/local/lohhla_mqc/main"
+include { fan_out_pairs } from "./pipeline_init.nf"
+
+workflow HLA_TYPING_WORKFLOW {
+
+    take:
+        bams // (metamap, sorted bam, bai)
+        chr_prefix
+        hla_fasta
+        hla_kmers
+        hla_freqs
+
+    main:
+
+        hla_bed = HLA_BED(chr_prefix).bed
+        
+        mhcflow_input = bams
+            .map { meta, bam, bai ->
+                tuple(meta, meta.sample_name, bam, bai)
+            }
+
+        // .first() to make the indexed reference an explicit value channel, matching how
+        // the un-indexed reference reaches this subworkflow (main.nf .first()s each HLA
+        // reference param). Nextflow would convert this single-item queue implicitly, but
+        // relying on that means the reference silently stops being reusable the day it
+        // emits more than one item.
+        hla_reference_indexed = NOVOALIGN_HLA_FASTA(hla_fasta).out.first()
+
+        mhcflow = MHCFLOW(mhcflow_input, hla_reference_indexed, hla_bed, hla_kmers, hla_freqs)
+
+
+        fastqs = MHC_REGION_FASTQS(bams).reads
+        //mhc_region = EXTRACT_MHC_REGION(bams)
+        //fastqs = BAM_TO_FASTQ(mhc_region)
+        // Run Optitype and HLA-HD on fastqs
+        optitype_input = fastqs
+            .map { meta, fastq1, fastq2 ->
+                tuple(meta, meta.molecule, fastq1, fastq2)
+            }
+
+        optitype = OPTITYPE(optitype_input)
+        hlahd = HLAHD(fastqs)
+        
+        // Combine HLA calls as input for consensus calls
+        combined_typing_results = optitype.hla_calls.join(hlahd.final_hla_calls)
+        
+        hlahd_to_tsv_input = hlahd.final_hla_calls
+            .map { meta, hlahd_result ->
+                tuple(meta, meta.sample_name, hlahd_result)
+            }
+
+        hlahd_tsv = HLAHD_TO_TSV(hlahd_to_tsv_input).hlahd_tsv
+        // Final HLA calls
+        hla_calls_pvac_input = HLA_CALLS_PVAC(combined_typing_results)
+
+    emit:
+        // The subject-specific reference and realignment the LOH workflow builds on, and
+        // hla_bed, which HLA_LOH_WORKFLOW needs for the tumour's second mhcflow run and
+        // which is produced in here rather than by the caller.
+        mhcflow_hla_ref = mhcflow.sample_hla_ref
+        mhcflow_realn_bam = mhcflow.realn_bam
+        hla_bed = hla_bed
+        optitype = optitype.hla_calls
+        hlahd = hlahd.final_hla_calls
+        hlahd_tsv = hlahd_tsv
+        pvac_input = hla_calls_pvac_input.pvac_calls
+
+}
 
 /*
     HLA loss of heterozygosity, following the three steps mhcflow documents.

@@ -1,10 +1,17 @@
 /*
+    pipeline init: utils_nfcore_vaximile_pipeline
+
+    One file per pipeline step. Each workflow keeps the take/emit signature it had
+    as its own subworkflow directory, so callers are unchanged.
+*/
+include { validateParameters; paramsSummaryLog } from "plugin/nf-schema"
+
+/*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     Subworkflow with functionality specific to the vaximile pipeline
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { validateParameters; paramsSummaryLog } from 'plugin/nf-schema'
 
 workflow PIPELINE_INITIALISATION {
 

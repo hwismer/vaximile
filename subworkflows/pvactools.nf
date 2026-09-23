@@ -1,20 +1,90 @@
-include { ADD_VCF_GT_FIELD } from "../../../modules/local/add_vcf_gt_field/main"
-include { MERGE_SOMATIC_VCFS } from "../../../modules/local/merge_somatic_vcfs/main"
-include { FILTER_VCF } from "../../../modules/local/filter_vcf/main"
-include { POSTPROCESS_VCF } from "../../../modules/local/postprocess_vcf/main"
-include { VCF_TO_TABLE } from "../../../modules/local/vcf_to_table/main"
-include { VEP_ANNOTATE } from "../../../modules/local/vep_annotate/main"
-include { VEP_POPULATION_FILTER } from "../../../modules/local/vep_population_filter/main"
-include { BAMREADCOUNT } from "../../../modules/local/bamreadcount/main"
-include { ANNOTATE_VCF_TRANSCRIPT_EXPRESSION } from "../../../modules/local/annotate_vcf_transcript_expression/main"
-include { ANNOTATE_VCF_GENE_EXPRESSION } from "../../../modules/local/annotate_vcf_gene_expression/main"
-include { ANNOTATE_VCF_COVERAGE as ANNOTATE_VCF_COVERAGE_TUMOR_DNA } from "../../../modules/local/annotate_vcf_coverage/main"
-include { ANNOTATE_VCF_COVERAGE as ANNOTATE_VCF_COVERAGE_NORMAL_DNA } from "../../../modules/local/annotate_vcf_coverage/main"
-include { ANNOTATE_VCF_COVERAGE as ANNOTATE_VCF_COVERAGE_TUMOR_RNA } from "../../../modules/local/annotate_vcf_coverage/main"
-include { INDEX_VCF } from "../../../modules/local/index_vcf/main"
+/*
+    pvactools: pvac_vcf_phasing, pvac_input_prep_workflow, pvactools_workflow
 
-include { PVAC_VCF_PHASING } from "../pvac_vcf_phasing/main"
-include { fan_out_pairs; expand_pairs } from "../utils_nfcore_vaximile_pipeline"
+    One file per pipeline step. Each workflow keeps the take/emit signature it had
+    as its own subworkflow directory, so callers are unchanged.
+*/
+include { VEP_ANNOTATE } from "../modules/local/vep_annotate/main"
+include { INDEX_VCF } from "../modules/local/index_vcf/main"
+include { PHASE_VCF_SELECT_VARIANTS } from "../modules/local/phase_vcf_select_variants/main"
+include { PHASE_VCF_RENAME } from "../modules/local/phase_vcf_rename/main"
+include { PHASE_VCF_COMBINE_VARIANTS } from "../modules/local/phase_vcf_combine_variants/main"
+include { PHASE_VCF_SORT_VCF } from "../modules/local/phase_vcf_sort_vcf/main"
+include { PHASE_VCF_RBPHASING } from "../modules/local/phase_vcf_rbphasing/main"
+include { ADD_VCF_GT_FIELD } from "../modules/local/add_vcf_gt_field/main"
+include { MERGE_SOMATIC_VCFS } from "../modules/local/merge_somatic_vcfs/main"
+include { FILTER_VCF } from "../modules/local/filter_vcf/main"
+include { POSTPROCESS_VCF } from "../modules/local/postprocess_vcf/main"
+include { VCF_TO_TABLE } from "../modules/local/vcf_to_table/main"
+include { VEP_POPULATION_FILTER } from "../modules/local/vep_population_filter/main"
+include { BAMREADCOUNT } from "../modules/local/bamreadcount/main"
+include { ANNOTATE_VCF_TRANSCRIPT_EXPRESSION } from "../modules/local/annotate_vcf_transcript_expression/main"
+include { ANNOTATE_VCF_GENE_EXPRESSION } from "../modules/local/annotate_vcf_gene_expression/main"
+include { ANNOTATE_VCF_COVERAGE as ANNOTATE_VCF_COVERAGE_TUMOR_DNA } from "../modules/local/annotate_vcf_coverage/main"
+include { ANNOTATE_VCF_COVERAGE as ANNOTATE_VCF_COVERAGE_NORMAL_DNA } from "../modules/local/annotate_vcf_coverage/main"
+include { ANNOTATE_VCF_COVERAGE as ANNOTATE_VCF_COVERAGE_TUMOR_RNA } from "../modules/local/annotate_vcf_coverage/main"
+include { fan_out_pairs; expand_pairs } from "./pipeline_init.nf"
+include { PVACSEQ } from "../modules/local/pvacseq/main"
+include { PVACFUSE } from "../modules/local/pvacfuse/main"
+include { COMBINE_PVACSEQ_AGGREGATED_REPORT } from "../modules/local/combine_pvacseq_aggregated_report/main"
+
+workflow PVAC_VCF_PHASING {
+
+    take:
+        tumor_bam
+        somatic_vcf
+        germline_vcf
+        reference_genome
+        reference_dict
+        vep_cache
+        vep_plugins
+       
+    main:
+
+    phase_vcf_select_variants_input = somatic_vcf
+        .map { somatic_meta, vcf, vcf_index ->
+            tuple(somatic_meta, somatic_meta.tumor_meta.sample_name, vcf, vcf_index)
+        }
+
+    select_variants = PHASE_VCF_SELECT_VARIANTS(phase_vcf_select_variants_input, reference_genome, reference_dict).vcf
+    
+
+    somatic_meta_germline = somatic_vcf.map{meta, vcf, tbi ->
+        tuple(meta.normal_meta, meta)
+    }.join(germline_vcf, by:0)
+
+    phase_vcf_rename_input = somatic_meta_germline
+        .map { normal_meta, somatic_meta, vcf, vcf_index ->
+            tuple(normal_meta, somatic_meta, normal_meta.sample_name, somatic_meta.tumor_meta.sample_name, vcf, vcf_index)
+        }
+
+    germline_renamed = PHASE_VCF_RENAME(phase_vcf_rename_input).vcf
+
+
+    combine_variants_input = select_variants.join(germline_renamed, by:0)
+    combined_variants = PHASE_VCF_COMBINE_VARIANTS(combine_variants_input, reference_genome, reference_dict).vcf
+
+    combined_sorted = PHASE_VCF_SORT_VCF(combined_variants, reference_genome, reference_dict).sorted_vcf
+
+    combined_sorted_by_tumor_sample = combined_sorted.map{ meta, vcf ->
+        tuple(meta.tumor_meta, meta, vcf)
+    }.join(tumor_bam)
+
+    rbphased = PHASE_VCF_RBPHASING(combined_sorted_by_tumor_sample, reference_genome, reference_dict).vcf
+
+    phased_vep = VEP_ANNOTATE(rbphased, reference_genome, vep_cache, vep_plugins)
+
+    
+    index_input = phased_vep.vcf.map{meta, vcf ->
+        tuple(meta.tumor_meta.sample_name, meta, vcf)
+    }
+    final_phased = INDEX_VCF(index_input, "phased").vcf
+
+    
+    emit:
+        final_phased = final_phased
+
+}
 
 workflow PVAC_INPUT_PREP_WORKFLOW {
 
@@ -167,4 +237,32 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
         somatic_vcf_table = final_vcf_table
         phased_vcf = phased_vcf_final
         vep_report = vep.report
+}
+
+workflow PVACTOOLS_WORKFLOW {
+
+    take:
+        pvacseq_input // (somatic_name, somatic_meta, somatic_vcf, somatic_vcf_index, phased_vcf, phase_vcf_index, hla_calls)
+        pvacfuse_input // (somatic_name, arriba_meta, arriba_fusions, star_meta, star_fusions, hla_meta, hla_calls)
+        proteome_reference
+
+    main:
+
+    pvacseq_ch = pvacseq_input
+        .map { somatic_name, somatic_meta, somatic_vcf, somatic_vcf_index, phased_vcf, phased_vcf_index, hla_meta, hla_pvac_input ->
+            tuple(somatic_name, somatic_meta, somatic_meta.tumor_meta.sample_name, somatic_meta.normal_meta.sample_name, somatic_vcf, somatic_vcf_index, phased_vcf, phased_vcf_index, hla_meta, hla_pvac_input)
+        }
+
+    pvacseq = PVACSEQ(pvacseq_ch, proteome_reference)
+    pvacfuse = PVACFUSE(pvacfuse_input, proteome_reference).pvacfuse_dir
+
+    pvacseq_patient = pvacseq.pvaseq_mhc_i_aggr.map{meta, report -> tuple(meta.patient, report)}.groupTuple()
+    combined_report = COMBINE_PVACSEQ_AGGREGATED_REPORT(pvacseq_patient).tsv
+
+
+    emit:
+        pvacseq = pvacseq.pvacseq_dir
+        pvacseq_mhc_i_combined = combined_report
+        pvacfuse = pvacfuse
+
 }

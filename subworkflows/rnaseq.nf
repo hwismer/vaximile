@@ -1,9 +1,32 @@
-include { CREATE_STAR_INDEX } from "../../../modules/local/create_star_index/main"
-include { STAR_ALIGN } from "../../../modules/local/star_align/main"
-include { STAR_SORT_INDEX_BAM } from "../../../modules/local/star_sort_index_bam/main"
-include { CREATE_SALMON_INDEX } from "../../../modules/local/create_salmon_index/main"
-include { SALMON_QUANT } from "../../../modules/local/salmon_quant/main"
-include { GET_RNA_STRANDEDNESS } from "../../../modules/local/get_rna_strandedness/main"
+/*
+    rnaseq: rna_qc_workflow, rnaseq_workflow, fusion_calling
+
+    One file per pipeline step. Each workflow keeps the take/emit signature it had
+    as its own subworkflow directory, so callers are unchanged.
+*/
+include { FASTP } from "../modules/local/fastp/main"
+include { CREATE_STAR_INDEX } from "../modules/local/create_star_index/main"
+include { STAR_ALIGN } from "../modules/local/star_align/main"
+include { STAR_SORT_INDEX_BAM } from "../modules/local/star_sort_index_bam/main"
+include { CREATE_SALMON_INDEX } from "../modules/local/create_salmon_index/main"
+include { SALMON_QUANT } from "../modules/local/salmon_quant/main"
+include { GET_RNA_STRANDEDNESS } from "../modules/local/get_rna_strandedness/main"
+include { STAR_FUSION } from "../modules/local/star_fusion/main"
+include { ARRIBA_FUSION } from "../modules/local/arriba_fusion/main"
+
+workflow RNA_QC_WORKFLOW {
+
+    take:
+        reads_channel
+
+    main:
+        fastp = FASTP(reads_channel)
+
+    emit:
+        fastp_fastqs = fastp.fastqs
+        fastp_reports = fastp.reports
+
+}
 
 workflow RNASEQ_WORKFLOW {
 
@@ -60,4 +83,23 @@ workflow RNASEQ_WORKFLOW {
         salmon_gene = salmon.genes_tsv    // quant.genes.sf, gene-level
         salmon_dir = salmon.quant         // whole run directory, for MultiQC
         rna_strand = rna_strand_predictions
+}
+
+workflow FUSION_CALLING {
+
+    take:
+        star_bam
+        star_chimeric_out
+        reference_genome
+        gtf
+        ctat_resource_lib
+        arriba_resources
+
+    main:
+        star_fusion = STAR_FUSION(star_chimeric_out, ctat_resource_lib)
+        arriba = ARRIBA_FUSION(star_bam, reference_genome, gtf, arriba_resources)
+    emit:
+        arriba_fusion = arriba.arriba_fusions
+        star_fusion = star_fusion.fusion_preds
+
 }
