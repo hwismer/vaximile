@@ -18,19 +18,8 @@ process LOHHLA_MQC {
         tuple val(somatic_name), val(meta), path("*_lohres.tsv"), emit: tsv
 
     script:
-    // lohhlaplot writes PDFs, which MultiQC cannot embed - it takes png, jpg and jpeg only -
-    // so they are rasterised here rather than lost from the report, and tiled into one sheet
-    // per pair. Fifteen separate images, three genes by five plot types, is fifteen report
-    // sections to scroll past for a single pair; as one sheet it is one section, and the
-    // three genes sit side by side, which is the comparison worth making.
-    //
-    // Genes across and plot types down rather than the other way round: five columns
-    // squeezes each panel to a fifth of the report width, where three leaves them legible.
-    // The PDFs stay the published artefact for anything needing full resolution.
-    //
-    // The tiling itself is assets/montage_panels.py, shared with ASCAT_MQC. Staged as an
-    // input rather than run from projectDir so it travels with the task under scratch and
-    // into a container.
+    // Rasterise the LOH PDFs and tile them into one sheet per pair for MultiQC (genes across, plots down).
+    // The tiling is assets/montage_panels.py, staged as an input.
     """
     mkdir -p panels
     for pdf in ${plot_dir}/*.pdf; do

@@ -1,20 +1,5 @@
-/*
-    Forked from the nf-core ascat module, not vendored from it - which is why it lives here
-    rather than under modules/nf-core/, where an unmodified copy such as SAMTOOLS_SORMADUP
-    belongs. It has diverged enough that `nf-core modules update` would overwrite working
-    behaviour rather than upgrade it:
-
-      - the input tuple carries sex and the per-pair BED, where upstream takes a bare
-        (meta, bams, indices) tuple with the BED as a separate channel
-      - fasta arrives with its .fai as a tuple
-      - tag and prefix read meta.somatic_name, this pipeline's pair key, not meta.id
-      - gender falls back to the samplesheet's sex rather than NULL, and genomeVersion to
-        hg38
-
-    The upstream meta.yml and nf-test files were dropped with the move: both described the
-    upstream signature, which no longer matches, and there is no nf-test harness here to
-    run the tests.
-*/
+// Forked from the nf-core ascat module: takes sex and the pair BED in its input tuple, fasta with its .fai,
+// and names outputs by meta.somatic_name. Not updatable from nf-core.
 process ASCAT {
     tag "${meta.somatic_name}"
     label 'process_medium'

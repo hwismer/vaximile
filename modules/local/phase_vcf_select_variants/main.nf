@@ -1,11 +1,6 @@
 process PHASE_VCF_SELECT_VARIANTS {
 
-    /*
-
-    Part of creating a phased germline vcf
-    Takes a somatic vcf and extracts just the tumor sample.
-
-    */
+    // Extract the tumour sample from the somatic VCF for phasing.
 
     label 'process_low_memory'
     conda "bioconda::gatk4=4.6.1.0"

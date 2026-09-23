@@ -1,10 +1,6 @@
 process MANTA {
 
-    /*
-
-    Run Manta Indel Caller
-
-    */
+    // Manta structural variant and indel calling.
 
    label 'process_high'
    tag "Running Manta on ${somatic_meta.somatic_name}"

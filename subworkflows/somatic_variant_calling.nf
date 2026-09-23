@@ -1,9 +1,4 @@
-/*
-    somatic variant calling: mutect2, strelka_workflow, deepsomatic_workflow
-
-    One file per pipeline step. Each workflow keeps the take/emit signature it had
-    as its own subworkflow directory, so callers are unchanged.
-*/
+// Somatic variant calling: Mutect2, Strelka/Manta and DeepSomatic, and their consensus.
 include { ADD_VCF_GT_FIELD } from "../modules/local/add_vcf_gt_field/main"
 include { FILTER_VCF } from "../modules/local/filter_vcf/main"
 include { POSTPROCESS_VCF } from "../modules/local/postprocess_vcf/main"
@@ -138,18 +133,7 @@ workflow DEEPSOMATIC_WORKFLOW {
 }
 
 
-/*
-    The n-1 consensus over the three somatic callers.
-
-    This lived in PVAC_INPUT_PREP_WORKFLOW, which meant the step that turns three callsets
-    into the pipeline's somatic callset sat in the subworkflow that consumes it rather than
-    the one that produces them. Nothing about the chain changed in the move.
-
-    Strelka's calls get a GT field first - it does not write one, and the merge needs it.
-    Each callset is then filtered to PASS and normalised before GATK3 CombineVariants
-    merges them under --minimumN 2, so a variant survives only if two of the three callers
-    report it.
-*/
+// 2-of-3 consensus: add GT to Strelka calls, keep PASS, normalise, then CombineVariants --minimumN 2.
 workflow SOMATIC_CONSENSUS {
 
     take:

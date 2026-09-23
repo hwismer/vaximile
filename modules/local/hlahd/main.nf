@@ -1,15 +1,6 @@
 process HLAHD {
 
-    /*
-
-    Run HLA-HD to perform HLA typing on patient fastqs
-
-    This has given me some trouble before with temp directories and issues where bowtie never initializes.
-    This should be fixed by unzipping fastqs at the beginning of the script.
-    One potential improvement here would be to map BAMs first, then extract reads from HLA region and run.
-
-
-    */
+    // HLA typing with HLA-HD. FASTQs are decompressed first to avoid bowtie start-up failures.
     
     label 'process_high'
     container "griffithlab/hlahd:1.0"

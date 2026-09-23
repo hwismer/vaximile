@@ -1,10 +1,6 @@
 process FILTER_VCF {
 
-    /*
-
-    Filter VCF, retaining only PASS variants.
-
-    */
+    // Keep only PASS variants.
     
     label 'process_medium'
     conda "bioconda::bcftools=1.23.1"

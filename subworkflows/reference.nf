@@ -1,9 +1,4 @@
-/*
-    reference: prepare_reference_fasta
-
-    One file per pipeline step. Each workflow keeps the take/emit signature it had
-    as its own subworkflow directory, so callers are unchanged.
-*/
+// Reference preparation: decompress, index and build the sequence dictionary.
 include { PREPARE_FASTA } from "../modules/local/prepare_fasta/main"
 include { INDEX_FASTA } from "../modules/local/index_fasta/main"
 include { MAKE_FASTA_DICT } from "../modules/local/make_fasta_dict/main"

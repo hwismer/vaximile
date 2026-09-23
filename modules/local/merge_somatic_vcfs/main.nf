@@ -1,16 +1,9 @@
 process MERGE_SOMATIC_VCFS {
 
-    /*
-
-    Use the deprecated CombineVariants from GATK 3.6.0 to combine vcf files. 
-
-    */
+    // Merge the three somatic callsets with GATK3 CombineVariants.
 
     label 'process_low_memory'
-    // GATK3 ONLY - deliberately has no conda spec, and must not be given a gatk4 one.
-    // This tool has no GATK4 equivalent: CombineVariants and ReadBackedPhasing were both
-    // dropped in GATK4. bioconda's `gatk` 3.x is only a wrapper that needs the licensed
-    // jar registered by hand, so this module stays container-only.
+    // GATK3 only: CombineVariants/ReadBackedPhasing have no GATK4 equivalent, and bioconda's gatk3 needs a licensed jar.
     container "broadinstitute/gatk3:3.6-0"
 
     tag "Merge 3 somatic vcfs from $vcf1 $vcf2 $vcf3"

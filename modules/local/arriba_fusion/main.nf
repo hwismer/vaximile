@@ -1,10 +1,6 @@
 process ARRIBA_FUSION {
 
-    // 384 GB was the single largest reservation in the pipeline, for a step Arriba's own
-    // README describes as "~2 minutes" post-alignment; nf-core/rnafusion runs it at
-    // 6 CPU / 36 GB. 96 GB keeps a wide margin over that while no longer forcing a
-    // whole-node reservation. Arriba takes no thread option, so the CPU count is
-    // incidental. Worth measuring peak RSS from an execution report and cutting further.
+    // Arriba is quick after alignment and takes no thread option.
     label 'process_high_memory'
     conda "bioconda::arriba=2.5.1"
 

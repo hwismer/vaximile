@@ -1,37 +1,8 @@
 process BWA_MAP {
 
-    /*
-        Map fastq files using minibwa. Outputs an unsorted BAM.
-        Reads groups are created using metadata information and currently are basically just the same name.
-        Creates read group solely based on provided metadata from samplesheet. Any readgroup information
-        present in the FASTQs is ignored.
-
-        minibwa takes -R in the same '@RG\tID:foo\tSM:bar' form bwa-mem2 did, so the read
-        group string below is unchanged. Note that minibwa uses a different algorithm from
-        bwa-mem2 and its alignments are NOT identical to it.
-
-        minibwa only writes SAM, but SAMTOOLS_SORMADUP begins with `samtools cat`, which
-        reads BAM and CRAM only and fails on SAM with "input is not BAM or CRAM".
-        MarkDuplicatesSpark took SAM directly, so nothing needed this before. Converting in
-        the pipe rather than in a following process means the SAM is never written at all -
-        for WGS that removes a multi-hundred-GB intermediate, so this is faster than the
-        bwa-mem2 pipeline was.
-
-        -1 is fast BAM compression: this file is transient, read once by SORMADUP, so the
-        cost of a higher level would not be repaid.
-
-        The `set -euo pipefail` below duplicates the global process.shell in
-        nextflow.config, deliberately. Without pipefail a minibwa crash mid-pipe would be
-        masked by samtools exiting 0, shipping a silently truncated BAM. Nextflow invokes
-        .command.sh as `env bash -C -e -u -o pipefail .command.sh`, so the shebang inside
-        the file is never used - re-running it by hand while debugging loses those options.
-        The explicit line keeps the pipe safe in that case too.
-
-        No container. The published minibwa images (biocontainers, staphb) carry minibwa
-        alone, and this now needs samtools in the same task. Under -profile docker or
-        singularity this process will fall back to the host, as the other samtools-only
-        modules in this pipeline already do.
-    */
+    // Align reads with minibwa and pipe straight to BAM. Read groups come from the samplesheet metadata.
+    // pipefail is set explicitly so a minibwa crash can't produce a truncated BAM.
+    // No container: no published image has both minibwa and samtools.
 
     label 'process_very_high'
     conda "bioconda::minibwa=0.7 bioconda::samtools=1.23.1 bioconda::htslib=1.23.1"

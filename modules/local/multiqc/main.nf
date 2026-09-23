@@ -1,11 +1,6 @@
 process MULTIQC {
 
-    /*
-    Runs MultiQC on gathered files on a per-patient basis.
-    Currently also imports HLA-HD calls into table format.
-
-    Replaces sample names with sample names from metadata and merged samples that start with Merge
-    */
+    // Per-patient MultiQC report, including custom HLA and copy-number sections.
 
     label 'process_low'
     conda "bioconda::multiqc=1.34-0"

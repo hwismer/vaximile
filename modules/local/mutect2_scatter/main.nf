@@ -1,17 +1,9 @@
 process MUTECT2_SCATTER {
 
 
-    /*
+    // Mutect2 on one interval shard for a tumour/normal pair.
 
-        Call mutect 2 on a single interval shard. This process creates a new metadata block specific to
-        the somatic caller of the form [somatic_name, somatic_caller, tumor_metadata, normal_metadata].
-
-    */
-
-    // process_low, matching nf-core's gatk4/mutect2. This runs once per pair per interval,
-    // so its footprint is multiplied by scatter_count; halving CPU and memory lets twice as
-    // many shards run at once. PairHMM scaling is sublinear, so more concurrent shards beats
-    // more threads per shard.
+    // process_low: runs once per shard, so smaller tasks let more run at once.
     label 'process_low'
     conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
@@ -33,10 +25,7 @@ process MUTECT2_SCATTER {
         tuple val(somatic_meta), path("*_mutect.vcf.gz.stats"), emit: stats
 
     script:
-    // Explicit heap, as nf-core's GATK4 modules do. Without --java-options the JVM picks
-    // its own maximum, which is a fraction of whatever memory it believes it has - not
-    // necessarily the amount the scheduler granted. Sizing it from task.memory keeps the
-    // heap inside the reservation, which matters more now the reservation is smaller.
+    // Size the JVM heap from task.memory so it stays within the reservation.
         def avail_mem = (task.memory.mega * 0.8).intValue()
         def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}_${interval_shard}"
         """

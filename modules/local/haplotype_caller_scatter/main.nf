@@ -1,21 +1,12 @@
 process HAPLOTYPE_CALLER_SCATTER {
 
-    /*
-
-    Use HaplotypeCaller on a single scattered interval. CNNScoreVariants runs
-    separately, in HAPLOTYPE_CALLER_CNN_SCORE_VARIANTS.
-
-    */
+    // HaplotypeCaller on one interval shard.
 
     // process_low, matching nf-core's gatk4/haplotypecaller. Runs once per normal per
     // interval, so the footprint is multiplied by scatter_count; more concurrent shards
     // beats more PairHMM threads per shard, which scales sublinearly.
     label 'process_low'
-    // GATK PINNED TO 4.3.0.0 - DO NOT BUMP TO MATCH THE 4.6.1.0 MODULES.
-    // This module is part of the CNNScoreVariants germline chain
-    // (HaplotypeCaller -> CNNScoreVariants -> FilterVariantTranches). CNNScoreVariants
-    // was deprecated in favour of NVScoreVariants and is not available in current GATK4,
-    // so the three modules in this chain must stay on a release that still ships it.
+    // GATK pinned to 4.3.0.0: CNNScoreVariants is not in newer GATK4. Do not bump.
     conda "bioconda::gatk4=4.3.0.0"
     container "broadinstitute/gatk:4.3.0.0"
 
@@ -32,10 +23,7 @@ process HAPLOTYPE_CALLER_SCATTER {
 
     script:
         def args = task.ext.args ?: ''
-    // Explicit heap, as nf-core's GATK4 modules do. Without --java-options the JVM picks
-    // its own maximum, which is a fraction of whatever memory it believes it has - not
-    // necessarily the amount the scheduler granted. Sizing it from task.memory keeps the
-    // heap inside the reservation, which matters more now the reservation is smaller.
+    // Size the JVM heap from task.memory so it stays within the reservation.
         def avail_mem = (task.memory.mega * 0.8).intValue()
         def prefix = task.ext.prefix ?: "${meta.sample_name}_${interval_shard}"
         """

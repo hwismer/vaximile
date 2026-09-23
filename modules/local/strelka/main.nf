@@ -1,10 +1,6 @@
 process STRELKA {
     
-    /*
-
-    Run Strelka somatic variant caller
-
-    */
+    // Strelka somatic variant calling.
     
     label 'process_high'
 

@@ -1,10 +1,6 @@
 process STRELKA_GERMLINE {
 
-    /*
-
-    Run Strelka in germline mode
-
-    */
+    // Strelka germline variant calling.
 
     label 'process_high'
     container "mgibio/strelka:2.9.9"

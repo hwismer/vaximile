@@ -7,12 +7,7 @@ process LOHHLAPLOT {
     tag "Plotting HLA LOH profiles for ${somatic_name}"
 
     input:
-        // The result table and the per-gene .rds files, staged flat into the task directory
-        // rather than as the LOHHLAMOD output directory. lohhlaplot writes its plots INTO
-        // --loh-dir, and that directory would be a symlink to the LOHHLAMOD task: plotting
-        // would write into another task's work directory, which breaks under `scratch` and
-        // leaves one task's outputs depending on another task not having been cleaned.
-        // Staged flat, --loh-dir is this task's own directory and the plots land here.
+        // Staged flat: lohhlaplot writes into --loh-dir, which must be this task's own directory.
         tuple val(somatic_name), val(meta), path(loh_res), path(loh_rds)
 
     output:

@@ -1,17 +1,8 @@
 process STAR_ALIGN {
 
-    /*
+    // Align RNA reads with STAR, using STAR-Fusion's parameters so Arriba and STAR-Fusion can reuse the output.
 
-    Align RNA reads with STAR. Parameters included from star-fusion to be able to use the output of this process
-    in a downstream star-fusion or arriba process without having to re-map.
-
-    */
-
-    // process_max, not process_very_high: STAR is the slowest step in the RNA path and
-    // --runThreadN takes whatever the tier gives it. Scaling is sub-linear past ~16 threads,
-    // so 32 buys well under 2x, and on a busy cluster the wider reservation may cost more in
-    // queue time than it saves. Drop back to process_very_high if that trade goes the wrong
-    // way. Memory is 96 GB in both tiers, which is what GRCh38 plus two-pass needs.
+    // process_max: STAR takes all available threads; drop to process_very_high if queueing is slow.
     label 'process_max'
     
     conda "bioconda::star=2.7.11b"

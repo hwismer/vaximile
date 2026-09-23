@@ -7,11 +7,7 @@ process MHCFLOW_REALIGN {
     tag "Realigning ${meta.sample_name} to ${somatic_name} normal HLA reference"
 
     input:
-        // The tumour library, and the HLA reference mhcflow inferred for the normal it is
-        // paired with. Step 2 of the LOH workflow: the tumour is realigned against the
-        // NORMAL's alleles rather than the full HLA reference, because lohhlamod compares
-        // coverage between the two BAMs and that is only meaningful over one common,
-        // subject-specific set of sequences.
+        // Realign the tumour against its normal's HLA reference, so both BAMs share one reference for LOH.
         tuple val(somatic_name), val(meta), path(bam), path(bai), path(hla_fasta), path(hla_nix)
         path hla_bed
         path hla_kmers

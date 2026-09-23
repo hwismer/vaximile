@@ -1,11 +1,6 @@
 process BAMREADCOUNT {
 
-    /*
-
-    Run bamreadcount to add coverage information to a vcf using a BAM file. The sample names in the VCF
-    must match the read groups and sample names in the BAM.
-
-    */
+    // Run bam-readcount at the VCF's sites. VCF sample names must match the BAM read groups.
 
     // bam-readcount is single-threaded and the helper script does not parallelise,
     // so the extra cores of process_high went unused.

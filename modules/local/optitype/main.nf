@@ -1,19 +1,8 @@
 process OPTITYPE {
 
-    /*
-        HLA type patient's fastqs using OPTITYPE
-        This process can be fairly memory intensive.
-        One potential improvement here would be to map BAMs first, then extract reads from HLA region and run.
+    // HLA class I typing with OptiType. Memory intensive.
 
-    */
-
-    // OptiType 1.5.0, pinned. Both a conda spec and the matching biocontainer, so this
-    // module runs under either provisioning method.
-    //
-    // 1.5.0 is a CLI rewrite, not a drop-in bump. The entry point is a click group -
-    // `optitype run`, not `OptiTypePipeline.py` - and the OptiType.ini file this module
-    // used to write is gone: mapper, solver and thread counts are now flags. The previous
-    // image was `fred2/optitype:latest`, a floating tag last pushed in 2018.
+    // OptiType 1.5.0: a CLI rewrite (`optitype run`, options as flags rather than a config file).
     conda "bioconda::optitype=1.5.0"
     container "quay.io/biocontainers/optitype:1.5.0--pyhdfd78af_1"
     label 'process_high'

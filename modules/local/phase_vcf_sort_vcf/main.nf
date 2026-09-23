@@ -1,11 +1,6 @@
 process PHASE_VCF_SORT_VCF {
 
-    /*
-
-    Part of creating a phased vcf.
-    Sort the somatic + germline combined vcf.
-
-    */
+    // Sort the combined somatic + germline VCF.
 
     label 'process_low_memory'
     container 'broadinstitute/picard:3.4.0'

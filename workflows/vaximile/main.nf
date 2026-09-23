@@ -93,13 +93,7 @@ workflow VAXIMILE {
     arriba_resources = PULL_ARRIBA_RESOURCES().resources
     vep_plugins = PULL_VEP_PVAC_PLUGINS().plugins
 
-    // --vep_cache is optional: use the directory given, otherwise pull the release-115
-    // GRCh38 cache once into ./vaximile_resources/vep_cache and reuse it on later runs.
-    //
-    // MUST be a value channel either way. VEP runs once per VCF, and a queue channel
-    // holding a single item would be consumed by the first of those tasks, leaving the
-    // rest with no cache. A process output that emits exactly once is already a value
-    // channel, so both branches broadcast.
+    // Use --vep_cache if given, otherwise download it once. Must be a value channel for every VEP task.
     vep_cache = params.vep_cache
         ? channel.value(file(params.vep_cache, checkIfExists: true))
         : PULL_VEP_CACHE().cache
@@ -110,10 +104,7 @@ workflow VAXIMILE {
 
     capture_kits = ch_capture_kits
 
-    // Collapse samplesheet rows describing the same library before any work happens, so a
-    // normal shared by several tumours is trimmed, aligned, marked, recalibrated, germline
-    // called and HLA typed once rather than once per pair. Metas now carry a somatic_names
-    // list; fan_out_pairs() restores the scalar somatic_name at each tumour/normal join.
+    // Deduplicate libraries first, so a shared normal is processed once.
     samplesheet_inputs = dedupe_libraries(ch_samplesheet)
 
     // Split DNA and RNA sequencing samples
@@ -139,15 +130,7 @@ workflow VAXIMILE {
     //**************************************************************************************************************************************
     // Split Capture Intervals
 
-    // `as Integer` because a value from the command line arrives as a String, where the
-    // same value in -params-file arrives as an Integer. num_intervals reaches
-    // groupTuple(size:), which takes only an Integer, so `--scatter_count 20` would end the
-    // run after alignment with
-    //
-    //   Value '20' cannot be used in in parameter 'size' for operator 'groupTuple'
-    //
-    // The schema types it as an integer, but nf-schema validates params rather than
-    // rewriting them, so the coercion has to happen here.
+    // CLI values arrive as strings; groupTuple(size:) needs an Integer.
     num_intervals = params.scatter_count as Integer
     intervals = SPLIT_INTERVALS(reference_genome, reference_dict, capture_kits, num_intervals, 0).interval_shards
     processed_regions = CAPTURE_KIT_BED_PROCESS(capture_kits).bed
@@ -184,12 +167,7 @@ workflow VAXIMILE {
     //**************************************************************************************************************************************
     // HLA Typing
     
-    // One HLA call set per library. Merging a pair's tumour and normal BAMs to type them
-    // together used to happen here, but mhcflow rejects the result: it requires a single
-    // read group and exits on the merge's two with
-    //
-    //   [helper.py] - [_check_single_rg:132] - [ERROR]: Found more than one read group
-    //   information in BAM: [{'ID': 'N1_S1', ...}, {'ID': 'T1', ...}]
+    // HLA typing runs per library; mhcflow requires a single read group per BAM.
     hla_input = markdup_bams
     hla_workflow = HLA_TYPING_WORKFLOW(hla_input, params.reference_includes_chr_prefix,
         hla_reference, hla_kmers, hla_freq)
@@ -314,13 +292,10 @@ workflow VAXIMILE {
         ascat_resources.RT,
     )
 
-    // One publish target for the whole ASCAT result set rather than eight separate ones.
-    // HLA LOH. Downstream of both HLA typing and ASCAT: it pairs each tumour with its own
-    // normal, realigns it against that normal's HLA reference, and calls loss over the two.
-    // Staged as a file rather than referenced through projectDir, so the tiling script
-    // travels with the task the way any other input does.
+    // Tiling script for the MultiQC LOH and ASCAT sheets.
     montage_script = Channel.value(file("${projectDir}/assets/montage_panels.py", checkIfExists: true))
 
+    // HLA LOH: each tumour against its own normal's HLA reference, using ASCAT's purity and ploidy.
     hla_loh_workflow = HLA_LOH_WORKFLOW(
         markdup_bams,
         hla_workflow.mhcflow_hla_ref,
@@ -332,9 +307,7 @@ workflow VAXIMILE {
         montage_script
     )
 
-    // ASCAT's plots and its two one-row result files, tiled and merged for the report.
-    // join on the meta rather than mixing: the three emits are per pair and have to arrive
-    // together, and ASCAT is allowed to fail here, which drops the pair from all three.
+    // ASCAT plots and metrics for MultiQC, joined per pair.
     ascat_mqc = ASCAT_MQC(
         ascat.png
             .join(ascat.purityploidy)
@@ -401,14 +374,7 @@ workflow VAXIMILE {
     //**************************************************************************************************************************************
     // PVACtools Neoantigen Prediction - Somatic Variants / RNA Fusions /
 
-    // pVACtools wants one HLA call set per tumour/normal pair, which used to be the merged
-    // sample's. With merging gone it comes from the normal: HLA type is germline, and the
-    // normal is free of the tumour's LOH at the HLA locus and of its purity, so it is the
-    // better of the two sources rather than only the available one. To predict against the
-    // tumour's calls instead, switch the filter below to "TUMOR".
-    //
-    // fan_out_pairs re-keys by somatic_name, which is what puts a normal shared by two
-    // tumours into both pairs.
+    // pVACtools uses the normal's HLA calls (HLA type is germline), fanned out to every pair.
     combined_hla_somatic_name = fan_out_pairs(
         hla_pvac_input.filter { meta, _calls -> meta.sample_type == "NORMAL" }
     )
@@ -456,10 +422,7 @@ workflow VAXIMILE {
     // the report had no duplicate rate at all. MultiQC's samtools module parses markdup
     // text output.
     mqc_markdup = markdup_metrics.map{meta, metrics -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, metrics)}
-    // Pair-level and one row per image: transpose() because LOHHLA_PLOTS_MQC emits all of a
-    // pair's plots as one list, and MultiQC's input is a flat file list. sample_name is null
-    // as it is for somalier - these belong to a pair, not a library, and a non-null value
-    // here would put a name into --replace-names that matches no sample.
+    // One row per LOH image for MultiQC; sample_name is null because these are pair-level.
     mqc_loh_plots = hla_loh_workflow.loh_plots_png
         .transpose()
         .map{ _somatic_name, meta, png -> tuple(meta.patient, meta.somatic_name, null, png) }

@@ -1,23 +1,6 @@
 process PVACSEQ {
 
-    /*
-
-    Run PVACseq on a single sample.
-
-    Inputs:
-        *(See PVACseq input preparation documents for more info.)
-        Somatic VCF
-        Phased Germline VCF
-        Tumor Sample Metadata
-        Normal Sample Metadata
-
-    Output:
-        Pvacseq folder containing:
-            Combined neoantigen predictions
-            MHC I neoantigen predictions
-            MHC II neoantigen predictions
-
-    */
+    // Run pVACseq on a tumour/normal pair's somatic and phased germline VCFs.
 
     label 'process_very_high'
     conda "bioconda::pvactools=7.0.1"

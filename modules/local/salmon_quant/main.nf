@@ -17,12 +17,7 @@ process SALMON_QUANT {
         // want the whole run directory; SALMON_TXIMPORT and the VCF expression annotators
         // want the transcript table, and vcf-expression-annotator takes a file, not a dir.
         tuple val(meta), path("*_salmon_quant/quant.sf"), emit: tsv
-        // Gene-level TPM, aggregated by salmon itself from --geneMap rather than by a
-        // separate tximport step. Same columns as quant.sf, with gene IDs in Name.
-        //
-        // Copied out under the sample name because this one is published: salmon calls it
-        // quant.genes.sf for every sample, so publishing it in place would either collide
-        // or drag the run directory along to disambiguate.
+        // Gene-level TPM from --geneMap, renamed per sample so published files don't collide.
         tuple val(meta), path("*.gene_tpm.tsv"), emit: genes_tsv
 
     script:

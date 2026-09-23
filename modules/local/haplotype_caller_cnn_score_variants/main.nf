@@ -1,18 +1,10 @@
 process HAPLOTYPE_CALLER_CNN_SCORE_VARIANTS {
     
-    /*
-
-    Use HaplotypeCaller on a single scattered interval. Post processes with CNNScoreVariants.
-
-    */
+    // Score one HaplotypeCaller shard with CNNScoreVariants.
 
     label 'process_low_memory'
 
-    // GATK PINNED TO 4.3.0.0 - DO NOT BUMP TO MATCH THE 4.6.1.0 MODULES.
-    // This module is part of the CNNScoreVariants germline chain
-    // (HaplotypeCaller -> CNNScoreVariants -> FilterVariantTranches). CNNScoreVariants
-    // was deprecated in favour of NVScoreVariants and is not available in current GATK4,
-    // so the three modules in this chain must stay on a release that still ships it.
+    // GATK pinned to 4.3.0.0: CNNScoreVariants is not in newer GATK4. Do not bump.
     conda "bioconda::gatk4=4.3.0.0"
     container "broadinstitute/gatk:4.3.0.0"
 

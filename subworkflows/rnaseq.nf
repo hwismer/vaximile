@@ -1,9 +1,4 @@
-/*
-    rnaseq: rna_qc_workflow, rnaseq_workflow, fusion_calling
-
-    One file per pipeline step. Each workflow keeps the take/emit signature it had
-    as its own subworkflow directory, so callers are unchanged.
-*/
+// RNA: QC, STAR alignment, salmon quantification and fusion calling.
 include { FASTP } from "../modules/local/fastp/main"
 include { CREATE_STAR_INDEX } from "../modules/local/create_star_index/main"
 include { STAR_ALIGN } from "../modules/local/star_align/main"

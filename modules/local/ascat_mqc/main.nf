@@ -15,10 +15,7 @@ process ASCAT_MQC {
         tuple val(somatic_name), val(meta), path("*_ascatmetrics.tsv"), emit: tsv
 
     script:
-    // Flat layout rather than the grid the LOH sheet uses: ASCAT's plots have no two-axis
-    // structure to lay out against, they are just a set. Two columns because the genome
-    // profiles are wide; the script keeps each panel's own aspect ratio, so the square
-    // sunrise plot sits in a row of its own height rather than being stretched to match.
+    // Tile ASCAT's plots into one sheet for MultiQC, keeping each panel's aspect ratio.
     """
     python3 $montage_script ${plots} \\
         --out ${somatic_name}_ascat_mqc.png \\

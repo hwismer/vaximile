@@ -6,11 +6,7 @@ process MHCFLOW {
 
     input:
         tuple val(meta), val(sample_name), path(bam), path(bai)
-        // The novoalign index comes in with the FASTA rather than being passed to mhcflow:
-        // mhcflow derives it from --ref as `ref.with_suffix(".nix")` and never takes it as
-        // an argument, so it only has to be staged next to the FASTA. Built by
-        // NOVOALIGN_HLA_FASTA; without it mhcflow exits on
-        // "Failed to find HLA reference novoalign index file".
+        // mhcflow finds the .nix index next to the FASTA, so all three are staged together.
         tuple path(hla_fasta), path(hla_fai), path(hla_nix)
         path hla_bed
         path hla_kmers
@@ -21,13 +17,7 @@ process MHCFLOW {
         // as a path makes Nextflow look for a file literally named by the map's toString,
         // which fails with "Missing output file(s) [somatic_name:..., patient:...]".
         tuple val(meta), path("${meta.sample_name}"), emit: out
-        // finalizer/ holds what an LOH analysis needs, and is not the same as realigner/.
-        // mhcflow realigns twice: once against the full HLA reference under realigner/, and
-        // again under finalizer/ against only the alleles it typed for this sample. LOH
-        // compares tumour and normal over one subject-specific reference, so it is the
-        // finalizer copy that matters here. The FASTA and its .nix travel together because
-        // the tumour's realignment is driven from this sample's reference, and mhcflow
-        // derives the index from the FASTA path rather than taking it as an argument.
+        // finalizer/ holds the sample-specific HLA reference and realignment used for LOH.
         tuple val(meta), path("${meta.sample_name}/finalizer/*.hla.fasta"), path("${meta.sample_name}/finalizer/*.hla.nix"), emit: sample_hla_ref
         tuple val(meta), path("${meta.sample_name}/finalizer/*.hla.realn.bam"), path("${meta.sample_name}/finalizer/*.hla.realn.bam.bai"), emit: realn_bam
 

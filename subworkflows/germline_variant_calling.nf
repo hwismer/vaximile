@@ -1,9 +1,4 @@
-/*
-    germline variant calling: haplotypecaller_workflow, germline_workflow
-
-    One file per pipeline step. Each workflow keeps the take/emit signature it had
-    as its own subworkflow directory, so callers are unchanged.
-*/
+// Germline variant calling: HaplotypeCaller, Strelka and DeepVariant, and their 2-of-3 consensus.
 include { HAPLOTYPE_CALLER_SCATTER } from "../modules/local/haplotype_caller_scatter/main"
 include { HAPLOTYPE_CALLER_CNN_SCORE_VARIANTS } from "../modules/local/haplotype_caller_cnn_score_variants/main"
 include { HAPLOTYPE_CALLER_GATHER_SELECT_VARIANTS } from "../modules/local/haplotype_caller_gather_select_variants/main"

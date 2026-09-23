@@ -1,13 +1,6 @@
 process ANNOTATE_VCF_GENE_EXPRESSION {
 
-    /*
-
-    Annotate gene expression in a VCF from salmon's quant.genes.sf.
-
-    The ID column is Name, holding gene IDs: salmon's --geneMap aggregation reuses the
-    quant.sf column names. The previous tximport table called that column ENSEMBLID.
-
-    */
+    // Annotate a VCF with gene expression from salmon's quant.genes.sf.
     label 'process_low'
 
     container "griffithlab/vatools:5.2.0"

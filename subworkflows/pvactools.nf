@@ -1,9 +1,4 @@
-/*
-    pvactools: pvac_vcf_phasing, pvac_input_prep_workflow, pvactools_workflow
-
-    One file per pipeline step. Each workflow keeps the take/emit signature it had
-    as its own subworkflow directory, so callers are unchanged.
-*/
+// pVACtools: germline phasing, VCF annotation and neoantigen prediction.
 include { VEP_ANNOTATE } from "../modules/local/vep_annotate/main"
 include { INDEX_VCF } from "../modules/local/index_vcf/main"
 include { PHASE_VCF_SELECT_VARIANTS } from "../modules/local/phase_vcf_select_variants/main"

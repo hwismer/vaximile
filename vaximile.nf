@@ -1,7 +1,4 @@
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    VAXIMILE
-    Tumor neoantigen discovery from paired tumour-normal bulk DNA and RNA sequencing
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+// vaximile: tumour neoantigen discovery from paired tumour/normal DNA and tumour RNA sequencing.
 
 include { VAXIMILE } from './workflows/vaximile'
 include { PIPELINE_INITIALISATION } from './subworkflows/pipeline_init.nf'
@@ -15,15 +12,7 @@ workflow {
 
     main:
 
-    // nf-schema's HelpObserver prints the help message in onFlowCreate - before this body
-    // runs - and then calls session.cancel(). That stops tasks from being submitted but does
-    // not stop the workflow body, so without this the run carries on to build channels from
-    // parameters a help request never supplies, and ends in a spurious validation error or
-    // parks on the output {} block. Leave immediately; the help has already been printed.
-    // containsKey, not params.helpFull: helpFull and showHidden are the plugin's own
-    // parameters and are not declared here, so reading one when it was not passed emits
-    // "Access to undefined parameter" and, with `params.help` unset, the guard then falls
-    // through to the workflow body.
+    // --help is printed by nf-schema before the workflow runs; exit here rather than continue.
     if (params.help || params.containsKey('helpFull')) {
         System.exit(0)
     }
@@ -67,19 +56,7 @@ workflow {
     PUBLISH TARGETS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-/*
-    Where an output belongs in the published tree, relative to the patient directory.
-
-    Pair-level outputs carry a somatic_meta with a scalar somatic_name and go under
-    "<somatic_name>/". Sample-level outputs - alignments, germline calls, per-sample HLA
-    typing, RNA quantification - carry a somatic_names list instead, because a library shared
-    between pairs is processed once and no longer belongs to exactly one of them. Those go
-    under "samples/<sample_name>/", which keeps the per-library results together and stops
-    them interleaving with the pair directories at the top of the patient folder.
-
-    Reading meta.somatic_name unconditionally is what published them to a literal "null"
-    directory once libraries began being deduplicated.
-*/
+// Publish pair-level outputs under <somatic_name>/ and per-library outputs under samples/<sample_name>/.
 def publish_scope(meta) {
     return meta.somatic_name ? "${meta.somatic_name}" : "samples/${meta.sample_name}"
 }

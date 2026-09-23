@@ -1,11 +1,6 @@
 process POSTPROCESS_VCF {
 
-    /*
-
-        Postprocess somatic variants from a vcf. This is used to normalize variants and decompose biallelics
-        into different entries. The vcf is then sorted and duplicate entries removed. The final vcf is then indexed.
-
-    */
+    // Normalise, split multiallelics, sort, deduplicate and index a VCF.
 
     label 'process_medium'
     conda "bioconda::bcftools=1.23.1"

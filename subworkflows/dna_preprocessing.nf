@@ -1,9 +1,4 @@
-/*
-    dna preprocessing: dna_qc_workflow, bwa_index, dna_align_and_preproc, bam_markduplicates, somalier
-
-    One file per pipeline step. Each workflow keeps the take/emit signature it had
-    as its own subworkflow directory, so callers are unchanged.
-*/
+// DNA preprocessing: QC, BWA index, alignment and BQSR, duplicate marking, and somalier.
 include { FASTP } from "../modules/local/fastp/main"
 include { CREATE_BWA_INDEX } from "../modules/local/create_bwa_index/main"
 include { BWA_MAP } from "../modules/local/bwa_map/main"
@@ -33,19 +28,7 @@ workflow DNA_QC_WORKFLOW {
         fastp_reports = fastp.reports
 }
 
-/*
-    BWA_MAP passes the reference FASTA to minibwa as the index prefix:
-
-        minibwa map ... $reference_fa $fastq1 $fastq2
-
-    so minibwa looks for "<reference_fa>.l2b" and "<reference_fa>.mbw". A
-    prebuilt index is therefore only usable if its files are named after the PREPARED
-    reference - the "<stem>_prc.fa" that PREPARE_FASTA writes - rather than after whatever
-    FASTA it happened to be built from elsewhere.
-
-    That name is derived from params.reference_fa, so it is checked here at launch instead
-    of letting minibwa fail per-sample with a missing-index error hours into a run.
-*/
+// A prebuilt --bwa_index must be named after the prepared reference (<stem>_prc.fa); checked at launch.
 def expected_index_prefix() {
     def stem = file(params.reference_fa).name.replaceFirst(/\.(fasta|fa)(\.gz)?$/, '')
     return "${stem}_prc.fa"
@@ -79,10 +62,7 @@ def prebuilt_bwa_index(index_dir) {
         def present = dir.list().sort()
         def report = "--bwa_index '${index_dir}' is not a usable minibwa index.\n\n"
 
-        // The upgrade case: a directory left over from when this pipeline used bwa-mem2.
-        // It is a perfectly valid index, just for the wrong aligner, so the generic
-        // "named after the wrong FASTA" advice below would send the reader hunting for a
-        // naming bug that is not there. Detect it by its signature extensions and say so.
+        // Recognise a leftover bwa-mem2 index and say so explicitly.
         def looks_like_bwa_mem2 = present.any { n -> n.endsWith('.bwt.2bit.64') || n.endsWith('.0123') }
         if ( looks_like_bwa_mem2 && !dangling ) {
             error(
@@ -124,17 +104,7 @@ workflow BWA_INDEX {
 
     main:
         if ( bwa_index ) {
-            // MUST be channel.value, not fromList/of.
-            //
-            // BWA_MAP is invoked once per sample against a queue channel of FASTQs, and
-            // this index has to be readable by every one of those tasks. A value channel
-            // is read without being consumed; a one-item queue channel is consumed by the
-            // first task, so BWA_MAP would align only a single sample and silently skip
-            // the rest.
-            //
-            // The auto branch works because a process output that emits exactly once is
-            // treated as a value channel too - so both branches broadcast, which is what
-            // makes them interchangeable here.
+            // Must be a value channel so every BWA_MAP task can read the index.
             bwa_index_ch = channel.value( prebuilt_bwa_index(bwa_index) )
         } else {
             bwa_index_ch = CREATE_BWA_INDEX(reference_genome).bwa_index
@@ -246,28 +216,8 @@ workflow DNA_ALIGN_AND_PREPROC {
 
 }
 
-/*
-    Coordinate-sort the aligned BAM and mark duplicates, replacing MarkDuplicatesSpark.
-
-    SAMTOOLS_SORMADUP is an unmodified nf-core module, so it expects nf-core conventions
-    this pipeline does not otherwise follow, and this wrapper is what bridges them:
-
-      - It tags tasks with `meta.id` and derives its default prefix from it. This
-        pipeline's meta map has no `id`, so an `id` is added for the duration of the call
-        and stripped again from the output.
-
-        Stripping matters. The meta map is the join key in DNA_ALIGN_AND_PREPROC
-        (`mark_dup.join(base_recal_gathered)`) and the grouping key for HLA typing and the
-        somatic pairs. Leaving an extra key on it would silently fail to match the metas
-        carried by every other channel.
-
-      - Its second input is a `tuple(meta2, fasta, fai)`, where this pipeline passes a
-        bare `tuple(fasta, fai)`, so a meta is prepended here.
-
-      - It emits the BAM and index on separate channels and, with --write-index, produces
-        a .csi. Downstream wants one `tuple(meta, bam, bai)`, so INDEX_BAM makes the .bai
-        and re-joins the shape. See that module for why .csi will not do.
-*/
+// Coordinate-sort and mark duplicates with the nf-core SAMTOOLS_SORMADUP module. Adds the meta.id it
+// expects (removed afterwards, since meta is a join key) and indexes to .bai.
 workflow BAM_MARKDUPLICATES {
 
     take:

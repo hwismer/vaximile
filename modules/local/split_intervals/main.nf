@@ -1,9 +1,6 @@
 process SPLIT_INTERVALS {
 
-    /*
-        Takes a file of genomic intervals such as a picard interval file or BED file splits into scatter_count number of shards for parallel processing.
-
-    */
+    // Split an interval file into scatter_count shards.
 
     label 'process_low'
     cache "lenient"

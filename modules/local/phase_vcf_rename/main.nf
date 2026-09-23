@@ -1,12 +1,6 @@
 process PHASE_VCF_RENAME {
 
-    /*
-
-    Part of creating a phase vcf file.
-    Germline sample name will be the name of the NORMAL sample, but to combine variants with the tumor sample, the names must match.
-    Here the sample name in the germline vcf is renamed to the name of the tumor sample.
-
-    */
+    // Rename the germline VCF's sample to the tumour's, so the two can be combined.
 
     label 'process_low'
     conda "bioconda::bcftools=1.23.1"

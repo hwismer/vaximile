@@ -1,9 +1,6 @@
 process ANNOTATE_VCF_COVERAGE {
 
-    /*
-
-        Use the output of bamreadcount to annotate coverage given a particular sample.
-    */
+    // Annotate a VCF with bam-readcount coverage for one sample.
 
     label 'process_low_memory'
 

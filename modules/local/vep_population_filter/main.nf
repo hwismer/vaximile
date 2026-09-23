@@ -1,12 +1,6 @@
 process VEP_POPULATION_FILTER {
 
-    /*
-
-    Use VEP to annotate a vcf files. Requires path to an installed cache
-    as well as a vep plugin directory. If using PVAC later on, the vep plugins
-    will need to includet those specified by pvac in their docs.
-
-    */
+    // Filter a VEP-annotated VCF with filter_vep (the gnomAD filter is set in conf/modules.config).
 
     label 'process_low'
     cache "lenient"

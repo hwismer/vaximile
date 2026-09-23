@@ -1,9 +1,4 @@
-/*
-    hla: hla_typing_workflow, hla_loh_workflow
-
-    One file per pipeline step. Each workflow keeps the take/emit signature it had
-    as its own subworkflow directory, so callers are unchanged.
-*/
+// HLA: typing (OptiType, HLA-HD, mhcflow) and loss of heterozygosity.
 include { OPTITYPE } from "../modules/local/optitype/main"
 include { HLAHD } from "../modules/local/hlahd/main"
 include { HLA_CALLS_PVAC } from "../modules/local/hla_calls_pvac/main"
@@ -38,11 +33,7 @@ workflow HLA_TYPING_WORKFLOW {
                 tuple(meta, meta.sample_name, bam, bai)
             }
 
-        // .first() to make the indexed reference an explicit value channel, matching how
-        // the un-indexed reference reaches this subworkflow (main.nf .first()s each HLA
-        // reference param). Nextflow would convert this single-item queue implicitly, but
-        // relying on that means the reference silently stops being reusable the day it
-        // emits more than one item.
+        // Value channel, so every MHCFLOW task reuses the one index.
         hla_reference_indexed = NOVOALIGN_HLA_FASTA(hla_fasta).out.first()
 
         mhcflow = MHCFLOW(mhcflow_input, hla_reference_indexed, hla_bed, hla_kmers, hla_freqs)
@@ -86,19 +77,7 @@ workflow HLA_TYPING_WORKFLOW {
 
 }
 
-/*
-    HLA loss of heterozygosity, following the three steps mhcflow documents.
-
-    Step 1 is already done by the time this runs: MHCFLOW types every DNA library, and its
-    finalizer stage leaves each sample realigned against the alleles inferred for that
-    sample. What is left is to pair a tumour with its own normal, realign the tumour against
-    THAT normal's HLA reference, and compare the two.
-
-    Pairing is the whole point. A tumour realigned against its own alleles cannot be compared
-    with a normal realigned against the normal's: lohhlamod reads coverage at mismatch sites
-    across both BAMs, so both have to sit on one reference, and that reference is the
-    normal's - the germline genotype the tumour is being tested for losing.
-*/
+// HLA LOH: realign each tumour against its own normal's HLA reference, then call loss with lohhlamod.
 workflow HLA_LOH_WORKFLOW {
 
     take:
@@ -132,12 +111,7 @@ workflow HLA_LOH_WORKFLOW {
         realign_input = tumor_bams.join(normal_ref)
         tumor_realn = MHCFLOW_REALIGN(realign_input, hla_bed, hla_kmers, hla_freqs).realn_bam
 
-        // Step 3: both BAMs, the normal's reference, and ASCAT's purity and ploidy.
-        //
-        // join(remainder: true) for ASCAT, not a plain join: ASCAT is allowed to fail, and
-        // an inner join would drop the whole pair from the LOH analysis when it does,
-        // silently. The remainder arrives as null, which the module reads as "no estimates"
-        // and lohhlamod fills with its own defaults.
+        // remainder: true so pairs without ASCAT results still get an LOH call, using lohhlamod's defaults.
         loh_input = tumor_realn
             .join(normal_realn)
             .join(normal_ref)
@@ -156,10 +130,7 @@ workflow HLA_LOH_WORKFLOW {
 
         loh = LOHHLAMOD(loh_input)
 
-        // Coverage, logR and BAF profiles per HLA gene. join on somatic_name rather than
-        // zipping the two emits: they come from the same process, but order across pairs is
-        // not guaranteed, and a mismatch here would plot one pair's result over another's
-        // intermediates without failing.
+        // Per-gene LOH plots, joined to their results by somatic_name.
         plot_input = loh.loh_res
             .map { somatic_name, meta, res -> tuple(somatic_name, meta, res) }
             .join(loh.loh_rds.map { somatic_name, _meta, rds -> tuple(somatic_name, rds) })

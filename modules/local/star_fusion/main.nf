@@ -1,9 +1,6 @@
 process STAR_FUSION {
 
-    /*
-        Run star-fusion to detect RNA fusion events.
-
-    */
+    // Call RNA fusions with STAR-Fusion.
 
     label 'process_very_high'
     conda "bioconda::star-fusion=1.15.0"

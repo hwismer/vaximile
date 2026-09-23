@@ -1,10 +1,6 @@
 process ADD_VCF_GT_FIELD {
 
-    /*
-
-    Adds the GT fields to a vcf lacking it. This is currently used for Strelka/Manta vcfs and the field is populated by 0/1 by default.
-
-    */
+    // Add a GT field (0/1) to VCFs that lack one, e.g. Strelka's.
 
     label 'process_low'
     container "griffithlab/vatools:5.2.0"

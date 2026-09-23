@@ -1,10 +1,6 @@
 process STAR_SORT_INDEX_BAM {
 
-    /*
-
-        Index the BAM file from a star process.
-
-    */
+    // Sort and index the STAR BAM.
 
     label 'process_high'
     conda "bioconda::samtools=1.23.1 bioconda::htslib=1.23.1"

@@ -1,10 +1,6 @@
 process CREATE_STAR_INDEX {
 
-    /*
-    
-    Use a reference fasta and gtf to create a star index for star 2.7.11b
-
-    */
+    // Build a STAR index from the reference FASTA and GTF.
 
     label 'process_max'
     cache 'lenient'

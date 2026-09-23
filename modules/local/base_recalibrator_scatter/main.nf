@@ -1,9 +1,6 @@
 process BASE_RECALIBRATOR_SCATTER {
 
-    /*
-    Scatters calls to BaseRecalibrator over the provided interval. Per GATK best practices.
-    Returns the recalibration table for that interval.
-    */
+    // BaseRecalibrator on one interval shard.
 
     label 'process_low'
     conda "bioconda::gatk4=4.6.1.0"

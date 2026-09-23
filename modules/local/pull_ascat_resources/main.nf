@@ -1,25 +1,13 @@
 process PULL_ASCAT_RESOURCES {
 
-    // Not under -stub-run: the stub writes empty placeholders, and storing those
-    // would make a later real run skip the download and use empty resources.
-    //
-    // The path carries the chr-prefix flag, unlike the other PULL_* stores. This process
-    // is the only one whose output depends on an input: with add_chr_prefix set it rewrites
-    // every loci file with sed. storeDir is keyed on the path alone, not on the task hash,
-    // so a single shared directory would hand back chr-prefixed loci to a later run that
-    // asked for unprefixed ones - silently, and only visible as wrong ASCAT calls.
+    // Not stored under -stub-run, so placeholders never stand in for real resources.
+    // The store path includes the chr-prefix setting because the loci files differ with it.
     storeDir workflow.stubRun ? null : "./vaximile_resources/ascat_hg38_${add_chr_prefix ? 'chr' : 'nochr'}"
 
     label 'process_single'
     executor "local"
 
-    // scratch false, written here rather than left to the config. These run on the local
-    // executor - on the node Nextflow was launched from, not as SLURM jobs - so an
-    // institutional `scratch = true` would put the download in that node's /tmp, which is
-    // sized for nothing like this, while the scratch reservation that makes `scratch`
-    // safe elsewhere (`--gres=scratch:...`) only ever applies to SLURM jobs. A directive in
-    // the module outranks a generic process scope in config, so this holds whatever
-    // config the pipeline is run with.
+    // scratch false: this runs on the launch node, whose /tmp is too small for the download.
     scratch false
     tag "Pulling ASCAT resources"
 

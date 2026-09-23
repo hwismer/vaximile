@@ -1,16 +1,6 @@
-/*
-    pipeline init: utils_nfcore_vaximile_pipeline
-
-    One file per pipeline step. Each workflow keeps the take/emit signature it had
-    as its own subworkflow directory, so callers are unchanged.
-*/
+// Pipeline initialisation: parameter validation, samplesheet parsing and shared helpers.
 include { validateParameters; paramsSummaryLog } from "plugin/nf-schema"
 
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Subworkflow with functionality specific to the vaximile pipeline
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
 
 
 workflow PIPELINE_INITIALISATION {
@@ -25,10 +15,7 @@ workflow PIPELINE_INITIALISATION {
     log.info(paramsSummaryAll())
     validateReferenceInputs()
 
-    // file(), not the raw string: downstream processes declare `path(bed)`, and a bare
-    // string only resolves if it happens to be absolute - a relative path in the CSV
-    // fails with "Not a valid path value" once a task is submitted. checkIfExists also
-    // turns a wrong BED path into a startup error instead of a mid-run one.
+    // file() so relative BED paths resolve and missing files fail at launch.
     ch_capture_kits = Channel.fromPath(capture_kits, checkIfExists: true)
         .splitCsv(header: true)
         .map { row -> tuple(row.kit, file(row.bed, checkIfExists: true)) }
@@ -73,11 +60,7 @@ workflow PIPELINE_COMPLETION {
 
     main:
 
-    // Capture the metadata object here, while the workflow binding is still resolvable.
-    // Referencing `workflow` from inside the closure instead resolves to null when the
-    // handler actually fires from within a named workflow body, which ended every run
-    // with "Failed to invoke `workflow.onComplete` event handler" and an NPE on
-    // `workflow.success`.
+    // Capture `workflow` here; it is null inside the onComplete closure.
     def wf = workflow
     def outdir = params.outdir
 
@@ -90,22 +73,9 @@ workflow PIPELINE_COMPLETION {
     }
 }
 
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    FUNCTIONS
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
+// Functions
 
-//
-// Log EVERY parameter the run will use, grouped by the sections in
-// nextflow_schema.json, with a marker on the ones that differ from their schema default.
-//
-// nf-schema's paramsSummaryLog() deliberately prints only values that differ from the
-// defaults ("Only displaying parameters that differ from the pipeline defaults"), which
-// hides most of what a run actually depends on - every reference URI, every GATK resource
-// VCF, the scatter settings. Those defaults are exactly what you want recorded next to a
-// set of results, so print all of them.
-//
+// Log every parameter by schema section, marking non-defaults (nf-schema's own summary shows only non-defaults).
 def paramsSummaryAll() {
     def schema = new groovy.json.JsonSlurper().parse(file("${projectDir}/nextflow_schema.json").toFile())
     def described = [] as Set
@@ -144,10 +114,7 @@ def paramsSummaryAll() {
     return lines.join('\n')
 }
 
-//
-// Checks nextflow_schema.json cannot express: the VEP cache is a user-supplied
-// directory whose absence only surfaces deep into annotation otherwise.
-//
+// Checks the schema can't express, e.g. that --vep_cache exists.
 def validateReferenceInputs() {
     if (params.vep_cache && !file(params.vep_cache).exists()) {
         error("VEP cache directory not found: ${params.vep_cache}")
@@ -155,32 +122,15 @@ def validateReferenceInputs() {
 }
 
 
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    LIBRARY DEDUPLICATION
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
+// Library deduplication
 
 // A library is identified by patient + sample name + molecule.
 def library_key(meta) {
     return [meta.patient, meta.sample_name, meta.molecule]
 }
 
-/*
-    Collapse samplesheet rows that describe the same library.
-
-    The samplesheet carries one row per (library, tumour/normal pair), so a normal shared
-    by two tumours is listed twice with a different somatic_name each time. somatic_name is
-    part of the meta map, and the meta map is a channel item's identity, so those rows are
-    two distinct items - and every sample-level process runs twice on byte-identical data:
-    fastp, alignment, markdup, BQSR, germline calling, HLA typing, somalier and the samtools
-    QC. With N tumours on one normal, the normal is processed N times, and its germline VCF
-    is produced N times into the same published name.
-
-    Collapsing here yields one item per library carrying the list of pairs it belongs to.
-    fan_out_pairs() restores the per-pair view at the tumour/normal join sites, so nothing
-    downstream of those joins changes shape.
-*/
+// Collapse rows describing the same library (e.g. a normal listed once per pair) so it is processed once.
+// Metas carry a somatic_names list; fan_out_pairs() restores per-pair items where needed.
 def dedupe_libraries(reads_ch) {
     return reads_ch
         .map { meta, reads -> tuple(library_key(meta), meta, reads) }
@@ -221,18 +171,7 @@ def dedupe_libraries(reads_ch) {
         }
 }
 
-/*
-    Inverse of dedupe_libraries: emit one copy of each item per tumour/normal pair the
-    library belongs to, with the scalar somatic_name put back on the meta in place of the
-    somatic_names list.
-
-    Arity-agnostic: element 0 is the meta, the rest is payload carried through untouched.
-
-    Use this form where the meta map itself is the join key - PVAC_VCF_PHASING joins
-    `somatic_meta.normal_meta` against the germline VCF channel and `somatic_meta.tumor_meta`
-    against the tumour BAM channel, so those channels must carry a meta that is equal to the
-    one stored inside somatic_meta, scalar somatic_name and all.
-*/
+// Inverse of dedupe_libraries: one item per pair, with a scalar somatic_name on the meta.
 def expand_pairs(ch) {
     return ch.flatMap { item ->
         def meta = item[0]
@@ -243,28 +182,13 @@ def expand_pairs(ch) {
     }
 }
 
-/*
-    expand_pairs with the somatic_name prepended as element 0, for the sites that branch and
-    join on the name as a plain string key.
-*/
+// expand_pairs, with somatic_name prepended as a join key.
 def fan_out_pairs(ch) {
     return expand_pairs(ch).map { item -> [item[0].somatic_name] + item }
 }
 
 
-/*
-    Pair a sample-level channel into tumour/normal pairs.
-
-    Every somatic caller needs the same shape - one item per pair, tumour payload then
-    normal payload, behind a somatic_meta - and this was hand-rolled three times in
-    workflows/vaximile/main.nf with the same five-field somatic_meta copied verbatim. Three
-    copies is how they stop agreeing.
-
-    Arity-agnostic. `ch` is (meta, payload...) with any number of payload elements, and the
-    result is (somatic_meta, tumour payload..., normal payload...). With (meta, bam, bai) in
-    that gives (somatic_meta, tumour_bam, tumour_bai, normal_bam, normal_bai); with
-    (meta, pileup) it gives (somatic_meta, tumour_pileup, normal_pileup).
-*/
+// Pair a sample-level channel into (somatic_meta, tumour payload..., normal payload...).
 def pair_tumor_normal(ch) {
     def branched = fan_out_pairs(ch).branch { item ->
         tumor:  item[1].sample_type == "TUMOR"

@@ -1,11 +1,6 @@
 process POSTPROCESS_STRELKA {
 
-    /*
-
-    Combine the SNVs and Indels from a Strelka and Manta run and rename the default TUMOR and NORMAL
-    samples to the specified sample names.
-
-    */
+    // Combine Strelka SNVs and indels, and rename TUMOR/NORMAL to the sample names.
 
     label 'process_medium'
 

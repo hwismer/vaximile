@@ -1,12 +1,6 @@
 process VEP_ANNOTATE {
 
-    /*
-
-    Use VEP to annotate a vcf files. Requires path to an installed cache
-    as well as a vep plugin directory. If using PVAC later on, the vep plugins
-    will need to includet those specified by pvac in their docs.
-
-    */
+    // Annotate a VCF with VEP, using a local cache and the pVACtools plugins.
 
     label 'process_medium'
 

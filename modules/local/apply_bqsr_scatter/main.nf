@@ -21,10 +21,7 @@ process APPLY_BQSR_SCATTER {
     output:
         tuple val(meta), path("*_bqsr.bam"), emit: bam
     script:
-    // Explicit heap, as nf-core's GATK4 modules do. Without --java-options the JVM picks
-    // its own maximum, which is a fraction of whatever memory it believes it has - not
-    // necessarily the amount the scheduler granted. Sizing it from task.memory keeps the
-    // heap inside the reservation, which matters more now the reservation is smaller.
+    // Size the JVM heap from task.memory so it stays within the reservation.
     def avail_mem = (task.memory.mega * 0.8).intValue()
     def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}_${interval_shard}"
     """
