@@ -1,4 +1,6 @@
 process HLA_BED {
+    // Create a BED file containing the regions of GRCh38 that harbor HLA genes.
+    // For downstream use with mhcflow.
     
     label 'process_single'
 
