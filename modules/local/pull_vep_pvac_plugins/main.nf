@@ -1,7 +1,5 @@
 process PULL_VEP_PVAC_PLUGINS {
 
-    // Not under -stub-run: the stub writes empty placeholders, and storing those
-    // would make a later real run skip the download and use empty resources.
     storeDir workflow.stubRun ? null : './vaximile_resources/vep_pvac_plugins'
 
     // Download the Frameshift and Wildtype VEP plugins pVACseq needs, pinned to the pVACtools version in use.
@@ -9,7 +7,6 @@ process PULL_VEP_PVAC_PLUGINS {
     label 'process_single'
     executor "local"
 
-    // scratch false: this runs on the launch node, whose /tmp is too small for the download.
     scratch false
 
     tag "Pulling Frameshift and Wildtype VEP plugins"
