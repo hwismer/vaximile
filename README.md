@@ -180,7 +180,7 @@ Some modules are container-only while others are conda-only. To execute a full r
 
 ## Output
 
-Publishing is driven by the `output {}` block in `main.nf`, which nests results under
+Publishing is driven by the `output {}` block in `vaximile.nf`, which nests results under
 `<outdir>/<patient>/<somatic_name>/`.
 
 ### Directory structure
@@ -289,7 +289,7 @@ are read together.
 
 Per-caller intermediate VCFs, aligned BAMs, RNA fusion tables and
 the built alignment indices remain in the work directory. Add them to the `publish:` block
-in `main.nf` and give them a `path {}` in the `output {}` block to change that.
+in `vaximile.nf` and give them a `path {}` in the `output {}` block to change that.
 
 ## Credits
 
