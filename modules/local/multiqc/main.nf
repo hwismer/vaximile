@@ -25,23 +25,12 @@ process MULTIQC {
     """
     printf '%s\n' "${rename_tsv}" > ${patient}_rename.tsv
 
-    # OptiType is read as custom content rather than by MultiQC's own optitype module,
-    # because only custom content can be grouped under a parent section, and it belongs
-    # under HLA with HLA-HD. The native module showed the same allele table plus a General
-    # Statistics column, which is all this gives up. Each result.tsv is keyed by a bare row
-    # index (0), so it is re-keyed by sample before MultiQC merges the files into one table
-    # - left alone, every sample would land on row "0" and overwrite the last.
+	# Optitype custom content
     for f in *_result.tsv; do
         [ -e "\$f" ] || continue
         s=\$(basename "\$f" _result.tsv)
         awk -F'\t' -v OFS='\t' -v s="\$s" 'NR == 1 { \$1 = "Sample"; print; next } { \$1 = s; print }' "\$f" > "\${s}_optitype.tsv"
     done
-
-    # Sections are grouped under two parents, HLA and Copy Number. Within a parent MultiQC
-    # always orders sections by natural sort of their NAME - custom_content.order ranks
-    # parents, not their children, and a report_section_order on children splits the parent
-    # in two - so the names below are what fixes the order: allele calls, then LOH metrics,
-    # then the per-pair LOH plots.
    cat > multiqc_config.yaml <<EOF
 exclude_modules:
   - optitype
