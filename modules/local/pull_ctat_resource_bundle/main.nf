@@ -9,6 +9,14 @@ process PULL_CTAT_RESOURCE_BUNDLE {
     label 'process_single'
     executor "local"
 
+    // scratch false, written here rather than left to the config. These run on the local
+    // executor - on the node Nextflow was launched from, not as SLURM jobs - so an
+    // institutional `scratch = true` would put the download in that node's /tmp, which is
+    // sized for nothing like this, while the scratch reservation that makes `scratch`
+    // safe elsewhere (`--gres=scratch:...`) only ever applies to SLURM jobs. A directive in
+    // the module outranks a generic process scope in config, so this holds whatever
+    // config the pipeline is run with.
+    scratch false
     tag "Pulling CTAT plug-n-play resource bundle"
 
     output:
