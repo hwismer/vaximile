@@ -11,7 +11,6 @@ process HLAHD_TO_TSV {
 
     output:
 		tuple val(meta), path("*_hlahd.tsv"), emit: hlahd_tsv
-		path "versions.yml", topic: versions
 
     script:
     def prefix = task.ext.prefix ?: "${sample_name}"
@@ -33,19 +32,11 @@ process HLAHD_TO_TSV {
               .reset_index()
               )
     wide.to_csv("${prefix}_hlahd.tsv", sep = "\\t", index = False)
-    # versions.yml must be written by this interpreter: the script block runs under
-    # python, so a bash heredoc here would be a syntax error.
-    with open("versions.yml", "w") as _vf:
-        _vf.write('"${task.process}":\\n    python: 3.10\\n')
     """
 
     stub:
     def prefix = task.ext.prefix ?: "${sample_name}"
     """
     touch ${prefix}_hlahd.tsv
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        python: 3.10
-    END_VERSIONS
     """
 }

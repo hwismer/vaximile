@@ -187,11 +187,6 @@ Publishing is driven by the `output {}` block in `main.nf`, which nests results 
 
 ```text
 <outdir>/
-├── pipeline_info/
-│   ├── execution_report.html
-│   ├── execution_timeline.html
-│   ├── execution_trace.txt
-│   └── pipeline_dag.html
 └── <patient>/
     ├── multiqc/
     │   └── <patient>_report.html

@@ -24,7 +24,6 @@ process MERGE_SOMATIC_VCFS {
         path(reference_dict)
     output:
         tuple val(somatic_meta), path("${somatic_meta.somatic_name}_variants.vcf.gz"), emit: vcf
-        path "versions.yml", topic: versions
 
 
     script:
@@ -42,19 +41,11 @@ process MERGE_SOMATIC_VCFS {
             $args \
             -o "${somatic_name}_variants.vcf.gz"
 
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            gatk3: 3.6-0
-        END_VERSIONS
         """
 
     stub:
         """
         touch ${somatic_meta.somatic_name}_variants.vcf.gz
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            gatk3: 3.6-0
-        END_VERSIONS
         """
 
 }

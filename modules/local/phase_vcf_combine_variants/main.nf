@@ -25,7 +25,6 @@ process PHASE_VCF_COMBINE_VARIANTS {
 
     output:
         tuple val(somatic_meta), path("*_combined_somatic_plus_germline.vcf"), emit: vcf
-        path "versions.yml", topic: versions
 
     script:
         def prefix = task.ext.prefix ?: "${somatic_meta.tumor_meta.sample_name}"
@@ -37,20 +36,12 @@ process PHASE_VCF_COMBINE_VARIANTS {
                 --variant $tumor_only_vcf \
                 -o ${prefix}_combined_somatic_plus_germline.vcf \
                 --assumeIdenticalSamples
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            gatk3: 3.6-0
-        END_VERSIONS
         """
 
     stub:
         def prefix = task.ext.prefix ?: "${somatic_meta.tumor_meta.sample_name}"
         """
         touch ${prefix}_combined_somatic_plus_germline.vcf
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            gatk3: 3.6-0
-        END_VERSIONS
         """
 
 }

@@ -42,8 +42,6 @@ process ASCAT {
     tuple val(meta), path("*png"),                        emit: png
     tuple val(meta), path("*purityploidy.txt"),           emit: purityploidy
     tuple val(meta), path("*segments.txt"),               emit: segments
-    tuple val("${task.process}"), val('bioconductor-ascat'), eval('Rscript -e "library(ASCAT); cat(as.character(packageVersion(\'ASCAT\')))"'), topic: versions, emit: versions_ascat
-    tuple val("${task.process}"), val('alleleCounter'), eval("alleleCounter --version"), topic: versions, emit: versions_allelecounter
 
     when:
     task.ext.when == null || task.ext.when
@@ -241,7 +239,7 @@ process ASCAT {
     """
 
     stub:
-    def prefix = task.ext.prefix ?: "${meta.id}"
+    def prefix = task.ext.prefix ?: meta.somatic_name ?: meta.id
     """
     touch ${prefix}.after_correction.gc_rt.test.tumour.germline.png
     touch ${prefix}.after_correction.gc_rt.test.tumour.tumour.png

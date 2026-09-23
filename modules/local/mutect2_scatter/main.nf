@@ -31,7 +31,6 @@ process MUTECT2_SCATTER {
         path("*_mutect.vcf.gz.tbi"), path(interval_shard), emit: vcf
         tuple val(somatic_meta), path("*_mutect_f1r2.tar.gz"), emit: f1r2
         tuple val(somatic_meta), path("*_mutect.vcf.gz.stats"), emit: stats
-        path "versions.yml", topic: versions
 
     script:
     // Explicit heap, as nf-core's GATK4 modules do. Without --java-options the JVM picks
@@ -53,10 +52,6 @@ process MUTECT2_SCATTER {
             -ip $interval_padding \
             -O "${prefix}_mutect.vcf.gz" \
             --native-pair-hmm-threads $task.cpus
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            gatk4: \$(gatk --version 2>&1 | grep -Eo 'v[0-9.]+' | head -1 | tr -d 'v')
-        END_VERSIONS
         """
 
     stub:
@@ -66,9 +61,5 @@ process MUTECT2_SCATTER {
         touch ${prefix}_mutect.vcf.gz.tbi
         touch ${prefix}_mutect.vcf.gz.stats
         touch ${prefix}_mutect_f1r2.tar.gz
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            gatk4: 4.6.1.0
-        END_VERSIONS
         """
 }

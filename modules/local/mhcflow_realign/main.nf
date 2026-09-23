@@ -22,7 +22,6 @@ process MHCFLOW_REALIGN {
         // no finalizer stage. The reference it aligned against is the normal's, which is
         // what makes this BAM comparable to the normal's own finalizer BAM.
         tuple val(somatic_name), val(meta), path("${meta.sample_name}_realn/realigner/*.hla.realn.bam"), path("${meta.sample_name}_realn/realigner/*.hla.realn.bam.bai"), emit: realn_bam
-        path "versions.yml", topic: versions
 
     script:
     def args = task.ext.args ?: ''
@@ -36,10 +35,6 @@ process MHCFLOW_REALIGN {
         --realn-only \
         $args \
         --outdir ${meta.sample_name}_realn
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        unknown: unknown
-    END_VERSIONS
     """
 
     stub:
@@ -47,9 +42,5 @@ process MHCFLOW_REALIGN {
     mkdir -p ${meta.sample_name}_realn/realigner
     touch ${meta.sample_name}_realn/realigner/${meta.sample_name}.hla.realn.bam
     touch ${meta.sample_name}_realn/realigner/${meta.sample_name}.hla.realn.bam.bai
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        unknown: unknown
-    END_VERSIONS
     """
 }

@@ -13,7 +13,6 @@ process ASCAT_MQC {
     output:
         tuple val(somatic_name), val(meta), path("*_ascat_mqc.png"), emit: png
         tuple val(somatic_name), val(meta), path("*_ascatmetrics.tsv"), emit: tsv
-        path "versions.yml", topic: versions
 
     script:
     // Flat layout rather than the grid the LOH sheet uses: ASCAT's plots have no two-axis
@@ -59,19 +58,11 @@ writer.writerow(head)
 writer.writerow(row)
 METRICS
 
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        pillow: \$(python3 -c "import PIL; print(PIL.__version__)")
-    END_VERSIONS
     """
 
     stub:
     """
     touch ${somatic_name}_ascat_mqc.png
     printf 'Pair\\tAberrantCellFraction\\tPloidy\\n${somatic_name}\\t0.5\\t2.0\\n' > ${somatic_name}_ascatmetrics.tsv
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        pillow: 12.3.0
-    END_VERSIONS
     """
 }

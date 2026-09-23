@@ -19,7 +19,6 @@ process ANNOTATE_VCF_TRANSCRIPT_EXPRESSION {
 
     output:
         tuple val(somatic_meta), path("*_tx_expression.vcf"), emit: vcf
-        path "versions.yml", topic: versions
 
     script:
         def prefix = task.ext.prefix ?: "${somatic_name}"
@@ -33,20 +32,12 @@ process ANNOTATE_VCF_TRANSCRIPT_EXPRESSION {
             -e TPM \
             --ignore-ensembl-id-version \
             -o ${prefix}_tx_expression.vcf
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            vatools: 5.2.0
-        END_VERSIONS
         """
 
     stub:
         def prefix = task.ext.prefix ?: "${somatic_name}"
         """
         touch ${prefix}_tx_expression.vcf
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            vatools: 5.2.0
-        END_VERSIONS
         """
 
 }

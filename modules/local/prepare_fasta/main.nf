@@ -11,7 +11,6 @@ process PREPARE_FASTA {
 
     output:
     	path "*_prc.fa", emit: fasta
-    	path "versions.yml", topic: versions
 
     script:
 
@@ -26,10 +25,6 @@ process PREPARE_FASTA {
     	else
         	cp ${fasta} ${prefix}_prc.fa
     	fi
-    	cat <<-END_VERSIONS > versions.yml
-    	"${task.process}":
-    	    unknown: unknown
-    	END_VERSIONS
     	"""
     stub:
 
@@ -37,10 +32,6 @@ process PREPARE_FASTA {
 
         """
         touch ${prefix}_prc.fa
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            unknown: unknown
-        END_VERSIONS
         """
 
 }

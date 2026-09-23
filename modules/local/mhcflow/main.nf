@@ -30,7 +30,6 @@ process MHCFLOW {
         // derives the index from the FASTA path rather than taking it as an argument.
         tuple val(meta), path("${meta.sample_name}/finalizer/*.hla.fasta"), path("${meta.sample_name}/finalizer/*.hla.nix"), emit: sample_hla_ref
         tuple val(meta), path("${meta.sample_name}/finalizer/*.hla.realn.bam"), path("${meta.sample_name}/finalizer/*.hla.realn.bam.bai"), emit: realn_bam
-        path "versions.yml", topic: versions
 
     script:
     def args = task.ext.args ?: ''
@@ -43,10 +42,6 @@ process MHCFLOW {
         --nproc $task.cpus \
         $args \
         --outdir ${meta.sample_name}
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        unknown: unknown
-    END_VERSIONS
     """
 
     stub:
@@ -56,9 +51,5 @@ process MHCFLOW {
     touch ${meta.sample_name}/finalizer/${meta.sample_name}.hla.nix
     touch ${meta.sample_name}/finalizer/${meta.sample_name}.hla.realn.bam
     touch ${meta.sample_name}/finalizer/${meta.sample_name}.hla.realn.bam.bai
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        unknown: unknown
-    END_VERSIONS
     """
 }

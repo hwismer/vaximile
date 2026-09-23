@@ -16,7 +16,6 @@ process LOHHLA_MQC {
         // survives into the report, and two pairs sharing a name would collide.
         tuple val(somatic_name), val(meta), path("*_hla_loh_mqc.png"), emit: png
         tuple val(somatic_name), val(meta), path("*_lohres.tsv"), emit: tsv
-        path "versions.yml", topic: versions
 
     script:
     // lohhlaplot writes PDFs, which MultiQC cannot embed - it takes png, jpg and jpeg only -
@@ -53,20 +52,11 @@ process LOHHLA_MQC {
         { \$1 = pair "_" \$1; print }
     ' ${loh_res} > ${somatic_name}_lohres.tsv
 
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        pdftoppm: \$(pdftoppm -v 2>&1 | head -1 | sed 's/pdftoppm version //')
-        pillow: \$(python3 -c "import PIL; print(PIL.__version__)")
-    END_VERSIONS
     """
 
     stub:
     """
     touch ${somatic_name}_hla_loh_mqc.png
     touch ${somatic_name}_lohres.tsv
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        pdftoppm: 26.09.0
-    END_VERSIONS
     """
 }

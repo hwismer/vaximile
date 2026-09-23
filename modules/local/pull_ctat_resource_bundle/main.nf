@@ -21,10 +21,6 @@ process PULL_CTAT_RESOURCE_BUNDLE {
 
     output:
         path("./GRCh38_gencode_v44_CTAT_lib_Oct292023.plug-n-play/ctat_genome_lib_build_dir"), emit: ctat_resource_dir
-        // No versions.yml here: storeDir only short-circuits when EVERY declared
-        // output is already in the store. An absent versions.yml made this process
-        // re-run on a populated store and then fail moving its result on top of the
-        // copy already there ("unable to remove target: Directory not empty").
 
     script:
     """

@@ -18,7 +18,6 @@ process HAPLOTYPE_CALLER_FILTER_VARIANTS {
 
     output:
         tuple val(meta), val("haplotypecaller"), path("*_germline_filtered.vcf.gz"), path("*_germline_filtered.vcf.gz.tbi"), emit: germline_vcf
-        path "versions.yml", topic: versions
 
     script:
     def args = task.ext.args ?: ''
@@ -31,10 +30,6 @@ process HAPLOTYPE_CALLER_FILTER_VARIANTS {
         $args \
         -O ${prefix}_germline_filtered.vcf.gz \
         --create-output-variant-index
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        gatk4: \$(gatk --version 2>&1 | grep -Eo 'v[0-9.]+' | head -1 | tr -d 'v')
-    END_VERSIONS
     """
 
     stub:
@@ -42,9 +37,5 @@ process HAPLOTYPE_CALLER_FILTER_VARIANTS {
     """
     touch ${prefix}_germline_filtered.vcf.gz
     touch ${prefix}_germline_filtered.vcf.gz.tbi
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        gatk4: 4.3.0.0
-    END_VERSIONS
     """
 }

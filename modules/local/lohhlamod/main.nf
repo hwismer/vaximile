@@ -33,7 +33,6 @@ process LOHHLAMOD {
         // takes a directory to look for <HLAGene>.rds in, and passing the whole result
         // directory would also drag the filtered BAMs into the plotting task.
         tuple val(somatic_name), val(meta), path("${somatic_name}_lohhla/*.rds"), emit: loh_rds
-        path "versions.yml", topic: versions
 
     script:
     def args = task.ext.args ?: ''
@@ -56,10 +55,6 @@ process LOHHLAMOD {
         $args \\
         --outdir ${somatic_name}_lohhla
 
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        unknown: unknown
-    END_VERSIONS
     """
 
     stub:
@@ -67,9 +62,5 @@ process LOHHLAMOD {
     mkdir -p ${somatic_name}_lohhla
     touch ${somatic_name}_lohhla/${somatic_name}.loh.res.tsv
     touch ${somatic_name}_lohhla/hla_a.rds ${somatic_name}_lohhla/hla_b.rds ${somatic_name}_lohhla/hla_c.rds
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        unknown: unknown
-    END_VERSIONS
     """
 }

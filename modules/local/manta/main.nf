@@ -16,7 +16,6 @@ process MANTA {
         tuple path(reference_fa), path(reference_fai)
     output:
         tuple val(somatic_meta), path("*_manta"), emit: dir
-        path "versions.yml", topic: versions
 
     script:
     def exome_flag = (tumor_sequencing_type == "exome" || tumor_sequencing_type == "exome_ffpe") ? "--exome" : ""
@@ -32,10 +31,6 @@ process MANTA {
         --runDir ./${prefix}_manta/
 
     ./${prefix}_manta/runWorkflow.py -j $task.cpus
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        manta: 1.6.0
-    END_VERSIONS
     """
 
     stub:
@@ -43,10 +38,6 @@ process MANTA {
     """
     mkdir -p ${prefix}_manta/results/variants
     touch ${prefix}_manta/results/variants/candidateSmallIndels.vcf.gz
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        manta: 1.6.0
-    END_VERSIONS
     """
 
 }

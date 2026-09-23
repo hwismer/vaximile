@@ -19,7 +19,6 @@ process PHASE_VCF_RENAME {
 
     output:
         tuple val(somatic_meta), path("*_germline_rename.vcf.gz"), path("*_germline_rename.vcf.gz.tbi"), emit: vcf
-        path "versions.yml", topic: versions
 
     script:
         def prefix = task.ext.prefix ?: "${tumor_sample_name}"
@@ -35,10 +34,6 @@ process PHASE_VCF_RENAME {
             $germline_vcf
 
         bcftools index -t --threads $task.cpus ${prefix}_germline_rename.vcf.gz
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            bcftools: \$(bcftools --version 2>&1 | head -1 | sed 's/bcftools //')
-        END_VERSIONS
         """
 
     stub:
@@ -46,10 +41,6 @@ process PHASE_VCF_RENAME {
         """
         touch ${prefix}_germline_rename.vcf.gz
         touch ${prefix}_germline_rename.vcf.gz.tbi
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            bcftools: 1.23.1
-        END_VERSIONS
         """
 
 

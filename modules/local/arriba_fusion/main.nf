@@ -19,7 +19,6 @@ process ARRIBA_FUSION {
     output:
         tuple val(meta), path("*_arriba_fusions.tsv"), emit: arriba_fusions
         tuple val(meta), path("*_arriba_fusions.discarded.tsv"), emit: discarded_fusions
-        path "versions.yml", topic: versions
 
     script:
         def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}"
@@ -32,10 +31,6 @@ process ARRIBA_FUSION {
             -p $arriba_protein_domains \
             -o "${prefix}_arriba_fusions.tsv" \
             -O "${prefix}_arriba_fusions.discarded.tsv"
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            arriba: \$(arriba -h 2>&1 | grep -Eo 'Version: *[0-9.]+' | grep -Eo '[0-9.]+')
-        END_VERSIONS
         """
 
     stub:
@@ -43,10 +38,6 @@ process ARRIBA_FUSION {
         """
         touch ${prefix}_arriba_fusions.tsv
         touch ${prefix}_arriba_fusions.discarded.tsv
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            arriba: 2.5.1
-        END_VERSIONS
         """
 
 }

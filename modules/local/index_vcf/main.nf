@@ -15,26 +15,17 @@ process INDEX_VCF {
 
     output:
         tuple val(meta), path("${vcf_name}_${filename_suffix}.vcf.gz"), path("${vcf_name}_${filename_suffix}.vcf.gz.tbi"), emit: vcf
-        path "versions.yml", topic: versions
 
     script:
         """
         bcftools view $vcf -Oz -o "${vcf_name}_${filename_suffix}.vcf.gz"
         bcftools index -t ${vcf_name}_${filename_suffix}.vcf.gz
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            bcftools: \$(bcftools --version 2>&1 | head -1 | sed 's/bcftools //')
-        END_VERSIONS
         """
 
     stub:
         """
         touch ${vcf_name}_${filename_suffix}.vcf.gz
         touch ${vcf_name}_${filename_suffix}.vcf.gz.tbi
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            bcftools: 1.23.1
-        END_VERSIONS
         """
 
 }

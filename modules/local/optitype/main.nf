@@ -25,7 +25,6 @@ process OPTITYPE {
 
     output:
         tuple val(meta), path("optitype_out/*_result.tsv"), path("optitype_out/*_coverage_plot.pdf"), emit: hla_calls
-        path "versions.yml", topic: versions
 
     script:
 
@@ -48,10 +47,6 @@ process OPTITYPE {
             --solver cbc \\
             --threads ${task.cpus} \\
             --ilp-threads ${task.cpus}
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            optitype: 1.5.0
-        END_VERSIONS
         """
 
     stub:
@@ -61,9 +56,5 @@ process OPTITYPE {
         mkdir -p optitype_out
         touch optitype_out/${prefix}_result.tsv
         touch optitype_out/${prefix}_coverage_plot.pdf
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            optitype: 1.5.0
-        END_VERSIONS
         """
 }

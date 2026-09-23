@@ -12,7 +12,6 @@ process DEEPVARIANT {
     output:
         tuple val(meta), val("deepvariant"), path("*_deepvariant.vcf.gz"), path("*_deepvariant.vcf.gz.tbi"), emit: vcf
         tuple val(meta), val("deepvariant"), path("*_deepvariant.gvcf.gz"), path("*_deepvariant.gvcf.gz.tbi"), emit: gvcf
-        path "versions.yml", topic: versions
 
     script:
 
@@ -35,10 +34,6 @@ process DEEPVARIANT {
         --num_shards=$task.cpus \
         --regions $bed \
         $args
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        deepvariant: 1.10.0
-    END_VERSIONS
     """
 
     stub:
@@ -48,9 +43,5 @@ process DEEPVARIANT {
     touch ${prefix}_deepvariant.vcf.gz.tbi
     touch ${prefix}_deepvariant.gvcf.gz
     touch ${prefix}_deepvariant.gvcf.gz.tbi
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        deepvariant: 1.10.0
-    END_VERSIONS
     """
 }

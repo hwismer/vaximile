@@ -42,7 +42,6 @@ process APPLY_BQSR_GATHER {
         tuple val(meta),
             path("${meta.sample_name}_${meta.molecule}_bqsr.bam"),
             path("${meta.sample_name}_${meta.molecule}_bqsr.bam.bai"), emit: bam
-        path "versions.yml", topic: versions
 
     script:
     def prefix = "${sample_name}_${molecule}_bqsr"
@@ -53,20 +52,12 @@ process APPLY_BQSR_GATHER {
         --write-index \\
         -o "${prefix}.bam##idx##${prefix}.bam.bai" \\
         ${bams.join(' ')}
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        samtools: \$(samtools --version 2>&1 | head -1 | sed 's/samtools //')
-    END_VERSIONS
     """
 
     stub:
     """
     touch "${sample_name}_${molecule}_bqsr.bam"
     touch "${sample_name}_${molecule}_bqsr.bam.bai"
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        samtools: 1.23.1
-    END_VERSIONS
     """
 
 }

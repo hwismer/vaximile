@@ -11,7 +11,6 @@ process FASTP {
     output:
         tuple val(meta), path("*_R1_fastp.fastq.gz"), path("*_R2_fastp.fastq.gz"), emit: fastqs
         tuple val(meta), path("*.json"), emit: reports
-        path "versions.yml", topic: versions
 
 
     script:
@@ -28,10 +27,6 @@ process FASTP {
               -j "${prefix}.json" \
               $args
 
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            fastp: \$(fastp --version 2>&1 | sed 's/fastp //')
-        END_VERSIONS
         """
 
     stub:
@@ -40,9 +35,5 @@ process FASTP {
         touch ${prefix}_R1_fastp.fastq.gz
         touch ${prefix}_R2_fastp.fastq.gz
         touch ${prefix}.json
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            fastp: 1.0.1
-        END_VERSIONS
         """
 }

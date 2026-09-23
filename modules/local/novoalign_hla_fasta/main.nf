@@ -16,25 +16,16 @@ process NOVOALIGN_HLA_FASTA {
         // calls `novoalign -d <that path>`. The index must therefore sit next to the FASTA
         // under exactly the same stem.
         tuple path(hla_fasta), path(hla_fai), path("${hla_fasta.baseName}.nix"), emit: out
-        path "versions.yml", topic: versions
 
     script:
     """
     novoindex "${hla_fasta.baseName}.nix" $hla_fasta
 
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        novoalign: 3.09.04
-    END_VERSIONS
     """
 
     stub:
     """
     touch "${hla_fasta.baseName}.nix"
 
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        novoalign: 3.09.04
-    END_VERSIONS
     """
 }

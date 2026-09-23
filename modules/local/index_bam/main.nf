@@ -22,23 +22,14 @@ process INDEX_BAM {
 
     output:
         tuple val(meta), path(bam), path("${bam}.bai"), emit: bam
-        path "versions.yml", topic: versions
 
     script:
         """
         samtools index -@ $task.cpus $bam
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            samtools: \$(samtools --version 2>&1 | head -1 | sed 's/samtools //')
-        END_VERSIONS
         """
 
     stub:
         """
         touch ${bam}.bai
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            samtools: 1.23.1
-        END_VERSIONS
         """
 }

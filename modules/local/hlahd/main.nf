@@ -24,7 +24,6 @@ process HLAHD {
         // No trailing slash: a glob ending in "/" never matches, so `*/result/` fails
         // with "Missing output file(s)" even when the directory is there.
         tuple val(meta), path("*/result", type: 'dir'), emit: result_dir
-        path "versions.yml", topic: versions
 
     script:
         def prefix = task.ext.prefix ?: "${meta.sample_name}"
@@ -37,10 +36,6 @@ process HLAHD {
             /opt/hlahd/dictionary \
             "${prefix}" \
             ./
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            hlahd: 1.0
-        END_VERSIONS
         """
 
     stub:
@@ -48,10 +43,6 @@ process HLAHD {
         """
         mkdir -p ${prefix}/result
         touch ${prefix}/result/${prefix}_final.result.txt
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            hlahd: 1.0
-        END_VERSIONS
         """
 
 }

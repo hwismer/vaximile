@@ -17,7 +17,6 @@ process FILTER_VCF {
 
     output:
         tuple val(meta), val(caller), path("*_filtered_variants.vcf.gz"), path("*_filtered_variants.vcf.gz.tbi"), emit: filtered_vcf
-        path "versions.yml", topic: versions
 
 
     script:
@@ -25,10 +24,6 @@ process FILTER_VCF {
         """
         bcftools view --threads $task.cpus -f PASS -Oz -o "${prefix}_filtered_variants.vcf.gz" $vcf
         bcftools index -t "${prefix}_filtered_variants.vcf.gz"
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            bcftools: \$(bcftools --version 2>&1 | head -1 | sed 's/bcftools //')
-        END_VERSIONS
         """
 
     stub:
@@ -36,10 +31,6 @@ process FILTER_VCF {
         """
         touch ${prefix}_filtered_variants.vcf.gz
         touch ${prefix}_filtered_variants.vcf.gz.tbi
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            bcftools: 1.23.1
-        END_VERSIONS
         """
 
 

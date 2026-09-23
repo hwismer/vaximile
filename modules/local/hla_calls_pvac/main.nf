@@ -11,7 +11,6 @@ process HLA_CALLS_PVAC {
 
     output:
 		tuple val(meta), path("*_hla_calls.csv"), emit: pvac_calls
-		path "versions.yml", topic: versions
 
     script:
     def prefix = task.ext.prefix ?: "${meta.sample_name}"
@@ -93,19 +92,11 @@ process HLA_CALLS_PVAC {
         writer = csv.writer(f,lineterminator="\\n")
         writer.writerow(alleles)
 
-    # versions.yml must be written by this interpreter: the script block runs under
-    # python, so a bash heredoc here would be a syntax error.
-    with open("versions.yml", "w") as _vf:
-        _vf.write('"${task.process}":\\n    python: 3.10\\n')
     """
 
     stub:
     def prefix = task.ext.prefix ?: "${meta.sample_name}"
     """
     touch "${prefix}_hla_calls.csv"
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        python: 3.10
-    END_VERSIONS
     """
 }

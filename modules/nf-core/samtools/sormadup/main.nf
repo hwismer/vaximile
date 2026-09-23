@@ -17,7 +17,6 @@ process SAMTOOLS_SORMADUP {
     tuple val(meta), path("*.csi"), emit: csi, optional: true
     tuple val(meta), path("*.crai"), emit: crai, optional: true
     tuple val(meta), path("*.metrics"), emit: metrics
-    tuple val("${task.process}"), val('samtools'), eval("samtools version | sed '1!d;s/.* //'"), topic: versions, emit: versions_samtools
 
     when:
     task.ext.when == null || task.ext.when

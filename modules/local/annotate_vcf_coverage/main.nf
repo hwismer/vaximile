@@ -13,7 +13,6 @@ process ANNOTATE_VCF_COVERAGE {
         tuple val(somatic_meta), val(sample_meta), val(sample_name), val(molecule), val(somatic_name), path(indels), path(snvs), path(vcf)
     output:
         tuple val(somatic_meta), path("${somatic_meta.somatic_name}_${sample_meta.sample_name}_${sample_meta.molecule}_coverage.vcf"), emit: vcf
-        path "versions.yml", topic: versions
         
     script:
         """
@@ -32,19 +31,11 @@ process ANNOTATE_VCF_COVERAGE {
             -s ${sample_name} \
             -t snv \
             -o ${somatic_name}_${sample_name}_${molecule}_coverage.vcf
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            vatools: 5.2.0
-        END_VERSIONS
         """
 
     stub:
         """
         touch ${somatic_meta.somatic_name}_${sample_meta.sample_name}_${sample_meta.molecule}_coverage.vcf
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            vatools: 5.2.0
-        END_VERSIONS
         """
 
 }

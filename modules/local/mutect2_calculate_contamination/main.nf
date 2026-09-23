@@ -11,7 +11,6 @@ process MUTECT2_CALCULATE_CONTAMINATION {
 
     output:
         tuple val(somatic_meta), path("*_contamination.table"), emit: table
-        path "versions.yml", topic: versions
 
     script:
     def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
@@ -21,10 +20,6 @@ process MUTECT2_CALCULATE_CONTAMINATION {
         -I $tumor_pileups \
         -matched $normal_pileups \
         -O "${prefix}_contamination.table"
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        gatk4: \$(gatk --version 2>&1 | grep -Eo 'v[0-9.]+' | head -1 | tr -d 'v')
-    END_VERSIONS
     """
 
     stub:
@@ -32,10 +27,6 @@ process MUTECT2_CALCULATE_CONTAMINATION {
 
     """
     touch "${prefix}_contamination.table"
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        gatk4: 4.6.1.0
-    END_VERSIONS
     """
 
 }

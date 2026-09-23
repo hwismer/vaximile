@@ -18,7 +18,6 @@ process SOMALIER_EXTRACT {
         // BAM's SM read-group tag, which need not equal meta.sample_name. Naming it
         // exactly made the process fail with a missing output whenever they differed.
         tuple val(meta), path("*.somalier"), emit: somalier
-        path "versions.yml", topic: versions
         
 
     script:
@@ -27,18 +26,10 @@ process SOMALIER_EXTRACT {
         -s $sites \
         -f $reference_fa \
         $bam 
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        somalier: \$(somalier --version 2>&1 | grep -Eo '[0-9]+\.[0-9.]+' | head -1)
-    END_VERSIONS
     """
 
     stub:
     """
     touch ${meta.sample_name}.somalier
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        somalier: 0.3.2
-    END_VERSIONS
     """
 }

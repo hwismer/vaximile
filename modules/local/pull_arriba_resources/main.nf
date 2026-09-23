@@ -23,10 +23,6 @@ process PULL_ARRIBA_RESOURCES {
         tuple path("./arriba_v2.5.1/database/blacklist_hg38_GRCh38_v2.5.1.tsv.gz"), 
             path("./arriba_v2.5.1/database/known_fusions_hg38_GRCh38_v2.5.1.tsv.gz"),
             path("./arriba_v2.5.1/database/protein_domains_hg38_GRCh38_v2.5.1.gff3"), emit: resources
-        // No versions.yml here: storeDir only short-circuits when EVERY declared
-        // output is already in the store. An absent versions.yml made this process
-        // re-run on a populated store and then fail moving its result on top of the
-        // copy already there ("unable to remove target: Directory not empty").
     
     script:
 

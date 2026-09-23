@@ -23,7 +23,6 @@ process CREATE_BWA_INDEX {
 
     output:
         path "*{.l2b,.mbw}", emit: bwa_index
-        path "versions.yml", topic: versions
 
     script:
         // minibwa index needs ~18x the genome size in RAM, so ~56 GB for GRCh38 - within
@@ -31,19 +30,11 @@ process CREATE_BWA_INDEX {
         // smaller node is all that is available; it trades build speed for memory.
         """
         minibwa index -t $task.cpus $reference_fa
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            minibwa: \$(minibwa version)
-        END_VERSIONS
         """
 
     stub:
         """
         touch ${reference_fa}.l2b
         touch ${reference_fa}.mbw
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            minibwa: 0.7
-        END_VERSIONS
         """
 }

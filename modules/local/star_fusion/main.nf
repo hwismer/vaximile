@@ -20,7 +20,6 @@ process STAR_FUSION {
         tuple val(meta), path("*_starfusion/*.fusion_predictions.abridged.tsv"), emit: abridged_preds
         //tuple val(meta), path("${meta.sample_name}_starfusion/*.coding_effect.tsv"), emit: coding_effect
         //tuple val(meta), path("${meta.sample_name}_starfusion/"), emit: all_output
-        path "versions.yml", topic: versions
 
 
     script:
@@ -33,10 +32,6 @@ process STAR_FUSION {
              --CPU $task.cpus \
              --output_dir "./${prefix}_starfusion"
 
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            star-fusion: \$(STAR-Fusion --version 2>&1 | grep -Eo '[0-9]+\.[0-9.]+' | head -1)
-        END_VERSIONS
         """
 
     stub:
@@ -45,10 +40,6 @@ process STAR_FUSION {
         mkdir -p ${prefix}_starfusion
         touch ${prefix}_starfusion/star-fusion.fusion_predictions.tsv
         touch ${prefix}_starfusion/star-fusion.fusion_predictions.abridged.tsv
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            star-fusion: 1.15.0
-        END_VERSIONS
         """
 
 }

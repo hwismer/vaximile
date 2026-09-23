@@ -20,7 +20,6 @@ process APPLY_BQSR_SCATTER {
 
     output:
         tuple val(meta), path("*_bqsr.bam"), emit: bam
-        path "versions.yml", topic: versions
     script:
     // Explicit heap, as nf-core's GATK4 modules do. Without --java-options the JVM picks
     // its own maximum, which is a fraction of whatever memory it believes it has - not
@@ -35,20 +34,12 @@ process APPLY_BQSR_SCATTER {
         -L $interval_shard \
         --bqsr-recal-file $recal_table \
         -O "${prefix}_bqsr.bam"
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        gatk4: \$(gatk --version 2>&1 | grep -Eo 'v[0-9.]+' | head -1 | tr -d 'v')
-    END_VERSIONS
     """
 
     stub:
     def prefix = task.ext.prefix ?: "${meta.sample_name}_${meta.molecule}_${interval_shard}"
     """
     touch ${prefix}_bqsr.bam
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        gatk4: 4.6.1.0
-    END_VERSIONS
     """
 
 }

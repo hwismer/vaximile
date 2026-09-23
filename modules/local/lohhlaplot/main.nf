@@ -17,7 +17,6 @@ process LOHHLAPLOT {
 
     output:
         tuple val(somatic_name), val(meta), path("${somatic_name}_plots"), emit: plots
-        path "versions.yml", topic: versions
 
     script:
     def args = task.ext.args ?: ''
@@ -27,19 +26,11 @@ process LOHHLAPLOT {
         --loh-dir . \\
         $args
 
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        unknown: unknown
-    END_VERSIONS
     """
 
     stub:
     """
     mkdir -p ${somatic_name}_plots
     touch ${somatic_name}_plots/hla_a.logR.pdf
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        unknown: unknown
-    END_VERSIONS
     """
 }

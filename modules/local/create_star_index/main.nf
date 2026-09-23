@@ -21,7 +21,6 @@ process CREATE_STAR_INDEX {
 
     output:
         path("STARGenomeDir"), type: "dir", emit: star_index
-        path "versions.yml", topic: versions
 
     script:
         """
@@ -34,19 +33,11 @@ process CREATE_STAR_INDEX {
             --genomeFastaFiles $reference_fa \
             --sjdbGTFfile gtf.gtf
 
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            star: \$(STAR --version 2>&1)
-        END_VERSIONS
         """
 
     stub:
         """
         mkdir -p STARGenomeDir
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            star: 2.7.10a_alpha_220506
-        END_VERSIONS
         """
 
 

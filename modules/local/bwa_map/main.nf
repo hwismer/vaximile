@@ -45,7 +45,6 @@ process BWA_MAP {
 
     output:
         tuple val(meta), path("*.bam"), emit: bam
-        path "versions.yml", topic: versions
 
     script:
     def prefix = task.ext.prefix ?: "${sample_name}_${molecule}"
@@ -59,21 +58,11 @@ process BWA_MAP {
     minibwa map -t $task.cpus -R \$NEW_RG $reference_fa $fastq1 $fastq2 \\
         | samtools view -1 -@ ${bam_threads} -o "${prefix}.bam" -
 
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        minibwa: \$(minibwa version)
-        samtools: \$(samtools --version 2>&1 | head -1 | sed 's/samtools //')
-    END_VERSIONS
     """
 
     stub:
     def prefix = task.ext.prefix ?: "${sample_name}_${molecule}"
     """
     touch ${prefix}.bam
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        minibwa: 0.7
-        samtools: 1.23.1
-    END_VERSIONS
     """
 }

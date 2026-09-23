@@ -20,7 +20,6 @@ process STRELKA {
         tuple val(somatic_meta), 
         path("./strelka/results/variants/somatic.snvs.vcf.gz"), path("./strelka/results/variants/somatic.snvs.vcf.gz.tbi"), 
         path("./strelka/results/variants/somatic.indels.vcf.gz"), path("./strelka/results/variants/somatic.indels.vcf.gz.tbi"), emit: strelka_vcfs
-        path "versions.yml", topic: versions
 
     script:
 
@@ -37,10 +36,6 @@ process STRELKA {
         --runDir "./strelka"
 
     ./strelka/runWorkflow.py -m local -j $task.cpus
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        strelka: 2.9.9
-    END_VERSIONS
     """
 
     stub:
@@ -50,10 +45,6 @@ process STRELKA {
     touch ./strelka/results/variants/somatic.snvs.vcf.gz.tbi
     touch ./strelka/results/variants/somatic.indels.vcf.gz
     touch ./strelka/results/variants/somatic.indels.vcf.gz.tbi
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        strelka: 2.9.9
-    END_VERSIONS
     """
 
 }

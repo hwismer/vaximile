@@ -31,7 +31,6 @@ process STAR_ALIGN {
         // Removed: `path("*")` globbed the whole work directory, so staged inputs
         // (FASTQs, index dirs, the decompressed GTF) and versions.yml were emitted
         // as results. Nothing consumed it.
-        path "versions.yml", topic: versions
     script:
         def prefix = task.ext.prefix ?: "${sample_name}_${meta.molecule}"
         """
@@ -73,10 +72,6 @@ process STAR_ALIGN {
             --outFileNamePrefix ./${prefix}_ \
             --sjdbGTFfile gencode.gtf
 
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            star: \$(STAR --version 2>&1)
-        END_VERSIONS
         """
 
     stub:
@@ -86,10 +81,6 @@ process STAR_ALIGN {
             touch ${prefix}_Log.final.out
         touch ${prefix}_SJ.out.tab
         touch ${prefix}_Chimeric.out.junction
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            star: 2.7.10a_alpha_220506
-        END_VERSIONS
         """
 
 }

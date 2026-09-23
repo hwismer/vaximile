@@ -32,10 +32,6 @@ process PULL_ASCAT_RESOURCES {
         path("G1000_alleles_hg38"), emit: alleles
         path("GC_G1000_hg38"), emit: GC
         path("RT_G1000_hg38"), emit: RT
-        // No versions.yml here: storeDir only short-circuits when EVERY declared
-        // output is already in the store. An absent versions.yml made this process
-        // re-run on a populated store and then fail moving its result on top of the
-        // copy already there ("unable to remove target: Directory not empty").
 
     script:
         

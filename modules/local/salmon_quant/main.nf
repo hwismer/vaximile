@@ -24,7 +24,6 @@ process SALMON_QUANT {
         // quant.genes.sf for every sample, so publishing it in place would either collide
         // or drag the run directory along to disambiguate.
         tuple val(meta), path("*.gene_tpm.tsv"), emit: genes_tsv
-        path "versions.yml", topic: versions
 
     script:
     // $args MUST stay ahead of -1/-2. It carries --libType, and salmon rejects a
@@ -46,10 +45,6 @@ process SALMON_QUANT {
         -o "${prefix}_salmon_quant"
 
     cp "${prefix}_salmon_quant/quant.genes.sf" "${prefix}.gene_tpm.tsv"
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        salmon: \$(salmon --version 2>&1 | sed 's/salmon //')
-    END_VERSIONS
     """
 
     stub:
@@ -59,10 +54,6 @@ process SALMON_QUANT {
     touch "${prefix}_salmon_quant/quant.sf"
     touch "${prefix}_salmon_quant/quant.genes.sf"
     touch "${prefix}.gene_tpm.tsv"
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        salmon: 1.11.4
-    END_VERSIONS
     """
 
 }

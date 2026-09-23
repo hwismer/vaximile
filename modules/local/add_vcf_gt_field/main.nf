@@ -16,7 +16,6 @@ process ADD_VCF_GT_FIELD {
          
     output:
         tuple val(somatic_meta), path("*_gt.vcf"), emit: vcf
-        path "versions.yml", topic: versions
 
     script:
         def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
@@ -25,19 +24,11 @@ process ADD_VCF_GT_FIELD {
             "${tumor_sample_name}" \
             0/1 \
             -o "${prefix}_gt.vcf"
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            vatools: 5.2.0
-        END_VERSIONS
         """
 
     stub:
         def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
         """
         touch ${prefix}_gt.vcf
-            cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            vatools: 5.2.0
-        END_VERSIONS
         """
 }

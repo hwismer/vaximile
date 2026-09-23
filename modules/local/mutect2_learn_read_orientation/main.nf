@@ -11,7 +11,6 @@ process MUTECT2_LEARN_READ_ORIENTATION {
 
     output:
         tuple val(somatic_meta), path("*_orientmodel.tar.gz"), emit: tar
-        path "versions.yml", topic: versions
 
     script:
 
@@ -24,10 +23,6 @@ process MUTECT2_LEARN_READ_ORIENTATION {
     gatk LearnReadOrientationModel \
         $f1r2_as_input \
         -O "${prefix}_orientmodel.tar.gz"
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        gatk4: \$(gatk --version 2>&1 | grep -Eo 'v[0-9.]+' | head -1 | tr -d 'v')
-    END_VERSIONS
     """
 
     stub:
@@ -36,9 +31,5 @@ process MUTECT2_LEARN_READ_ORIENTATION {
 
     """
     touch ${prefix}_orientmodel.tar.gz
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        gatk4: 4.6.1.0
-    END_VERSIONS
     """
 }

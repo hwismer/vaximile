@@ -19,7 +19,6 @@ process PHASE_VCF_SORT_VCF {
 
     output:
         tuple val(somatic_meta), path("*_combined.sorted.vcf"), emit: sorted_vcf
-        path "versions.yml", topic: versions
 
     script:
         def prefix = task.ext.prefix ?: "${somatic_meta.tumor_meta.sample_name}"
@@ -29,20 +28,12 @@ process PHASE_VCF_SORT_VCF {
                 -I $combined_vcf \
                 -O ${prefix}_combined.sorted.vcf \
                 -SD $reference_dict
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            unknown: unknown
-        END_VERSIONS
         """
 
     stub:
         def prefix = task.ext.prefix ?: "${somatic_meta.tumor_meta.sample_name}"
         """
         touch ${prefix}_combined.sorted.vcf
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            unknown: unknown
-        END_VERSIONS
         """
 
 }
