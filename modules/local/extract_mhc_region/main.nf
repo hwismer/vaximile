@@ -1,4 +1,8 @@
 process EXTRACT_MHC_REGION {
+
+    // Extracts reads mapped to the MHC region, unmapped reads, and outputs a mapped bam.
+    // Works only for GRCh38.
+
     label 'process_medium'
     conda "bioconda::samtools=1.23.1 bioconda::htslib=1.23.1"
 
