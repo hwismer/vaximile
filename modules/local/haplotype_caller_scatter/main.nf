@@ -2,9 +2,6 @@ process HAPLOTYPE_CALLER_SCATTER {
 
     // HaplotypeCaller on one interval shard.
 
-    // process_low, matching nf-core's gatk4/haplotypecaller. Runs once per normal per
-    // interval, so the footprint is multiplied by scatter_count; more concurrent shards
-    // beats more PairHMM threads per shard, which scales sublinearly.
     label 'process_low'
     // GATK pinned to 4.3.0.0: CNNScoreVariants is not in newer GATK4. Do not bump.
     conda "bioconda::gatk4=4.3.0.0"
