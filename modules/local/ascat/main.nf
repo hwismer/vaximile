@@ -1,5 +1,6 @@
 // Forked from the nf-core ascat module: takes sex and the pair BED in its input tuple, fasta with its .fai,
 // and names outputs by meta.somatic_name. Not updatable from nf-core.
+
 process ASCAT {
     tag "${meta.somatic_name}"
     label 'process_medium'
@@ -13,7 +14,7 @@ process ASCAT {
     tuple val(meta), val(sex), path(input_normal), path(index_normal), path(input_tumor), path(index_tumor), path(bed_file)
     path allele_files
     path loci_files
-    //path bed_file
+    //path bed_file  **** Biggest change is here, making bed_file per-sample instead of global for all samples run.
     tuple path(fasta), path(fai)
     path gc_file
     path rt_file
