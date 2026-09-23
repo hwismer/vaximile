@@ -1,6 +1,6 @@
 process INDEX_BAM {
 
-    // Index a sorted BAM as .bai: SORMADUP only writes .csi, and downstream tools need .bai.
+    // Index a sorted BAM as .bai
 
     label 'process_low'
     conda "bioconda::samtools=1.23.1 bioconda::htslib=1.23.1"
