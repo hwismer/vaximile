@@ -1,6 +1,7 @@
 process ARRIBA_FUSION {
 
-    // Arriba is quick after alignment and takes no thread option.
+    // Run Arriba gene fusion prediction
+
     label 'process_high_memory'
     conda "bioconda::arriba=2.5.1"
 
