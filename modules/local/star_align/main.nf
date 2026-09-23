@@ -1,8 +1,6 @@
 process STAR_ALIGN {
 
     // Align RNA reads with STAR, using STAR-Fusion's parameters so Arriba and STAR-Fusion can reuse the output.
-
-    // process_max: STAR takes all available threads; drop to process_very_high if queueing is slow.
     label 'process_max'
     
     conda "bioconda::star=2.7.11b"
@@ -19,9 +17,6 @@ process STAR_ALIGN {
         tuple val(meta), path("*_Log.final.out"), emit:final_log
         tuple val(meta), path("*_SJ.out.tab"), emit: sj_out
         tuple val(meta), path("*_Chimeric.out.junction"), path(fastq1), path(fastq2), emit: chimeric_out
-        // Removed: `path("*")` globbed the whole work directory, so staged inputs
-        // (FASTQs, index dirs, the decompressed GTF) and versions.yml were emitted
-        // as results. Nothing consumed it.
     script:
         def prefix = task.ext.prefix ?: "${sample_name}_${meta.molecule}"
         """
