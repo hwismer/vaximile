@@ -1,7 +1,7 @@
 process BAM_TO_FASTQ {
 
     /*
-
+    Converts a BAM file to a fastq file pair
     */
     
     label 'process_medium'
