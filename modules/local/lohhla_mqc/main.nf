@@ -1,5 +1,7 @@
 process LOHHLA_MQC {
 
+    // Loads LOHHLAmod results into MultiQC
+
     label 'process_single'
 
     conda "conda-forge::poppler=26.09.0 conda-forge::pillow=12.3.0 python=3.12"
@@ -11,9 +13,6 @@ process LOHHLA_MQC {
         path montage_script
 
     output:
-        // MultiQC picks up any *_mqc.png as a custom-content image and titles the section
-        // from the file name, so the pair is encoded there: it is the only place that
-        // survives into the report, and two pairs sharing a name would collide.
         tuple val(somatic_name), val(meta), path("*_hla_loh_mqc.png"), emit: png
         tuple val(somatic_name), val(meta), path("*_lohres.tsv"), emit: tsv
 
