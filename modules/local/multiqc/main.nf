@@ -30,22 +30,63 @@ process MULTIQC {
 
     """
     printf '%s\n' "${rename_tsv}" > ${patient}_rename.tsv
-   
+
+    # OptiType is read as custom content rather than by MultiQC's own optitype module,
+    # because only custom content can be grouped under a parent section, and it belongs
+    # under HLA with HLA-HD. The native module showed the same allele table plus a General
+    # Statistics column, which is all this gives up. Each result.tsv is keyed by a bare row
+    # index (0), so it is re-keyed by sample before MultiQC merges the files into one table
+    # - left alone, every sample would land on row "0" and overwrite the last.
+    for f in *_result.tsv; do
+        [ -e "\$f" ] || continue
+        s=\$(basename "\$f" _result.tsv)
+        awk -F'\t' -v OFS='\t' -v s="\$s" 'NR == 1 { \$1 = "Sample"; print; next } { \$1 = s; print }' "\$f" > "\${s}_optitype.tsv"
+    done
+
+    # Sections are grouped under two parents, HLA and Copy Number. Within a parent MultiQC
+    # always orders sections by natural sort of their NAME - custom_content.order ranks
+    # parents, not their children, and a report_section_order on children splits the parent
+    # in two - so the names below are what fixes the order: allele calls, then LOH metrics,
+    # then the per-pair LOH plots.
    cat > multiqc_config.yaml <<EOF
+exclude_modules:
+  - optitype
+
+custom_content:
+  order:
+    - hla
+    - cnv
+
 custom_data:
   hla_calls:
     file_format: tsv
-    section_name: "HLA-HD"
-    description: "HLA Allele Calls"
+    section_name: "Allele calls - HLA-HD"
+    description: "HLA class I and II allele calls from HLA-HD, per library"
+    parent_id: hla
+    parent_name: "HLA"
+    parent_description: "HLA typing, and loss of heterozygosity at the HLA locus in each tumour against its own normal"
     plot_type: table
     pconfig:
       id: "hla_calls"
       title: "HLA-HD Calls"
 
+  optitype_calls:
+    file_format: tsv
+    section_name: "Allele calls - OptiType"
+    description: "HLA class I allele calls from OptiType, per library"
+    parent_id: hla
+    parent_name: "HLA"
+    plot_type: table
+    pconfig:
+      id: "optitype_calls"
+      title: "OptiType Calls"
+
   hla_loh:
     file_format: tsv
-    section_name: "HLA LOH Metrics"
+    section_name: "LOH metrics"
     description: "Allele-level copy number and loss-of-heterozygosity statistics from lohhlamod, one row per HLA gene per tumour/normal pair. The remaining columns - copy number bounds, the four median logR columns, bin counts and the per-allele loss percentages - are hidden by default and can be shown from Configure Columns."
+    parent_id: hla
+    parent_name: "HLA"
     plot_type: table
     pconfig:
       id: "hla_loh"
@@ -86,8 +127,11 @@ custom_data:
 
   ascat_metrics:
     file_format: tsv
-    section_name: "ASCAT Metrics"
+    section_name: "ASCAT metrics"
     description: "Tumour purity, ploidy and ASCAT's own QC metrics, one row per tumour/normal pair"
+    parent_id: cnv
+    parent_name: "Copy Number"
+    parent_description: "Allele-specific copy number from ASCAT, whose purity and ploidy the HLA LOH analysis uses"
     plot_type: table
     pconfig:
       id: "ascat_metrics"
@@ -103,18 +147,20 @@ EOF
     for sheet in *_hla_loh_mqc.png; do
         [ -e "\$sheet" ] || continue
         pair=\$(basename "\$sheet" _hla_loh_mqc.png)
-        printf '  hla_loh_plots_%s:\n    section_name: "HLA LOH - %s"\n    plot_type: image\n' "\$pair" "\$pair" >> multiqc_config.yaml
+        printf '  hla_loh_plots_%s:\n    section_name: "LOH plots - %s"\n    parent_id: hla\n    parent_name: "HLA"\n    plot_type: image\n' "\$pair" "\$pair" >> multiqc_config.yaml
     done
     for sheet in *_ascat_mqc.png; do
         [ -e "\$sheet" ] || continue
         pair=\$(basename "\$sheet" _ascat_mqc.png)
-        printf '  ascat_plots_%s:\n    section_name: "ASCAT - %s"\n    plot_type: image\n' "\$pair" "\$pair" >> multiqc_config.yaml
+        printf '  ascat_plots_%s:\n    section_name: "ASCAT plots - %s"\n    parent_id: cnv\n    parent_name: "Copy Number"\n    plot_type: image\n' "\$pair" "\$pair" >> multiqc_config.yaml
     done
 
     cat >> multiqc_config.yaml <<EOF
 sp:
   hla_calls:
     fn: "*_hlahd.tsv"
+  optitype_calls:
+    fn: "*_optitype.tsv"
   hla_loh:
     fn: "*_lohres.tsv"
   ascat_metrics:
