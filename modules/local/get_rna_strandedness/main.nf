@@ -1,5 +1,7 @@
 process GET_RNA_STRANDEDNESS {
 
+    // Gets the strandedness prediction for the rna prep using Salmon.
+
     label 'process_single'
 
     conda "python=3.10 pandas=2.1"
