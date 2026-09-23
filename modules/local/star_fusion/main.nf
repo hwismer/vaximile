@@ -15,8 +15,6 @@ process STAR_FUSION {
     output:
         tuple val(meta), path("*_starfusion/*.fusion_predictions.tsv"), emit: fusion_preds
         tuple val(meta), path("*_starfusion/*.fusion_predictions.abridged.tsv"), emit: abridged_preds
-        //tuple val(meta), path("${meta.sample_name}_starfusion/*.coding_effect.tsv"), emit: coding_effect
-        //tuple val(meta), path("${meta.sample_name}_starfusion/"), emit: all_output
 
 
     script:
