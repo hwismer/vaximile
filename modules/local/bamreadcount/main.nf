@@ -2,8 +2,6 @@ process BAMREADCOUNT {
 
     // Run bam-readcount at the VCF's sites. VCF sample names must match the BAM read groups.
 
-    // bam-readcount is single-threaded and the helper script does not parallelise,
-    // so the extra cores of process_high went unused.
     label 'process_low'
     cache "lenient"
 
