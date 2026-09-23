@@ -2,7 +2,6 @@ process OPTITYPE {
 
     // HLA class I typing with OptiType. Memory intensive.
 
-    // OptiType 1.5.0: a CLI rewrite (`optitype run`, options as flags rather than a config file).
     conda "bioconda::optitype=1.5.0"
     container "quay.io/biocontainers/optitype:1.5.0--pyhdfd78af_1"
     label 'process_high'
@@ -20,13 +19,6 @@ process OPTITYPE {
         def molecule_flag = molecule.toLowerCase()
         def prefix = task.ext.prefix ?: "${meta.sample_name}_${molecule}"
         """
-        # -i is `multiple=True` in 1.5.0, so each read file needs its own flag; passing
-        # both after a single -i silently drops the second.
-        #
-        # --prefix matters beyond naming: without it OptiType invents a timestamp prefix
-        # AND nests results in <outdir>/<timestamp>/, which would not match the output
-        # globs above. With it, results land directly in optitype_out/ as
-        # <prefix>_result.tsv and <prefix>_coverage_plot.pdf.
         optitype run \\
             -i $fastq1 \\
             -i $fastq2 \\
