@@ -1,7 +1,5 @@
 process PULL_CTAT_RESOURCE_BUNDLE {
 
-    // Not under -stub-run: the stub writes empty placeholders, and storing those
-    // would make a later real run skip the download and use empty resources.
     storeDir workflow.stubRun ? null : './vaximile_resources/ctat_resource_dir'
 
     // Pulls the hg38 CTAT resource bundle needed for STARfusion and other tools.
@@ -9,7 +7,6 @@ process PULL_CTAT_RESOURCE_BUNDLE {
     label 'process_single'
     executor "local"
 
-    // scratch false: this runs on the launch node, whose /tmp is too small for the download.
     scratch false
     tag "Pulling CTAT plug-n-play resource bundle"
 
@@ -29,7 +26,3 @@ process PULL_CTAT_RESOURCE_BUNDLE {
     """
 
 }
-
-
-//***************************************************************************************************************************
-// FILE INDEXING OPERATIONS
