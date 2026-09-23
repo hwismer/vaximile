@@ -1,8 +1,6 @@
 process SOMALIER_EXTRACT {
 
 
-    // somalier has no internal threading - its README parallelises across samples,
-    // which Nextflow already does. nf-core's somalier modules are process_low.
     label 'process_low'
     conda "bioconda::somalier=0.3.2-0 bioconda::htslib=1.23.1"
 
@@ -14,9 +12,6 @@ process SOMALIER_EXTRACT {
         path(sites)
 
     output:
-        // Glob, not the exact name: `somalier extract` derives the filename from the
-        // BAM's SM read-group tag, which need not equal meta.sample_name. Naming it
-        // exactly made the process fail with a missing output whenever they differed.
         tuple val(meta), path("*.somalier"), emit: somalier
         
 
