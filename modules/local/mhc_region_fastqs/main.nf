@@ -1,4 +1,6 @@
 process MHC_REGION_FASTQS {
+
+	// Get reads from the MHC region from a mapped BAM. Outputs paired fastqs.
     
     label 'process_medium'
 
