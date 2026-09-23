@@ -4,9 +4,6 @@ process APPLY_BQSR_SCATTER {
     Apply base quality score recalibration on a provided interval.
     */
     
-    // process_low, matching nf-core's gatk4/applybqsr. ApplyBQSR just rewrites quality
-    // scores and does not need the 32 GB of process_low_memory; it also runs once per
-    // sample per interval, so the saving is multiplied by scatter_count.
     label 'process_low'
     conda "bioconda::gatk4=4.6.1.0"
     container "broadinstitute/gatk:4.6.1.0"
