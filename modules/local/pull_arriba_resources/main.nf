@@ -1,16 +1,12 @@
 process PULL_ARRIBA_RESOURCES {
 
-    // Not under -stub-run: the stub writes empty placeholders, and storing those
-    // would make a later real run skip the download and use empty resources.
     storeDir workflow.stubRun ? null : './vaximile_resources/arriba_hg38'
 
-    // Pulls arribra resources from release 2.5.1. Runs locally incase job nodes don't have internet.
+    // Pulls arribra resources from release 2.5.1. Runs locally in case job nodes don't have internet.
 
     label 'process_single'
     executor "local"
 
-    // scratch false: this runs on the launch node, whose /tmp is too small for the download.
-    scratch false
     tag "Pulling Arriba resources v2.5.1"
 
     output:
