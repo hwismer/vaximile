@@ -40,6 +40,14 @@
 
 - [OptiType](https://pubmed.ncbi.nlm.nih.gov/25143287/) — Szolek A, Schubert B, Mohr C, et al. OptiType: precision HLA typing from next-generation sequencing data. Bioinformatics. 2014;30(23):3310-6.
 - [HLA-HD](https://pubmed.ncbi.nlm.nih.gov/28419628/) — Kawaguchi S, Higasa K, Shimizu M, Yamada R, Matsuda F. HLA-HD: An accurate HLA typing algorithm for next-generation sequencing data. Hum Mutat. 2017;38(7):788-797.
+- [mhcflow](https://github.com/svm-zhang/mhcflow) — HLA class I and II typing and sample-specific HLA realignment. Software, no associated publication; a re-engineering of POLYSOLVER.
+- [POLYSOLVER](https://pubmed.ncbi.nlm.nih.gov/26372948/) — Shukla SA, Rooney MS, Rajasagi M, et al. Comprehensive analysis of cancer-associated somatic mutations in class I HLA genes. Nat Biotechnol. 2015;33(11):1152-8.
+- [Novoalign](http://www.novocraft.com/products/novoalign/) — Novocraft Technologies. The aligner mhcflow uses for HLA realignment. Commercial software, no associated publication.
+
+### HLA loss of heterozygosity
+
+- [LOHHLA](https://pubmed.ncbi.nlm.nih.gov/29107330/) — McGranahan N, Rosenthal R, Hiley CT, et al. Allele-Specific HLA Loss and Immune Escape in Lung Cancer Evolution. Cell. 2017;171(6):1259-1271.e11.
+- [lohhla-mod](https://github.com/svm-zhang/lohhla-mod) — the reimplementation of LOHHLA this pipeline runs. Software, no associated publication.
 
 ### RNA quantification and fusion calling
 
