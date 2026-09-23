@@ -1,5 +1,10 @@
 process HLA_CALLS_PVAC {
 
+	// Parses optitype and HLA-HD result to call consensus HLA alleles and output them in
+	// the format accepted by pvacTools
+
+	// This is ugly and potentially inaccurate and should be improved.
+
     label 'process_low'
 
     conda "python=3.10 pandas=2.1"
