@@ -19,7 +19,6 @@ process BWA_MAP {
 
     script:
     def prefix = task.ext.prefix ?: "${sample_name}_${molecule}"
-    // minibwa is the bottleneck; give the compressor a slice rather than a second full set.
     def bam_threads = Math.max(1, task.cpus.intdiv(4))
     """
     set -euo pipefail
