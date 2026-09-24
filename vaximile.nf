@@ -58,46 +58,43 @@ workflow {
 
 // Publish pair-level outputs under <somatic_name>/ and per-library outputs under samples/<sample_name>/.
 def publish_scope(meta) {
-    return meta.somatic_name ? "${meta.somatic_name}" : "samples/${meta.sample_name}"
+    return meta.somatic_name ? "somatic_samples/${meta.somatic_name}" : "samples/${meta.sample_name}"
 }
 
 output {
     multiqc_reports {
-        path { patient, report -> "${params.outdir}/${patient}/multiqc/" }
+        path { patient, report -> "${params.outdir}/${patient}/" }
     }
     somatic_vcf {
-        path { meta, vcf, vcf_index -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/variants" }
+        path { meta, vcf, vcf_index -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/somatic" }
     }
     somatic_vcf_table {
-        path { meta, table -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/variants" }
+        path { meta, table -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/somatic" }
     }
     optitype_calls {
-        path { meta, tsv, pdf -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla/optitype/" }
+        path { meta, tsv, pdf -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla_typing/optitype/" }
     }
     hlahd_calls {
-        path { meta, calls -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla/hlahd/" }
+        path { meta, calls -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla_typing/hlahd/" }
     }
     hla_pvac_input {
-        path { meta, calls -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla/" }
+        path { meta, calls -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla_typing/" }
     }
     pvacseq {
-        path { meta, pvacseq_dir -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/pvactools/" }
+        path { meta, pvacseq_dir -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/neoantigen_prediction/" }
     }
     pvacseq_mhc_i_combined {
-        path { patient, report -> "${params.outdir}/${patient}/pvactools_report" }
+        path { patient, report -> "${params.outdir}/${patient}/" }
     }
     pvacfuse {
-        path { meta, pvacfuse_dir -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/pvactools" }
+        path { meta, pvacfuse_dir -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/neoantigen_prediction" }
     }
     germline_vcf {
         path { meta, vcf, tbi -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/germline/" }
     }
-    // Alongside the VCF, matching how somatic_vcf and somatic_vcf_table share variants/.
     germline_vcf_table {
         path { meta, tsv -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/germline/" }
     }
-    // All three BAM sets share alignment/; their filenames already distinguish them
-    // (_markdup.bam, _bqsr.bam, _STAR_sorted.bam).
     markdup_bams {
         path { meta, bam, bai -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/alignment/" }
     }
@@ -107,23 +104,17 @@ output {
     star_bam {
         path { meta, bam, bai -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/alignment/" }
     }
-    // Pair-level: ASCAT is called on a tumour/normal pair. Published beside the LOH
-    // results rather than in its own directory, because its purity and ploidy estimates are
-    // what the LOH copy number inference is built on, and the two are read together.
     ascat_results {
-        path { meta, result -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla/loh/" }
+        path { meta, result -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/CNV/ascat/" }
     }
     salmon_gene {
         path { meta, gene_abundance -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/salmon" }
     }
-    // Pair-level, and keyed by the pair rather than by a sample: LOH is a property of a
-    // tumour measured against its own normal, so the somatic_meta carries the patient and
-    // the two channels arrive as (somatic_name, meta, files).
     hla_loh {
-        path { _somatic_name, meta, res -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla/loh/" }
+        path { _somatic_name, meta, res -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla_loh/" }
     }
     hla_loh_plots {
-        path { _somatic_name, meta, plots -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla/loh/" }
+        path { _somatic_name, meta, plots -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/hla_loh/" }
     }
 
 }

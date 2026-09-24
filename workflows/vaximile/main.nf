@@ -418,11 +418,7 @@ workflow VAXIMILE {
     mqc_somalier_pairs = somalier_pairs.map{patient, pairs -> tuple(patient, null, null,pairs) }
     mqc_somalier_samples = somalier_samples.map{patient, samples -> tuple(patient, null, null,samples) }
     mqc_hlahd_tsv = hlahd_tsv.map{meta, tsv -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, tsv)}
-    // New with SAMTOOLS_SORMADUP: MarkDuplicatesSpark was not run with --metrics-file, so
-    // the report had no duplicate rate at all. MultiQC's samtools module parses markdup
-    // text output.
     mqc_markdup = markdup_metrics.map{meta, metrics -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, metrics)}
-    // One row per LOH image for MultiQC; sample_name is null because these are pair-level.
     mqc_loh_plots = hla_loh_workflow.loh_plots_png
         .transpose()
         .map{ _somatic_name, meta, png -> tuple(meta.patient, meta.somatic_name, null, png) }
