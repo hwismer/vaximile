@@ -206,10 +206,14 @@ workflow VAXIMILE {
         normal: meta.sample_type == "NORMAL"
     }
 
+    // Strelka and DeepVariant expect unrecalibrated base qualities, so they get the duplicate-marked BAMs.
+    normal_markdup_bams = markdup_bams.filter { meta, _bam, _bai -> meta.sample_type == "NORMAL" }
+
     // Run Haplotype Caller
     // Should make a single germline workflow in the future and put this haplotype caller workflow in it
     germline = GERMLINE_WORKFLOW(
         normal_tumor_split_bams.normal,
+        normal_markdup_bams,
         capture_kits,
         processed_regions,
         intervals,

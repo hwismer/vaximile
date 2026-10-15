@@ -275,8 +275,8 @@ and MultiQC - rather than published.
 
 `alignment/` holds three BAMs per library, each with its index, distinguished by suffix:
 `_markdup.bam` after duplicate marking, `_bqsr.bam` after base recalibration, and
-`_STAR_sorted.bam` for RNA. The somatic callers read the recalibrated BAMs; Strelka and
-Manta read the duplicate-marked ones.
+`_STAR_sorted.bam` for RNA. Mutect2 and HaplotypeCaller read the recalibrated BAMs;
+Strelka, Manta, DeepSomatic and DeepVariant read the duplicate-marked ones.
 
 #### Copy number
 

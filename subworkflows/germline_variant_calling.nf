@@ -57,7 +57,8 @@ workflow HAPLOTYPECALLER_WORKFLOW {
 workflow GERMLINE_WORKFLOW {
 
     take:
-        sample_bams // (sample metamap, bam, bai)
+        sample_bams // (sample metamap, bam, bai), after BQSR, for HaplotypeCaller
+        markdup_bams // (sample metamap, bam, bai), duplicates marked without BQSR, for Strelka and DeepVariant
         capture_kits // (kit_name, bed)
         processed_regions // (kit_name, bed, tbi)
         intervals // (capture_kit, [interval_shards])
@@ -76,7 +77,7 @@ workflow GERMLINE_WORKFLOW {
         haplotype_caller_vcf = haplotype_caller.vcf
         
         
-        strelka_input = sample_bams.map { meta, bam, bai ->
+        strelka_input = markdup_bams.map { meta, bam, bai ->
             tuple(meta.capture_kit, meta, bam, bai)
         }
         .combine(processed_regions, by:0)
@@ -85,7 +86,7 @@ workflow GERMLINE_WORKFLOW {
         }
         strelka_germline = STRELKA_GERMLINE(strelka_input, reference_genome).vcf
         
-        deepsomatic_input = sample_bams.map { meta, bam, bai ->
+        deepvariant_input = markdup_bams.map { meta, bam, bai ->
             tuple(meta.capture_kit, meta, bam, bai)
         }
         .combine(capture_kits, by:0)
@@ -93,7 +94,7 @@ workflow GERMLINE_WORKFLOW {
             tuple(meta, meta.sequencing_type, bam, bai, bed)
         }
         
-        deepvariant = DEEPVARIANT(deepsomatic_input, reference_genome)
+        deepvariant = DEEPVARIANT(deepvariant_input, reference_genome)
         deepvariant_vcf = deepvariant.vcf
 
         vcfs = haplotype_caller_vcf.mix(strelka_germline).mix(deepvariant_vcf)
