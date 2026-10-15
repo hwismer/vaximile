@@ -44,7 +44,7 @@ process MHC_REGION_FASTQS {
     samtools view --threads $task.cpus \
         -b \
         -f 4 \
-        -F 0x904 \
+        -F 0x900 \
         ${bam} \
         > unmapped.bam
 
