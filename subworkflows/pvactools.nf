@@ -212,7 +212,13 @@ workflow PVACTOOLS_WORKFLOW {
     pvacseq = PVACSEQ(pvacseq_ch, proteome_reference)
     pvacfuse = PVACFUSE(pvacfuse_input, proteome_reference).pvacfuse_dir
 
-    pvacseq_patient = pvacseq.pvaseq_mhc_i_aggr.map{meta, report -> tuple(meta.patient, report)}.groupTuple()
+    // Pair each report with the somatic VCF it came from, for each sample's AD.
+    somatic_vcfs = pvacseq_input.map { somatic_name, somatic_meta, somatic_vcf, somatic_vcf_index, phased_vcf, phased_vcf_index, hla_meta, hla_pvac_input ->
+        tuple(somatic_meta, somatic_vcf)
+    }
+    pvacseq_patient = pvacseq.pvaseq_mhc_i_aggr.join(somatic_vcfs)
+        .map { meta, report, vcf -> tuple(meta.patient, report, vcf) }
+        .groupTuple()
     combined_report = COMBINE_PVACSEQ_AGGREGATED_REPORT(pvacseq_patient).tsv
 
 
