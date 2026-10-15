@@ -68,7 +68,7 @@ process COMBINE_PVACSEQ_AGGREGATED_REPORT {
     
     df["sum_rank"] = (df["Allele Expr"].rank(method="min", ascending=False) + df["%ile MT"].rank(method="min") + df["IC50 MT"].rank(method="min"))
     
-    df = df.sort_values(["Tier", "sum_rank", "IC50 MT", "Gene", "AA Change"],kind="mergesort").drop(columns="sum_rank").reset_index()
+    df = df.sort_values(["Tier", "sum_rank", "IC50 MT", "Gene", "AA Change"],kind="mergesort").drop(columns="sum_rank").reset_index(drop=True)
     df.to_csv("${prefix}_pvacseq_reports.tsv", sep = "\\t", index = False)
     """
 
