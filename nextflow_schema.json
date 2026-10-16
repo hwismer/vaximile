@@ -90,7 +90,7 @@
                     "format": "file-path",
                     "description": "Reference proteome peptide FASTA used by pVACtools for reference proteome similarity.",
                     "fa_icon": "fas fa-file",
-                    "default": "https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz"
+                    "default": "https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz"
                 }
             }
         },
@@ -151,25 +151,25 @@
                     "type": "string",
                     "format": "file-path",
                     "description": "HLA class I reference FASTA.",
-                    "default": "https://raw.githubusercontent.com/jason-weirather/hla-polysolver/master/data/abc_complete.fasta"
+                    "default": "https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/abc_complete.fasta"
                 },
                 "hla_fasta_fai": {
                     "type": "string",
                     "format": "file-path",
                     "description": "Index for the HLA reference FASTA.",
-                    "default": "https://raw.githubusercontent.com/jason-weirather/hla-polysolver/master/data/abc_complete.fasta.fai"
+                    "default": "https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/abc_complete.fasta.fai"
                 },
                 "hla_kmers": {
                     "type": "string",
                     "format": "file-path",
                     "description": "Unique HLA k-mer file used by the typing tools.",
-                    "default": "https://raw.githubusercontent.com/jason-weirather/hla-polysolver/master/data/abc_v14.uniq"
+                    "default": "https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/abc_v14.uniq"
                 },
                 "hla_freq": {
                     "type": "string",
                     "format": "file-path",
                     "description": "HLA allele population frequency table.",
-                    "default": "https://raw.githubusercontent.com/jason-weirather/hla-polysolver/master/data/HLA_FREQ.txt"
+                    "default": "https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/HLA_FREQ.txt"
                 }
             }
         },
