@@ -32,7 +32,7 @@ include { DEEPSOMATIC_WORKFLOW } from "../../subworkflows/somatic_variant_callin
 include { SOMATIC_QC } from "../../modules/local/somatic_qc/main"
 include { GERMLINE_QC } from "../../modules/local/germline_qc/main"
 include { MOSDEPTH } from "../../modules/local/mosdepth/main"
-include { RNA_VAF_GRID } from "../../modules/local/rna_vaf_grid/main"
+include { VAF_GRIDS } from "../../modules/local/vaf_grids/main"
 
 //**************************************************************************************************************************************
 
@@ -438,19 +438,22 @@ workflow VAXIMILE {
     somatic_qc_workflow = SOMATIC_QC(somatic_qc_input, variant_qc_script)
     somatic_qc = somatic_qc_workflow.mqc
 
-    // RNA vs DNA VAF of every pair of a patient, side by side.
-    rna_vaf_grid = RNA_VAF_GRID(
-        somatic_qc_workflow.rna_vaf.map { meta, tsv -> tuple(meta.patient, tsv) }.groupTuple(),
-        variant_qc_script
-    ).png
-
     // Germline, per normal: each caller's calls and the consensus.
     germline_qc_input = germline.caller_vcfs
         .map { meta, _caller, vcf, _tbi -> tuple(meta.sample_name, vcf) }
         .groupTuple(size: 3)
         .join(germline_vcf.map { meta, vcf, _tbi -> tuple(meta.sample_name, meta, vcf) })
         .map { _name, caller_vcfs, meta, consensus -> tuple(meta, caller_vcfs, consensus) }
-    germline_qc = GERMLINE_QC(germline_qc_input, variant_qc_script).mqc
+    germline_qc_workflow = GERMLINE_QC(germline_qc_input, variant_qc_script)
+    germline_qc = germline_qc_workflow.mqc
+
+    // The VAF histograms and scatter plots, drawn per patient with one panel per pair or normal.
+    vaf_tables = somatic_qc_workflow.vaf_tables
+        .mix(germline_qc_workflow.vaf_tables)
+        .map { meta, tables -> tuple(meta.patient, tables) }
+        .groupTuple()
+        .map { patient, tables -> tuple(patient, tables.flatten()) }
+    vaf_grids = VAF_GRIDS(vaf_tables, variant_qc_script).png
 
     // Coverage over the capture regions, per DNA library.
     mosdepth_input = markdup_bams
@@ -488,8 +491,8 @@ workflow VAXIMILE {
         .map{ _somatic_name, meta, tsv -> tuple(meta.patient, meta.somatic_name, null, tsv) }
     mqc_somatic_qc = somatic_qc
         .flatMap{ meta, files -> [files].flatten().collect { f -> tuple(meta.patient, meta.somatic_name, null, f) } }
-    mqc_rna_vaf_grid = rna_vaf_grid
-        .map{ patient, png -> tuple(patient, null, null, png) }
+    mqc_vaf_grids = vaf_grids
+        .flatMap{ patient, pngs -> [pngs].flatten().collect { f -> tuple(patient, null, null, f) } }
     mqc_germline_qc = germline_qc
         .flatMap{ meta, files -> [files].flatten().collect { f -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, f) } }
     mqc_mosdepth = mosdepth
@@ -516,7 +519,7 @@ workflow VAXIMILE {
         .mix(mqc_ascat_plots)
         .mix(mqc_ascat_metrics)
         .mix(mqc_somatic_qc)
-        .mix(mqc_rna_vaf_grid)
+        .mix(mqc_vaf_grids)
         .mix(mqc_germline_qc)
         .mix(mqc_mosdepth)
         .groupTuple()
