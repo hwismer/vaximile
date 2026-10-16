@@ -126,13 +126,6 @@ def bed_size(path):
 # ---------------------------------------------------------------------------
 # Metrics
 
-def histogram(values):
-    """Counts of values in [0, 1] per bin, keyed by the bin's lower edge."""
-    n = round(1 / VAF_BIN)
-    counts = Counter(min(int(v / VAF_BIN), n - 1) for v in values)
-    return {f"{i * VAF_BIN:.2f}": counts.get(i, 0) for i in range(n)}
-
-
 def ti_tv(records):
     snvs = [(r.ref, r.alt) for r in records if is_snv(r)]
     ti = sum(1 for s in snvs if s in TRANSITIONS)
@@ -364,11 +357,8 @@ def germline(args):
             vafs.append(vaf)
             if gt == "het":
                 het_vafs.append(vaf)
-    write_mqc(f"{sample}_germline_vaf_mqc.json", "germline_vaf", "VAF",
-              "VAF of the consensus germline calls. Heterozygous variants should peak at 0.5 and homozygous ones at 1. "
-              "A heterozygous peak that is broad or shifted away from 0.5 suggests contamination or a mixed sample.",
-              GERMLINE, "linegraph", {sample: histogram(vafs)},
-              {"title": "Germline: VAF", "xlab": "VAF", "ylab": "Variants", "xmin": 0, "xmax": 1, "ymin": 0})
+    # A matplotlib image, as for the tumour VAF; the MultiQC step gives each normal its own section.
+    plot_vaf_histogram(f"{sample}_germline_vaf_mqc.png", vafs, f"{sample}: germline VAF", "VAF")
 
     overlap, _ = caller_overlap(args.callers, GERMLINE_CALLERS)
     write_mqc(f"{sample}_germline_overlap_mqc.json", "germline_overlap", "Calls - caller overlap",

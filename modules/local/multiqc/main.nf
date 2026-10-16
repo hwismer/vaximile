@@ -153,6 +153,11 @@ EOF
         pair=\$(basename "\$plot" _somatic_vaf_mqc.png)
         printf '  somatic_vaf_%s:\n    section_name: "VAF - tumour - %s"\n    description: "Histogram of tumour DNA VAF of the consensus somatic calls, before the population filter. A clonal peak sits near half the tumour purity; a pile-up at very low VAF is mostly calls at the limit of detection."\n    parent_id: somatic\n    parent_name: "Somatic variants"\n    plot_type: image\n' "\$pair" "\$pair" >> multiqc_config.yaml
     done
+    for plot in *_germline_vaf_mqc.png; do
+        [ -e "\$plot" ] || continue
+        sample=\$(basename "\$plot" _germline_vaf_mqc.png)
+        printf '  germline_vaf_%s:\n    section_name: "VAF - %s"\n    description: "Histogram of the VAF of the consensus germline calls. Heterozygous variants should peak at 0.5 and homozygous ones at 1. A heterozygous peak that is broad or shifted away from 0.5 suggests contamination or a mixed sample."\n    parent_id: germline\n    parent_name: "Germline variants"\n    plot_type: image\n' "\$sample" "\$sample" >> multiqc_config.yaml
+    done
 
     cat >> multiqc_config.yaml <<EOF
 sp:
@@ -180,6 +185,11 @@ EOF
         [ -e "\$plot" ] || continue
         pair=\$(basename "\$plot" _somatic_vaf_mqc.png)
         printf '  somatic_vaf_%s:\n    fn: "%s"\n' "\$pair" "\$plot" >> multiqc_config.yaml
+    done
+    for plot in *_germline_vaf_mqc.png; do
+        [ -e "\$plot" ] || continue
+        sample=\$(basename "\$plot" _germline_vaf_mqc.png)
+        printf '  germline_vaf_%s:\n    fn: "%s"\n' "\$sample" "\$plot" >> multiqc_config.yaml
     done
 
     printf '\nsample_names_replace_regex: true\n' >> multiqc_config.yaml
