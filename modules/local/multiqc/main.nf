@@ -128,7 +128,6 @@ custom_data:
 
   somatic_normal_vaf:
     section_name: "VAF - tumor vs normal"
-    description: "Tumor against normal DNA VAF of each consensus somatic call, before the population filter, one panel per tumor/normal pair. True somatic calls lie on the x-axis. Calls with alt reads in the normal suggest germline leakage, tumor cells in the normal, or a normal that is not from the same person."
     parent_id: somatic
     parent_name: "Somatic"
     plot_type: image

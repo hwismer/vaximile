@@ -300,9 +300,6 @@ workflow VAXIMILE {
         ascat_resources.RT,
     )
 
-    // Tiling script for the MultiQC LOH and ASCAT sheets.
-    montage_script = Channel.value(file("${projectDir}/assets/montage_panels.py", checkIfExists: true))
-
     // HLA LOH: each tumour against its own normal's HLA reference, using ASCAT's purity and ploidy.
     hla_loh_workflow = HLA_LOH_WORKFLOW(
         markdup_bams,
@@ -311,8 +308,7 @@ workflow VAXIMILE {
         ascat.purityploidy,
         hla_workflow.hla_bed,
         hla_kmers,
-        hla_freq,
-        montage_script
+        hla_freq
     )
 
     // ASCAT plots and metrics for MultiQC, joined per pair.
@@ -320,8 +316,7 @@ workflow VAXIMILE {
         ascat.png
             .join(ascat.purityploidy)
             .join(ascat.metrics)
-            .map { meta, png, pp, metrics -> tuple(meta.somatic_name, meta, png, pp, metrics) },
-        montage_script
+            .map { meta, png, pp, metrics -> tuple(meta.somatic_name, meta, png, pp, metrics) }
     )
 
     ascat_results = ascat.segments
@@ -413,8 +408,6 @@ workflow VAXIMILE {
     //**************************************************************************************************************************************
     // Variant and coverage QC for the MultiQC report
 
-    variant_qc_script = Channel.value(file("${projectDir}/assets/variant_qc.py", checkIfExists: true))
-
     // Somatic, per pair: each caller's calls, the consensus, the final calls, contamination, the capture BED and pVACseq's report.
     somatic_qc_input = somatic_consensus_workflow.caller_vcfs
         .map { meta, _caller, vcf, _tbi -> tuple(meta.somatic_name, vcf) }
@@ -435,7 +428,7 @@ workflow VAXIMILE {
         .map { _name, meta, caller_vcfs, consensus, final_vcf, contamination, bed, report ->
             tuple(meta, caller_vcfs, consensus, final_vcf, contamination, bed, report ?: [])
         }
-    somatic_qc_workflow = SOMATIC_QC(somatic_qc_input, variant_qc_script)
+    somatic_qc_workflow = SOMATIC_QC(somatic_qc_input)
     somatic_qc = somatic_qc_workflow.mqc
 
     // Germline, per normal: each caller's calls and the consensus.
@@ -444,7 +437,7 @@ workflow VAXIMILE {
         .groupTuple(size: 3)
         .join(germline_vcf.map { meta, vcf, _tbi -> tuple(meta.sample_name, meta, vcf) })
         .map { _name, caller_vcfs, meta, consensus -> tuple(meta, caller_vcfs, consensus) }
-    germline_qc_workflow = GERMLINE_QC(germline_qc_input, variant_qc_script)
+    germline_qc_workflow = GERMLINE_QC(germline_qc_input)
     germline_qc = germline_qc_workflow.mqc
 
     // The VAF histograms and scatter plots, drawn per patient with one panel per pair or normal.
@@ -453,7 +446,7 @@ workflow VAXIMILE {
         .map { meta, tables -> tuple(meta.patient, tables) }
         .groupTuple()
         .map { patient, tables -> tuple(patient, tables.flatten()) }
-    vaf_grids = VAF_GRIDS(vaf_tables, variant_qc_script).png
+    vaf_grids = VAF_GRIDS(vaf_tables).png
 
     // Coverage over the capture regions, per DNA library.
     mosdepth_input = markdup_bams
