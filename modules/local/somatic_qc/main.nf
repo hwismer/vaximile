@@ -14,6 +14,7 @@ process SOMATIC_QC {
 
     output:
         tuple val(meta), path("*_mqc.{json,png}"), emit: mqc
+        tuple val(meta), path("*_rna_vaf.tsv"), emit: rna_vaf
 
     script:
     def pvacseq = pvacseq_report ? "--pvacseq ${pvacseq_report}" : ''
@@ -32,6 +33,6 @@ process SOMATIC_QC {
 
     stub:
     """
-    touch ${meta.somatic_name}_somatic_metrics_mqc.json ${meta.somatic_name}_somatic_vaf_mqc.png
+    touch ${meta.somatic_name}_somatic_metrics_mqc.json ${meta.somatic_name}_somatic_vaf_mqc.png ${meta.somatic_name}_rna_vaf.tsv
     """
 }

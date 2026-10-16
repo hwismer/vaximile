@@ -6,6 +6,7 @@ different pairs or samples are merged by MultiQC into one plot or table.
 
   somatic  - one tumor/normal pair: VAFs, filtering metrics, substitution types,
              TMB, contamination, and the pVACseq tiers
+  rna-grid - all pairs of one patient: RNA vs DNA VAF scatter plots side by side
   germline - one normal: VAF histogram, het/hom and Ti/Tv, caller overlap
 """
 
@@ -14,14 +15,15 @@ import csv
 import gzip
 import itertools
 import json
+import math
 import statistics
 from collections import Counter, namedtuple
 
 Record = namedtuple("Record", "chrom pos ref alt info calls")
 
-SOMATIC = {"id": "somatic", "name": "Somatic variants",
+SOMATIC = {"id": "somatic", "name": "Somatic",
            "description": "Somatic calls for each tumor/normal pair, from the three callers through to the pVACseq candidates"}
-GERMLINE = {"id": "germline", "name": "Germline variants",
+GERMLINE = {"id": "germline", "name": "Germline",
             "description": "Germline calls for each normal sample"}
 NEOANTIGENS = {"id": "neoantigens", "name": "Neoantigens",
                "description": "pVACseq MHC class I results for each tumor/normal pair"}
@@ -192,6 +194,32 @@ def plot_vaf_histogram(path, vafs, title, xlabel):
     plt.close(fig)
 
 
+def plot_rna_vaf_grid(path, panels):
+    """One square RNA vs DNA VAF scatter per pair, side by side. panels: (pair, tumor, points)."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    cols = min(len(panels), 3)
+    rows = math.ceil(len(panels) / cols)
+    fig, axes = plt.subplots(rows, cols, figsize=(4 * cols, 4.2 * rows), squeeze=False)
+    for ax in axes.flat[len(panels):]:
+        ax.axis("off")
+    for ax, (pair, tumor, points) in zip(axes.flat, panels):
+        ax.plot([0, 1], [0, 1], color="grey", linestyle="--", linewidth=0.8)
+        ax.scatter([d for d, _ in points], [r for _, r in points], s=14, alpha=0.6, color="#4C72B0", edgecolors="none")
+        ax.set_xlim(-0.03, 1.03)
+        ax.set_ylim(-0.03, 1.03)
+        ax.set_aspect("equal")
+        ax.set_xlabel(f"{tumor} DNA VAF")
+        ax.set_ylabel(f"{tumor} RNA VAF")
+        ax.set_title(f"{pair} (n = {len(points):,})", fontsize=10)
+        ax.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+
+
 def write_mqc(path, plot_id, section, description, parent, plot_type, data, pconfig=None, headers=None):
     if not data:
         return
@@ -217,9 +245,9 @@ def vaf_scatter_points(pairs):
 
 
 def vaf_scatter_pconfig(title, xlab, ylab):
-    # Axes start just below 0 so points at 0 are not cut off; square so both axes read the same.
+    # Axes run just past 0 and 1 so points at the edges are not cut off; square so both axes read the same.
     return {"title": title, "xlab": xlab, "ylab": ylab, "square": True,
-            "xmin": -0.03, "xmax": 1, "ymin": -0.03, "ymax": 1}
+            "xmin": -0.03, "xmax": 1.03, "ymin": -0.03, "ymax": 1.03}
 
 
 # ---------------------------------------------------------------------------
@@ -230,24 +258,26 @@ def somatic(args):
     _, _, consensus = read_vcf(args.consensus)
     _, csq_fields, final = read_vcf(args.final)
 
-    # Tumor VAF and tumor vs normal VAF, on the consensus calls before the population filter.
-    tumor_vafs, normal_pairs = [], []
+    # Tumor VAF of the final calls, after every filter. A matplotlib image rather than a MultiQC
+    # plot, since MultiQC only draws horizontal bars; the MultiQC step gives each pair its own section.
+    final_vafs = [v for v in (dna_vaf(r.calls.get(args.tumor, {})) for r in final) if v is not None]
+    plot_vaf_histogram(f"{pair}_somatic_vaf_mqc.png", final_vafs, f"{pair}: tumor VAF", f"{args.tumor} DNA VAF")
+
+    # Tumor vs normal VAF on the consensus calls before the population filter, which removes the
+    # germline leakage this plot is meant to show.
+    normal_pairs = []
     for r in consensus:
         t = ad_vaf(r.calls.get(args.tumor, {}))
         n = ad_vaf(r.calls.get(args.normal, {}))
-        if t is not None:
-            tumor_vafs.append(t)
-            if n is not None:
-                normal_pairs.append((t, n))
-    # A matplotlib image rather than a MultiQC plot, since MultiQC only draws horizontal bars.
-    # The MultiQC step gives each pair's image its own section.
-    plot_vaf_histogram(f"{pair}_somatic_vaf_mqc.png", tumor_vafs, f"{pair}: tumor VAF", "Tumor VAF")
+        if t is not None and n is not None:
+            normal_pairs.append((t, n))
     write_mqc(f"{pair}_somatic_normal_vaf_mqc.json", f"somatic_normal_vaf_{pair}", f"VAF - tumor vs normal - {pair}",
               "Tumor against normal DNA VAF of each consensus somatic call, before the population filter. True somatic "
               "calls lie on the x-axis. Calls with alt reads in the normal suggest germline leakage, tumor cells in the "
               "normal, or a normal that is not from the same person.",
               SOMATIC, "scatter", {pair: vaf_scatter_points(normal_pairs)},
-              vaf_scatter_pconfig(f"Somatic: tumor vs normal VAF - {pair}", "Tumor VAF", "Normal VAF"))
+              vaf_scatter_pconfig(f"Somatic: tumor vs normal VAF - {pair}", f"{args.tumor} DNA VAF",
+                                  f"{args.normal} DNA VAF"))
 
     # RNA vs DNA VAF of the final calls.
     rna_pairs = []
@@ -256,11 +286,12 @@ def somatic(args):
         d, rna = dna_vaf(call), field_float(call, "RAF")
         if d is not None and rna is not None and (field_float(call, "RDP") or 0) > 0:
             rna_pairs.append((d, rna))
-    write_mqc(f"{pair}_somatic_rna_vaf_mqc.json", f"somatic_rna_vaf_{pair}", f"VAF - RNA vs DNA - {pair}",
-              "Tumor DNA against RNA VAF of the final somatic calls that have RNA coverage. Mutations near the diagonal "
-              "are expressed in proportion to their DNA fraction; those on the x-axis are not expressed.",
-              SOMATIC, "scatter", {pair: vaf_scatter_points(rna_pairs)},
-              vaf_scatter_pconfig(f"Somatic: RNA vs DNA VAF - {pair}", "Tumor DNA VAF", "Tumor RNA VAF"))
+    # Drawn with the patient's other pairs by the rna-grid mode, so only the points are written here.
+    with open(f"{pair}_rna_vaf.tsv", "w") as fh:
+        fh.write("pair\ttumor\tdna_vaf\trna_vaf\n")
+        fh.writelines(f"{pair}\t{args.tumor}\t{d:.4f}\t{rna:.4f}\n" for d, rna in rna_pairs)
+        if not rna_pairs:
+            fh.write(f"{pair}\t{args.tumor}\t\t\n")  # keeps the pair's (empty) panel in the grid
 
     # Variants left at each step, from each caller's PASS calls to pVACseq's Pass tier.
     _, per_caller = caller_overlap(args.callers, SOMATIC_CALLERS)
@@ -302,7 +333,6 @@ def somatic(args):
         rows = list(csv.DictReader(fh, delimiter="\t"))
         if rows:
             contamination = float(rows[0]["contamination"]) * 100
-    final_vafs = [v for v in (dna_vaf(r.calls.get(args.tumor, {})) for r in final) if v is not None]
     metrics = {
         "Variants": len(final),
         "SNVs": sum(1 for r in final if is_snv(r)),
@@ -341,6 +371,18 @@ def somatic(args):
                   "results: candidates on a lost allele will not be presented by the tumor.",
                   NEOANTIGENS, "bargraph", {pair: dict(sorted(alleles.items()))},
                   {"title": "Neoantigens: Pass candidates per allele", "ylab": "Candidates", "cpswitch_counts_label": "Candidates"})
+
+
+def rna_grid(args):
+    panels = {}
+    for path in args.tables:
+        with open(path) as fh:
+            rows = list(csv.DictReader(fh, delimiter="\t"))
+        if rows:
+            pair, tumor = rows[0]["pair"], rows[0]["tumor"]
+            panels[pair] = (pair, tumor, [(float(r["dna_vaf"]), float(r["rna_vaf"])) for r in rows if r["dna_vaf"]])
+    if panels:
+        plot_rna_vaf_grid(f"{args.patient}_somatic_rna_vaf_mqc.png", [panels[p] for p in sorted(panels)])
 
 
 def germline(args):
@@ -399,6 +441,10 @@ def main():
     s.add_argument("--bed", required=True, help="Capture region BED")
     s.add_argument("--pvacseq", help="pVACseq MHC class I aggregated report")
 
+    r = modes.add_parser("rna-grid")
+    r.add_argument("--patient", required=True)
+    r.add_argument("--tables", nargs="+", required=True, help="RNA vs DNA VAF table of each pair, from somatic mode")
+
     g = modes.add_parser("germline")
     g.add_argument("--sample", required=True, help="Name to show in the report")
     g.add_argument("--sample-column", required=True, help="Sample name in the VCFs")
@@ -406,7 +452,7 @@ def main():
     g.add_argument("--consensus", required=True, help="Consensus germline VCF")
 
     args = parser.parse_args()
-    {"somatic": somatic, "germline": germline}[args.mode](args)
+    {"somatic": somatic, "rna-grid": rna_grid, "germline": germline}[args.mode](args)
 
 
 if __name__ == "__main__":

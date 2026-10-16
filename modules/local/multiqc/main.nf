@@ -54,7 +54,7 @@ custom_content:
 custom_data:
   hla_calls:
     file_format: tsv
-    section_name: "Allele calls - HLA-HD"
+    section_name: "HLA-HD"
     description: "HLA class I and II allele calls from HLA-HD, per library"
     parent_id: hla
     parent_name: "HLA"
@@ -66,7 +66,7 @@ custom_data:
 
   optitype_calls:
     file_format: tsv
-    section_name: "Allele calls - OptiType"
+    section_name: "OptiType"
     description: "HLA class I allele calls from OptiType, per library"
     parent_id: hla
     parent_name: "HLA"
@@ -119,6 +119,13 @@ custom_data:
       Pct_A1_Loss_Supporting_Bins: { hidden: True }
       Pct_A2_Loss_Supporting_Bins: { hidden: True }
 
+  somatic_rna_vaf:
+    section_name: "VAF - RNA vs DNA"
+    description: "Tumor DNA against RNA VAF of the final somatic calls that have RNA coverage, one panel per tumor/normal pair. Mutations near the diagonal are expressed in proportion to their DNA fraction; those on the x-axis are not expressed."
+    parent_id: somatic
+    parent_name: "Somatic"
+    plot_type: image
+
   ascat_metrics:
     file_format: tsv
     section_name: "ASCAT metrics"
@@ -151,12 +158,12 @@ EOF
     for plot in *_somatic_vaf_mqc.png; do
         [ -e "\$plot" ] || continue
         pair=\$(basename "\$plot" _somatic_vaf_mqc.png)
-        printf '  somatic_vaf_%s:\n    section_name: "VAF - tumor - %s"\n    description: "Histogram of tumor DNA VAF of the consensus somatic calls, before the population filter. A clonal peak sits near half the tumor purity; a pile-up at very low VAF is mostly calls at the limit of detection."\n    parent_id: somatic\n    parent_name: "Somatic variants"\n    plot_type: image\n' "\$pair" "\$pair" >> multiqc_config.yaml
+        printf '  somatic_vaf_%s:\n    section_name: "VAF - tumor - %s"\n    description: "Histogram of tumor DNA VAF of the final somatic calls, after the two-caller consensus and the population filter. A clonal peak sits near half the tumor purity; a pile-up at very low VAF is mostly calls at the limit of detection."\n    parent_id: somatic\n    parent_name: "Somatic"\n    plot_type: image\n' "\$pair" "\$pair" >> multiqc_config.yaml
     done
     for plot in *_germline_vaf_mqc.png; do
         [ -e "\$plot" ] || continue
         sample=\$(basename "\$plot" _germline_vaf_mqc.png)
-        printf '  germline_vaf_%s:\n    section_name: "VAF - %s"\n    description: "Histogram of the VAF of the consensus germline calls. Heterozygous variants should peak at 0.5 and homozygous ones at 1. A heterozygous peak that is broad or shifted away from 0.5 suggests contamination or a mixed sample."\n    parent_id: germline\n    parent_name: "Germline variants"\n    plot_type: image\n' "\$sample" "\$sample" >> multiqc_config.yaml
+        printf '  germline_vaf_%s:\n    section_name: "VAF - %s"\n    description: "Histogram of the VAF of the consensus germline calls. Heterozygous variants should peak at 0.5 and homozygous ones at 1. A heterozygous peak that is broad or shifted away from 0.5 suggests contamination or a mixed sample."\n    parent_id: germline\n    parent_name: "Germline"\n    plot_type: image\n' "\$sample" "\$sample" >> multiqc_config.yaml
     done
 
     cat >> multiqc_config.yaml <<EOF
@@ -169,6 +176,8 @@ sp:
     fn: "*_lohres.tsv"
   ascat_metrics:
     fn: "*_ascatmetrics.tsv"
+  somatic_rna_vaf:
+    fn: "*_somatic_rna_vaf_mqc.png"
 EOF
 
     for sheet in *_hla_loh_mqc.png; do
@@ -200,8 +209,7 @@ EOF
         -n ${prefix}_report.html \
         --replace-names ${patient}_rename.tsv \
         -c multiqc_config.yaml \
-        -i "${patient} - UCSF Custom Immunoprofiler CustomVax Pipeline Metrics" \
-		-b "Info | Patient: ${patient} \n | VEP Outputs: Germline (normal sample name) and Somatic (tumor/normal pair, e.g. Patient1_T1_N1)" \
+        -i "${patient} - Vaximile Pipeline Metrics" \
         .
     """
 

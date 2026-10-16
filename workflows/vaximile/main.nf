@@ -32,6 +32,7 @@ include { DEEPSOMATIC_WORKFLOW } from "../../subworkflows/somatic_variant_callin
 include { SOMATIC_QC } from "../../modules/local/somatic_qc/main"
 include { GERMLINE_QC } from "../../modules/local/germline_qc/main"
 include { MOSDEPTH } from "../../modules/local/mosdepth/main"
+include { RNA_VAF_GRID } from "../../modules/local/rna_vaf_grid/main"
 
 //**************************************************************************************************************************************
 
@@ -434,7 +435,14 @@ workflow VAXIMILE {
         .map { _name, meta, caller_vcfs, consensus, final_vcf, contamination, bed, report ->
             tuple(meta, caller_vcfs, consensus, final_vcf, contamination, bed, report ?: [])
         }
-    somatic_qc = SOMATIC_QC(somatic_qc_input, variant_qc_script).mqc
+    somatic_qc_workflow = SOMATIC_QC(somatic_qc_input, variant_qc_script)
+    somatic_qc = somatic_qc_workflow.mqc
+
+    // RNA vs DNA VAF of every pair of a patient, side by side.
+    rna_vaf_grid = RNA_VAF_GRID(
+        somatic_qc_workflow.rna_vaf.map { meta, tsv -> tuple(meta.patient, tsv) }.groupTuple(),
+        variant_qc_script
+    ).png
 
     // Germline, per normal: each caller's calls and the consensus.
     germline_qc_input = germline.caller_vcfs
@@ -480,6 +488,8 @@ workflow VAXIMILE {
         .map{ _somatic_name, meta, tsv -> tuple(meta.patient, meta.somatic_name, null, tsv) }
     mqc_somatic_qc = somatic_qc
         .flatMap{ meta, files -> [files].flatten().collect { f -> tuple(meta.patient, meta.somatic_name, null, f) } }
+    mqc_rna_vaf_grid = rna_vaf_grid
+        .map{ patient, png -> tuple(patient, null, null, png) }
     mqc_germline_qc = germline_qc
         .flatMap{ meta, files -> [files].flatten().collect { f -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, f) } }
     mqc_mosdepth = mosdepth
@@ -506,6 +516,7 @@ workflow VAXIMILE {
         .mix(mqc_ascat_plots)
         .mix(mqc_ascat_metrics)
         .mix(mqc_somatic_qc)
+        .mix(mqc_rna_vaf_grid)
         .mix(mqc_germline_qc)
         .mix(mqc_mosdepth)
         .groupTuple()
