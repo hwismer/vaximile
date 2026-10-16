@@ -4,8 +4,8 @@
 Writes MultiQC custom-content files (*_mqc.json). Files with the same plot id from
 different pairs or samples are merged by MultiQC into one plot or table.
 
-  somatic  - one tumour/normal pair: VAFs, caller overlap, filtering funnel,
-             substitution spectrum, TMB, contamination, and the pVACseq tiers
+  somatic  - one tumor/normal pair: VAFs, filtering metrics, substitution types,
+             TMB, contamination, and the pVACseq tiers
   germline - one normal: VAF histogram, het/hom and Ti/Tv, caller overlap
 """
 
@@ -20,11 +20,11 @@ from collections import Counter, namedtuple
 Record = namedtuple("Record", "chrom pos ref alt info calls")
 
 SOMATIC = {"id": "somatic", "name": "Somatic variants",
-           "description": "Somatic calls for each tumour/normal pair, from the three callers through to the pVACseq candidates"}
+           "description": "Somatic calls for each tumor/normal pair, from the three callers through to the pVACseq candidates"}
 GERMLINE = {"id": "germline", "name": "Germline variants",
             "description": "Germline calls for each normal sample"}
 NEOANTIGENS = {"id": "neoantigens", "name": "Neoantigens",
-               "description": "pVACseq MHC class I results for each tumour/normal pair"}
+               "description": "pVACseq MHC class I results for each tumor/normal pair"}
 
 SOMATIC_CALLERS = {"mutect": "Mutect2", "deepsomatic": "DeepSomatic", "strelka": "Strelka"}
 GERMLINE_CALLERS = {"deepvariant": "DeepVariant", "haplotypecaller": "HaplotypeCaller", "strelka": "Strelka"}
@@ -36,7 +36,7 @@ SPECTRUM = ["C>A", "C>G", "C>T", "T>A", "T>C", "T>G"]
 COMPLEMENT = str.maketrans("ACGT", "TGCA")
 TIERS = ["Pass", "PoorBinder", "PoorImmunogenicity", "PoorPresentation", "RefMatch", "ProbPos",
          "PoorTranscript", "Anchor", "Subclonal", "LowExpr", "NoExpr", "Poor"]
-VAF_BIN = 0.02
+VAF_BIN = 0.05
 
 
 # ---------------------------------------------------------------------------
@@ -83,7 +83,7 @@ def field_float(call, name):
 
 
 def dna_vaf(call):
-    """Tumour DNA VAF: the bam-readcount AF if present, otherwise from AD."""
+    """Tumor DNA VAF: the bam-readcount AF if present, otherwise from AD."""
     vaf = field_float(call, "AF")
     return vaf if vaf is not None else ad_vaf(call)
 
@@ -216,6 +216,12 @@ def vaf_scatter_points(pairs):
     return [{"x": round(x, 3), "y": round(y, 3)} for x, y in pairs]
 
 
+def vaf_scatter_pconfig(title, xlab, ylab):
+    # Axes start just below 0 so points at 0 are not cut off; square so both axes read the same.
+    return {"title": title, "xlab": xlab, "ylab": ylab, "square": True,
+            "xmin": -0.03, "xmax": 1, "ymin": -0.03, "ymax": 1}
+
+
 # ---------------------------------------------------------------------------
 # Modes
 
@@ -224,25 +230,24 @@ def somatic(args):
     _, _, consensus = read_vcf(args.consensus)
     _, csq_fields, final = read_vcf(args.final)
 
-    # Tumour VAF and tumour vs normal VAF, on the consensus calls before the population filter.
-    tumour_vafs, normal_pairs = [], []
+    # Tumor VAF and tumor vs normal VAF, on the consensus calls before the population filter.
+    tumor_vafs, normal_pairs = [], []
     for r in consensus:
         t = ad_vaf(r.calls.get(args.tumor, {}))
         n = ad_vaf(r.calls.get(args.normal, {}))
         if t is not None:
-            tumour_vafs.append(t)
+            tumor_vafs.append(t)
             if n is not None:
                 normal_pairs.append((t, n))
     # A matplotlib image rather than a MultiQC plot, since MultiQC only draws horizontal bars.
     # The MultiQC step gives each pair's image its own section.
-    plot_vaf_histogram(f"{pair}_somatic_vaf_mqc.png", tumour_vafs, f"{pair}: tumour VAF", "Tumour VAF")
-    write_mqc(f"{pair}_somatic_normal_vaf_mqc.json", "somatic_normal_vaf", "VAF - tumour vs normal",
-              "Tumour against normal DNA VAF of each consensus somatic call, before the population filter. True somatic "
-              "calls lie on the x-axis. Calls with alt reads in the normal suggest germline leakage, tumour cells in the "
+    plot_vaf_histogram(f"{pair}_somatic_vaf_mqc.png", tumor_vafs, f"{pair}: tumor VAF", "Tumor VAF")
+    write_mqc(f"{pair}_somatic_normal_vaf_mqc.json", f"somatic_normal_vaf_{pair}", f"VAF - tumor vs normal - {pair}",
+              "Tumor against normal DNA VAF of each consensus somatic call, before the population filter. True somatic "
+              "calls lie on the x-axis. Calls with alt reads in the normal suggest germline leakage, tumor cells in the "
               "normal, or a normal that is not from the same person.",
               SOMATIC, "scatter", {pair: vaf_scatter_points(normal_pairs)},
-              {"title": "Somatic: tumour vs normal VAF", "xlab": "Tumour VAF", "ylab": "Normal VAF",
-               "xmin": 0, "xmax": 1, "ymin": 0, "ymax": 1})
+              vaf_scatter_pconfig(f"Somatic: tumor vs normal VAF - {pair}", "Tumor VAF", "Normal VAF"))
 
     # RNA vs DNA VAF of the final calls.
     rna_pairs = []
@@ -251,21 +256,14 @@ def somatic(args):
         d, rna = dna_vaf(call), field_float(call, "RAF")
         if d is not None and rna is not None and (field_float(call, "RDP") or 0) > 0:
             rna_pairs.append((d, rna))
-    # One plot per pair, so pairs don't overlap; the id makes each its own section.
     write_mqc(f"{pair}_somatic_rna_vaf_mqc.json", f"somatic_rna_vaf_{pair}", f"VAF - RNA vs DNA - {pair}",
-              "Tumour DNA against RNA VAF of the final somatic calls that have RNA coverage. Mutations near the diagonal "
+              "Tumor DNA against RNA VAF of the final somatic calls that have RNA coverage. Mutations near the diagonal "
               "are expressed in proportion to their DNA fraction; those on the x-axis are not expressed.",
               SOMATIC, "scatter", {pair: vaf_scatter_points(rna_pairs)},
-              {"title": f"Somatic: RNA vs DNA VAF - {pair}", "xlab": "Tumour DNA VAF", "ylab": "Tumour RNA VAF",
-               "xmin": 0, "xmax": 1, "ymin": 0, "ymax": 1})
+              vaf_scatter_pconfig(f"Somatic: RNA vs DNA VAF - {pair}", "Tumor DNA VAF", "Tumor RNA VAF"))
 
-    # Caller overlap, and the funnel from caller calls to pVACseq candidates.
-    overlap, per_caller = caller_overlap(args.callers, SOMATIC_CALLERS)
-    write_mqc(f"{pair}_somatic_overlap_mqc.json", "somatic_overlap", "Calls - caller overlap",
-              "PASS calls from each somatic caller, by which callers made them. Only calls made by at least two callers "
-              "are kept in the consensus.",
-              SOMATIC, "bargraph", {pair: overlap},
-              {"title": "Somatic: caller overlap", "ylab": "Variants", "cpswitch_counts_label": "Variants"})
+    # Variants left at each step, from each caller's PASS calls to pVACseq's Pass tier.
+    _, per_caller = caller_overlap(args.callers, SOMATIC_CALLERS)
 
     report = []
     if args.pvacseq:
@@ -277,17 +275,17 @@ def somatic(args):
     if args.pvacseq:
         funnel["With pVACseq peptides"] = len(report)
         funnel["pVACseq Pass"] = sum(1 for row in report if row["Tier"] == "Pass")
-    write_mqc(f"{pair}_somatic_funnel_mqc.json", "somatic_funnel", "Calls - filtering funnel",
+    write_mqc(f"{pair}_somatic_funnel_mqc.json", "somatic_funnel", "Filtering Metrics",
               "Number of somatic variants left at each step, from each caller's PASS calls to pVACseq's Pass tier.",
               SOMATIC, "table", {pair: funnel},
-              {"title": "Somatic: filtering funnel", "col1_header": "Pair"},
+              {"title": "Somatic: filtering metrics", "col1_header": "Pair"},
               {c: {"title": c, "format": "{:,.0f}", "scale": False} for c in funnel})
 
-    write_mqc(f"{pair}_somatic_spectrum_mqc.json", "somatic_spectrum", "Calls - substitution spectrum",
+    write_mqc(f"{pair}_somatic_spectrum_mqc.json", "somatic_spectrum", "Substitution Types",
               "SNV substitution classes of the final somatic calls. An excess of C>T can indicate FFPE damage and an "
               "excess of C>A oxidative damage.",
               SOMATIC, "bargraph", {pair: spectrum(final)},
-              {"title": "Somatic: substitution spectrum", "ylab": "SNVs", "cpswitch_counts_label": "SNVs",
+              {"title": "Somatic: substitution types", "ylab": "SNVs", "cpswitch_counts_label": "SNVs",
                "cpswitch_c_active": False})
 
     # Summary metrics.
@@ -320,14 +318,14 @@ def somatic(args):
         "Variants": {"title": "Variants", "description": "Final somatic calls, after the population filter", "format": "{:,.0f}"},
         "SNVs": {"title": "SNVs", "format": "{:,.0f}"},
         "Indels": {"title": "Indels", "format": "{:,.0f}"},
-        "Median VAF": {"title": "Median VAF", "description": "Median tumour DNA VAF of the final calls", "format": "{:,.3f}", "max": 1},
+        "Median VAF": {"title": "Median VAF", "description": "Median tumor DNA VAF of the final calls", "format": "{:,.3f}", "max": 1},
         "TMB": {"title": "TMB", "description": f"Non-synonymous coding variants per Mb of capture region ({capture_mb:.1f} Mb)", "format": "{:,.2f}"},
         "Ti/Tv": {"title": "Ti/Tv", "description": "Transition/transversion ratio of the final SNVs", "format": "{:,.2f}"},
-        "Contamination": {"title": "Contamination", "description": "Cross-sample contamination of the tumour, from GATK CalculateContamination", "suffix": "%", "format": "{:,.2f}"},
+        "Contamination": {"title": "Contamination", "description": "Cross-sample contamination of the tumor, from GATK CalculateContamination", "suffix": "%", "format": "{:,.2f}"},
         "Normal VAF >= 5%": {"title": "Normal VAF >= 5%", "description": "Consensus calls with at least 5% alt reads in the normal; should be near 0", "suffix": "%", "format": "{:,.1f}", "max": 100},
     }
-    write_mqc(f"{pair}_somatic_metrics_mqc.json", "somatic_metrics", "Calls - summary metrics",
-              "Summary of the final somatic calls for each tumour/normal pair.",
+    write_mqc(f"{pair}_somatic_metrics_mqc.json", "somatic_metrics", "Summary Metrics",
+              "Summary of the final somatic calls for each tumor/normal pair.",
               SOMATIC, "table", {pair: metrics}, {"title": "Somatic: metrics", "col1_header": "Pair"}, headers)
 
     # pVACseq tiers and Pass candidates per HLA allele.
@@ -340,7 +338,7 @@ def somatic(args):
         alleles = Counter(row["Allele"] for row in report if row["Tier"] == "Pass")
         write_mqc(f"{pair}_neoantigen_alleles_mqc.json", "neoantigen_alleles", "Pass candidates per HLA allele",
                   "Number of Pass-tier candidates whose best peptide binds each HLA allele. Compare with the HLA LOH "
-                  "results: candidates on a lost allele will not be presented by the tumour.",
+                  "results: candidates on a lost allele will not be presented by the tumor.",
                   NEOANTIGENS, "bargraph", {pair: dict(sorted(alleles.items()))},
                   {"title": "Neoantigens: Pass candidates per allele", "ylab": "Candidates", "cpswitch_counts_label": "Candidates"})
 
@@ -357,11 +355,11 @@ def germline(args):
             vafs.append(vaf)
             if gt == "het":
                 het_vafs.append(vaf)
-    # A matplotlib image, as for the tumour VAF; the MultiQC step gives each normal its own section.
+    # A matplotlib image, as for the tumor VAF; the MultiQC step gives each normal its own section.
     plot_vaf_histogram(f"{sample}_germline_vaf_mqc.png", vafs, f"{sample}: germline VAF", "VAF")
 
     overlap, _ = caller_overlap(args.callers, GERMLINE_CALLERS)
-    write_mqc(f"{sample}_germline_overlap_mqc.json", "germline_overlap", "Calls - caller overlap",
+    write_mqc(f"{sample}_germline_overlap_mqc.json", "germline_overlap", "Caller Overlap",
               "PASS calls from each germline caller, by which callers made them. Only calls made by at least two callers "
               "are kept in the consensus.",
               GERMLINE, "bargraph", {sample: overlap},
@@ -381,7 +379,7 @@ def germline(args):
     headers["Het/Hom"] = {"title": "Het/Hom", "description": "Heterozygous to homozygous-alt ratio; typically 1.3-2", "format": "{:,.2f}"}
     headers["Ti/Tv"] = {"title": "Ti/Tv", "description": "Transition/transversion ratio; about 2.0-2.1 for genomes and 2.8-3.0 for exomes", "format": "{:,.2f}"}
     headers["Median het VAF"] = {"title": "Median het VAF", "description": "Median VAF of heterozygous calls; should be near 0.5", "format": "{:,.3f}", "max": 1}
-    write_mqc(f"{sample}_germline_metrics_mqc.json", "germline_metrics", "Calls - summary metrics",
+    write_mqc(f"{sample}_germline_metrics_mqc.json", "germline_metrics", "Summary Metrics",
               "Summary of the consensus germline calls for each normal.",
               GERMLINE, "table", {sample: metrics}, {"title": "Germline: metrics", "col1_header": "Sample"}, headers)
 
@@ -392,7 +390,7 @@ def main():
 
     s = modes.add_parser("somatic")
     s.add_argument("--pair", required=True)
-    s.add_argument("--tumor", required=True, help="Tumour sample name in the VCFs")
+    s.add_argument("--tumor", required=True, help="Tumor sample name in the VCFs")
     s.add_argument("--normal", required=True, help="Normal sample name in the VCFs")
     s.add_argument("--callers", nargs="+", required=True, help="Normalised PASS VCF of each caller")
     s.add_argument("--consensus", required=True, help="Consensus VCF, before the population filter")
