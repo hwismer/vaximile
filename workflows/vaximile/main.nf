@@ -29,6 +29,10 @@ include { FUSION_CALLING } from "../../subworkflows/rnaseq.nf"
 include { PVAC_INPUT_PREP_WORKFLOW } from "../../subworkflows/pvactools.nf"
 include { PVACTOOLS_WORKFLOW } from "../../subworkflows/pvactools.nf"
 include { DEEPSOMATIC_WORKFLOW } from "../../subworkflows/somatic_variant_calling.nf"
+include { SOMATIC_QC } from "../../modules/local/somatic_qc/main"
+include { GERMLINE_QC } from "../../modules/local/germline_qc/main"
+include { TUMOR_COMPARISON_QC } from "../../modules/local/tumor_comparison_qc/main"
+include { MOSDEPTH } from "../../modules/local/mosdepth/main"
 
 //**************************************************************************************************************************************
 
@@ -348,13 +352,14 @@ workflow VAXIMILE {
    
 
     // The three callers become one callset here, before anything downstream sees them.
-    somatic_consensus = SOMATIC_CONSENSUS(
+    somatic_consensus_workflow = SOMATIC_CONSENSUS(
         mutect2_vcf,
         strelka_vcf,
         deepsomatic_vcf,
         reference_genome,
         reference_dict
-    ).vcf
+    )
+    somatic_consensus = somatic_consensus_workflow.vcf
 
     pvac_input = PVAC_INPUT_PREP_WORKFLOW(
         somatic_consensus,
@@ -405,6 +410,55 @@ workflow VAXIMILE {
     somalier_pairs = somalier.pairs
     somalier_samples = somalier.samples
 
+    //**************************************************************************************************************************************
+    // Variant and coverage QC for the MultiQC report
+
+    variant_qc_script = Channel.value(file("${projectDir}/assets/variant_qc.py", checkIfExists: true))
+
+    // Somatic, per pair: each caller's calls, the consensus, the final calls, contamination, the capture BED and pVACseq's report.
+    somatic_qc_input = somatic_consensus_workflow.caller_vcfs
+        .map { meta, _caller, vcf, _tbi -> tuple(meta.somatic_name, vcf) }
+        .groupTuple(size: 3)
+        .join(somatic_consensus.map { meta, vcf -> tuple(meta.somatic_name, meta, vcf) })
+        .join(somatic_vcf.map { meta, vcf, _tbi -> tuple(meta.somatic_name, vcf) })
+        .join(mutect2.contamination.map { meta, table -> tuple(meta.somatic_name, table) })
+        .map { _name, caller_vcfs, meta, consensus, final_vcf, contamination ->
+            tuple(meta.capture_kit, meta, caller_vcfs, consensus, final_vcf, contamination)
+        }
+        .combine(capture_kits, by: 0)
+        .map { _kit, meta, caller_vcfs, consensus, final_vcf, contamination, bed ->
+            tuple(meta.somatic_name, meta, caller_vcfs, consensus, final_vcf, contamination, bed)
+        }
+        // remainder: true so a pair whose pVACseq run failed still gets its variant QC.
+        .join(pvactools.pvacseq_aggregated.map { meta, report -> tuple(meta.somatic_name, report) }, remainder: true)
+        .filter { items -> items[1] instanceof Map }
+        .map { _name, meta, caller_vcfs, consensus, final_vcf, contamination, bed, report ->
+            tuple(meta, caller_vcfs, consensus, final_vcf, contamination, bed, report ?: [])
+        }
+    somatic_qc = SOMATIC_QC(somatic_qc_input, variant_qc_script).mqc
+
+    // Germline, per normal: each caller's calls and the consensus.
+    germline_qc_input = germline.caller_vcfs
+        .map { meta, _caller, vcf, _tbi -> tuple(meta.sample_name, vcf) }
+        .groupTuple(size: 3)
+        .join(germline_vcf.map { meta, vcf, _tbi -> tuple(meta.sample_name, meta, vcf) })
+        .map { _name, caller_vcfs, meta, consensus -> tuple(meta, caller_vcfs, consensus) }
+    germline_qc = GERMLINE_QC(germline_qc_input, variant_qc_script).mqc
+
+    // Variants shared between tumours, for patients with more than one tumour/normal pair.
+    tumor_comparison_input = somatic_vcf
+        .map { meta, vcf, _tbi -> tuple(meta.patient, meta.somatic_name, meta.tumor_meta.sample_name, vcf) }
+        .groupTuple()
+        .filter { _patient, pair_names, _tumors, _vcfs -> pair_names.size() > 1 }
+    tumor_comparison = TUMOR_COMPARISON_QC(tumor_comparison_input, variant_qc_script).mqc
+
+    // Coverage over the capture regions, per DNA library.
+    mosdepth_input = markdup_bams
+        .map { meta, bam, bai -> tuple(meta.capture_kit, meta, bam, bai) }
+        .combine(capture_kits, by: 0)
+        .map { _kit, meta, bam, bai, bed -> tuple(meta, bam, bai, bed) }
+    mosdepth = MOSDEPTH(mosdepth_input).dist
+
 
     //**************************************************************************************************************************************
     // MultiQC Report Creation
@@ -432,6 +486,14 @@ workflow VAXIMILE {
         .map{ _somatic_name, meta, png -> tuple(meta.patient, meta.somatic_name, null, png) }
     mqc_ascat_metrics = ascat_mqc.tsv
         .map{ _somatic_name, meta, tsv -> tuple(meta.patient, meta.somatic_name, null, tsv) }
+    mqc_somatic_qc = somatic_qc
+        .flatMap{ meta, files -> [files].flatten().collect { f -> tuple(meta.patient, meta.somatic_name, null, f) } }
+    mqc_germline_qc = germline_qc
+        .flatMap{ meta, files -> [files].flatten().collect { f -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, f) } }
+    mqc_tumor_comparison = tumor_comparison
+        .flatMap{ patient, files -> [files].flatten().collect { f -> tuple(patient, null, null, f) } }
+    mqc_mosdepth = mosdepth
+        .flatMap{ meta, global, region, summary -> [global, region, summary].collect { f -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, f) } }
 
 
     mqc_reports = mqc_dna_fastp_reports
@@ -453,6 +515,10 @@ workflow VAXIMILE {
         .mix(mqc_loh_res)
         .mix(mqc_ascat_plots)
         .mix(mqc_ascat_metrics)
+        .mix(mqc_somatic_qc)
+        .mix(mqc_germline_qc)
+        .mix(mqc_tumor_comparison)
+        .mix(mqc_mosdepth)
         .groupTuple()
     multiqc = MULTIQC(mqc_reports).html
     

@@ -66,6 +66,7 @@ workflow MUTECT2 {
 
     emit:
         mutect2_vcf = filtered_calls.filtered_vcf
+        contamination = contamination
 
 }
 
@@ -183,4 +184,5 @@ workflow SOMATIC_CONSENSUS {
 
     emit:
         vcf = merged_vcf
+        caller_vcfs = vcfs_normalized // (meta, caller, vcf, tbi), each caller's PASS calls after normalisation
 }

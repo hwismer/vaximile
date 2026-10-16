@@ -35,10 +35,21 @@ process MULTIQC {
 exclude_modules:
   - optitype
 
+mosdepth_config:
+  general_stats_coverage: [20, 50, 100]
+
+# Draw the variant scatter plots straight away instead of behind a "Show plot" button.
+# MultiQC 1.34 still applies the deprecated num_datasets_plot_limit as well.
+plots_defer_loading_numseries: 2000
+num_datasets_plot_limit: 2000
+
 custom_content:
   order:
+    - somatic
+    - germline
     - hla
     - cnv
+    - neoantigens
 
 custom_data:
   hla_calls:

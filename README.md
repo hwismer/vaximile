@@ -54,7 +54,9 @@ and RNA coverage and expression, then [pVACseq](https://pvactools.readthedocs.io
 somatic variants and pVACfuse on fusions.
 
 **Report** — one [MultiQC](https://multiqc.info/) report per patient, including the HLA LOH
-and ASCAT results.
+and ASCAT results, somatic and germline variant QC (VAFs, caller overlap, filtering funnel,
+substitution spectrum, TMB), pVACseq tier summaries, and capture coverage from
+[mosdepth](https://github.com/brentp/mosdepth).
 
 ## Parameters
 

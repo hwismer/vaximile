@@ -134,5 +134,6 @@ workflow GERMLINE_WORKFLOW {
         germline_vcf = merged_vcf_indexed
         germline_vcf_table = vcf_table
         germline_vep = vep_report
+        caller_vcfs = vcfs_norm // (meta, caller, vcf, tbi), each caller's PASS calls after normalisation
 
 }

@@ -13,6 +13,7 @@
 ### Quality control and reporting
 
 - [fastp](https://pubmed.ncbi.nlm.nih.gov/30423086/) — Chen S, Zhou Y, Chen Y, Gu J. fastp: an ultra-fast all-in-one FASTQ preprocessor. Bioinformatics. 2018;34(17):i884-i890.
+- [mosdepth](https://pubmed.ncbi.nlm.nih.gov/29096012/) — Pedersen BS, Quinlan AR. Mosdepth: quick coverage calculation for genomes and exomes. Bioinformatics. 2018;34(5):867-868.
 - [MultiQC](https://pubmed.ncbi.nlm.nih.gov/27312411/) — Ewels P, Magnusson M, Lundin S, Käller M. MultiQC: summarize analysis results for multiple tools and samples in a single report. Bioinformatics. 2016;32(19):3047-8.
 - [SAMtools](https://pubmed.ncbi.nlm.nih.gov/19505943/) — Li H, Handsaker B, Wysoker A, et al. The Sequence Alignment/Map format and SAMtools. Bioinformatics. 2009;25(16):2078-9.
 - [somalier](https://pubmed.ncbi.nlm.nih.gov/32664994/) — Pedersen BS, Bhetariya PJ, Brown J, et al. Somalier: rapid relatedness estimation for cancer and germline studies using efficient genotype sketches. Genome Med. 2020;12(1):62.
