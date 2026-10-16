@@ -31,7 +31,6 @@ include { PVACTOOLS_WORKFLOW } from "../../subworkflows/pvactools.nf"
 include { DEEPSOMATIC_WORKFLOW } from "../../subworkflows/somatic_variant_calling.nf"
 include { SOMATIC_QC } from "../../modules/local/somatic_qc/main"
 include { GERMLINE_QC } from "../../modules/local/germline_qc/main"
-include { TUMOR_COMPARISON_QC } from "../../modules/local/tumor_comparison_qc/main"
 include { MOSDEPTH } from "../../modules/local/mosdepth/main"
 
 //**************************************************************************************************************************************
@@ -445,13 +444,6 @@ workflow VAXIMILE {
         .map { _name, caller_vcfs, meta, consensus -> tuple(meta, caller_vcfs, consensus) }
     germline_qc = GERMLINE_QC(germline_qc_input, variant_qc_script).mqc
 
-    // Variants shared between tumours, for patients with more than one tumour/normal pair.
-    tumor_comparison_input = somatic_vcf
-        .map { meta, vcf, _tbi -> tuple(meta.patient, meta.somatic_name, meta.tumor_meta.sample_name, vcf) }
-        .groupTuple()
-        .filter { _patient, pair_names, _tumors, _vcfs -> pair_names.size() > 1 }
-    tumor_comparison = TUMOR_COMPARISON_QC(tumor_comparison_input, variant_qc_script).mqc
-
     // Coverage over the capture regions, per DNA library.
     mosdepth_input = markdup_bams
         .map { meta, bam, bai -> tuple(meta.capture_kit, meta, bam, bai) }
@@ -490,8 +482,6 @@ workflow VAXIMILE {
         .flatMap{ meta, files -> [files].flatten().collect { f -> tuple(meta.patient, meta.somatic_name, null, f) } }
     mqc_germline_qc = germline_qc
         .flatMap{ meta, files -> [files].flatten().collect { f -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, f) } }
-    mqc_tumor_comparison = tumor_comparison
-        .flatMap{ patient, files -> [files].flatten().collect { f -> tuple(patient, null, null, f) } }
     mqc_mosdepth = mosdepth
         .flatMap{ meta, global, region, summary -> [global, region, summary].collect { f -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, f) } }
 
@@ -517,7 +507,6 @@ workflow VAXIMILE {
         .mix(mqc_ascat_metrics)
         .mix(mqc_somatic_qc)
         .mix(mqc_germline_qc)
-        .mix(mqc_tumor_comparison)
         .mix(mqc_mosdepth)
         .groupTuple()
     multiqc = MULTIQC(mqc_reports).html

@@ -3,7 +3,7 @@ process SOMATIC_QC {
     // VAF, caller overlap, filtering funnel, spectrum, TMB and pVACseq tier plots for one pair.
 
     label 'process_low'
-    conda "python=3.10 pandas=2.1"
+    conda "python=3.10 pandas=2.1 matplotlib=3.8"
 
     tag "Somatic QC for ${meta.somatic_name}"
 
@@ -13,7 +13,7 @@ process SOMATIC_QC {
         path(script)
 
     output:
-        tuple val(meta), path("*_mqc.json"), emit: mqc
+        tuple val(meta), path("*_mqc.{json,png}"), emit: mqc
 
     script:
     def pvacseq = pvacseq_report ? "--pvacseq ${pvacseq_report}" : ''
@@ -32,6 +32,6 @@ process SOMATIC_QC {
 
     stub:
     """
-    touch ${meta.somatic_name}_somatic_metrics_mqc.json
+    touch ${meta.somatic_name}_somatic_metrics_mqc.json ${meta.somatic_name}_somatic_vaf_mqc.png
     """
 }

@@ -148,6 +148,11 @@ EOF
         pair=\$(basename "\$sheet" _ascat_mqc.png)
         printf '  ascat_plots_%s:\n    section_name: "ASCAT plots - %s"\n    parent_id: cnv\n    parent_name: "Copy Number"\n    plot_type: image\n' "\$pair" "\$pair" >> multiqc_config.yaml
     done
+    for plot in *_somatic_vaf_mqc.png; do
+        [ -e "\$plot" ] || continue
+        pair=\$(basename "\$plot" _somatic_vaf_mqc.png)
+        printf '  somatic_vaf_%s:\n    section_name: "VAF - tumour - %s"\n    description: "Histogram of tumour DNA VAF of the consensus somatic calls, before the population filter. A clonal peak sits near half the tumour purity; a pile-up at very low VAF is mostly calls at the limit of detection."\n    parent_id: somatic\n    parent_name: "Somatic variants"\n    plot_type: image\n' "\$pair" "\$pair" >> multiqc_config.yaml
+    done
 
     cat >> multiqc_config.yaml <<EOF
 sp:
@@ -170,6 +175,11 @@ EOF
         [ -e "\$sheet" ] || continue
         pair=\$(basename "\$sheet" _ascat_mqc.png)
         printf '  ascat_plots_%s:\n    fn: "%s"\n' "\$pair" "\$sheet" >> multiqc_config.yaml
+    done
+    for plot in *_somatic_vaf_mqc.png; do
+        [ -e "\$plot" ] || continue
+        pair=\$(basename "\$plot" _somatic_vaf_mqc.png)
+        printf '  somatic_vaf_%s:\n    fn: "%s"\n' "\$pair" "\$plot" >> multiqc_config.yaml
     done
 
     printf '\nsample_names_replace_regex: true\n' >> multiqc_config.yaml

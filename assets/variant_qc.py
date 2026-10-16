@@ -7,7 +7,6 @@ different pairs or samples are merged by MultiQC into one plot or table.
   somatic  - one tumour/normal pair: VAFs, caller overlap, filtering funnel,
              substitution spectrum, TMB, contamination, and the pVACseq tiers
   germline - one normal: VAF histogram, het/hom and Ti/Tv, caller overlap
-  compare  - all tumours of one patient: variants shared between tumours
 """
 
 import argparse
@@ -128,8 +127,10 @@ def bed_size(path):
 # Metrics
 
 def histogram(values):
-    counts = Counter(min(int(v / VAF_BIN), int(1 / VAF_BIN) - 1) for v in values)
-    return {f"{i * VAF_BIN:.2f}": counts.get(i, 0) for i in range(int(1 / VAF_BIN))}
+    """Counts of values in [0, 1] per bin, keyed by the bin's lower edge."""
+    n = round(1 / VAF_BIN)
+    counts = Counter(min(int(v / VAF_BIN), n - 1) for v in values)
+    return {f"{i * VAF_BIN:.2f}": counts.get(i, 0) for i in range(n)}
 
 
 def ti_tv(records):
@@ -181,6 +182,23 @@ def genotype(call):
 # ---------------------------------------------------------------------------
 # Writing
 
+def plot_vaf_histogram(path, vafs, title, xlabel):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(figsize=(7, 3.5))
+    ax.hist(vafs, bins=[i * VAF_BIN for i in range(round(1 / VAF_BIN) + 1)], color="#4C72B0", edgecolor="white")
+    ax.set_xlim(0, 1)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("Variants")
+    ax.set_title(f"{title} (n = {len(vafs):,})")
+    ax.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+
+
 def write_mqc(path, plot_id, section, description, parent, plot_type, data, pconfig=None, headers=None):
     if not data:
         return
@@ -222,11 +240,9 @@ def somatic(args):
             tumour_vafs.append(t)
             if n is not None:
                 normal_pairs.append((t, n))
-    write_mqc(f"{pair}_somatic_vaf_mqc.json", "somatic_vaf", "VAF - tumour",
-              "Tumour DNA VAF of the consensus somatic calls, before the population filter. A clonal peak sits near half "
-              "the tumour purity; a pile-up at very low VAF is mostly calls at the limit of detection.",
-              SOMATIC, "linegraph", {pair: histogram(tumour_vafs)},
-              {"title": "Somatic: tumour VAF", "xlab": "Tumour VAF", "ylab": "Variants", "xmin": 0, "xmax": 1, "ymin": 0})
+    # A matplotlib image rather than a MultiQC plot, since MultiQC only draws horizontal bars.
+    # The MultiQC step gives each pair's image its own section.
+    plot_vaf_histogram(f"{pair}_somatic_vaf_mqc.png", tumour_vafs, f"{pair}: tumour VAF", "Tumour VAF")
     write_mqc(f"{pair}_somatic_normal_vaf_mqc.json", "somatic_normal_vaf", "VAF - tumour vs normal",
               "Tumour against normal DNA VAF of each consensus somatic call, before the population filter. True somatic "
               "calls lie on the x-axis. Calls with alt reads in the normal suggest germline leakage, tumour cells in the "
@@ -242,11 +258,12 @@ def somatic(args):
         d, rna = dna_vaf(call), field_float(call, "RAF")
         if d is not None and rna is not None and (field_float(call, "RDP") or 0) > 0:
             rna_pairs.append((d, rna))
-    write_mqc(f"{pair}_somatic_rna_vaf_mqc.json", "somatic_rna_vaf", "VAF - RNA vs DNA",
+    # One plot per pair, so pairs don't overlap; the id makes each its own section.
+    write_mqc(f"{pair}_somatic_rna_vaf_mqc.json", f"somatic_rna_vaf_{pair}", f"VAF - RNA vs DNA - {pair}",
               "Tumour DNA against RNA VAF of the final somatic calls that have RNA coverage. Mutations near the diagonal "
               "are expressed in proportion to their DNA fraction; those on the x-axis are not expressed.",
               SOMATIC, "scatter", {pair: vaf_scatter_points(rna_pairs)},
-              {"title": "Somatic: RNA vs DNA VAF", "xlab": "Tumour DNA VAF", "ylab": "Tumour RNA VAF",
+              {"title": f"Somatic: RNA vs DNA VAF - {pair}", "xlab": "Tumour DNA VAF", "ylab": "Tumour RNA VAF",
                "xmin": 0, "xmax": 1, "ymin": 0, "ymax": 1})
 
     # Caller overlap, and the funnel from caller calls to pVACseq candidates.
@@ -379,33 +396,6 @@ def germline(args):
               GERMLINE, "table", {sample: metrics}, {"title": "Germline: metrics", "col1_header": "Sample"}, headers)
 
 
-def compare(args):
-    vafs = {}
-    for name, tumor, path in zip(args.names, args.tumors, args.vcfs):
-        vafs[name] = {key(r): dna_vaf(r.calls.get(tumor, {})) or 0 for r in read_vcf(path)[2]}
-    shared = {}
-    for name, calls in vafs.items():
-        others = set().union(*(v.keys() for n, v in vafs.items() if n != name))
-        in_others = sum(1 for k in calls if k in others)
-        shared[name] = {"Shared with another tumour": in_others, "Private": len(calls) - in_others}
-    write_mqc(f"{args.patient}_somatic_shared_mqc.json", "somatic_shared", "Calls - shared between tumours",
-              "Final somatic calls of each tumour/normal pair that are also called in another of the patient's tumours. "
-              "Shared variants are likely truncal, and present in every tumour.",
-              SOMATIC, "bargraph", shared,
-              {"title": "Somatic: shared between tumours", "ylab": "Variants", "cpswitch_counts_label": "Variants"})
-
-    points = {}
-    for a, b in itertools.combinations(vafs, 2):
-        union = set(vafs[a]) | set(vafs[b])
-        points[f"{a} vs {b}"] = vaf_scatter_points((vafs[a].get(k, 0), vafs[b].get(k, 0)) for k in sorted(union))
-    write_mqc(f"{args.patient}_somatic_shared_vaf_mqc.json", "somatic_shared_vaf", "VAF - shared between tumours",
-              "Tumour DNA VAF of each final somatic call in two of the patient's tumours (first named on the x-axis). "
-              "Variants on an axis are private to one tumour.",
-              SOMATIC, "scatter", points,
-              {"title": "Somatic: VAF in two tumours", "xlab": "VAF, first tumour", "ylab": "VAF, second tumour",
-               "xmin": 0, "xmax": 1, "ymin": 0, "ymax": 1})
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     modes = parser.add_subparsers(dest="mode", required=True)
@@ -427,14 +417,8 @@ def main():
     g.add_argument("--callers", nargs="+", required=True, help="Normalised PASS VCF of each caller")
     g.add_argument("--consensus", required=True, help="Consensus germline VCF")
 
-    c = modes.add_parser("compare")
-    c.add_argument("--patient", required=True)
-    c.add_argument("--names", nargs="+", required=True, help="Pair names")
-    c.add_argument("--tumors", nargs="+", required=True, help="Tumour sample name in each VCF")
-    c.add_argument("--vcfs", nargs="+", required=True, help="Final somatic VCF of each pair")
-
     args = parser.parse_args()
-    {"somatic": somatic, "germline": germline, "compare": compare}[args.mode](args)
+    {"somatic": somatic, "germline": germline}[args.mode](args)
 
 
 if __name__ == "__main__":
