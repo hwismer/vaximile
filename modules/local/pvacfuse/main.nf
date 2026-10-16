@@ -1,8 +1,8 @@
 process PVACFUSE {
     
     label 'process_high_memory'
-    conda "bioconda::pvactools=7.0.1"
-    container "griffithlab/pvactools:7.0.1"
+    conda "bioconda::pvactools=7.1.5"
+    container "griffithlab/pvactools:7.1.5"
 
     
     tag "pVACfuse on ${somatic_name}"

@@ -3,8 +3,8 @@ process PVACSEQ {
     // Run pVACseq on a tumour/normal pair's somatic and phased germline VCFs.
 
     label 'process_very_high'
-    conda "bioconda::pvactools=7.0.1"
-    container "griffithlab/pvactools:7.0.1"
+    conda "bioconda::pvactools=7.1.5"
+    container "griffithlab/pvactools:7.1.5"
 
     tag "pVACseq on ${somatic_name}"
     input:

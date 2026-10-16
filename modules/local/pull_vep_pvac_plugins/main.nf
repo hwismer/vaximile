@@ -15,7 +15,7 @@ process PULL_VEP_PVAC_PLUGINS {
         path("VEP_plugins"), emit: plugins
 
     script:
-    def pvactools_version = '7.0.1'
+    def pvactools_version = '7.1.5'
     """
     mkdir -p VEP_plugins
     for plugin in Wildtype Frameshift; do
