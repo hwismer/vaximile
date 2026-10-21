@@ -94,17 +94,17 @@ Prebuilt indices. Any left unset are built from the reference during the run.
 
 ### Downloaded resource options
 
-Resources the pipeline downloads when not given, once, into `./vaximile_resources/` in the launch directory, reusing them on later runs.
+Resources the pipeline downloads when not given, once, into `./vaximile_resources/` in the launch directory, reusing them on later runs. Each default is the download it makes; giving a parameter skips that download. See [Saved resources](#saved-resources) for where each one is saved.
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
-| `--vep_cache` | Path to a local Ensembl VEP cache directory. Optional; downloaded if omitted. | — |
-| `--vep_plugins` | Directory containing the pVACtools Frameshift.pm and Wildtype.pm VEP plugins. Downloaded if omitted. | — |
-| `--ctat_resource_lib` | CTAT genome library for STAR-Fusion: the `ctat_genome_lib_build_dir` directory of a plug-n-play bundle. Downloaded if omitted. | — |
-| `--arriba_blacklist` | Arriba blacklist. Downloaded with the Arriba v2.5.1 release if omitted. | — |
-| `--arriba_known_fusions` | Arriba known fusions. Downloaded with the Arriba v2.5.1 release if omitted. | — |
-| `--arriba_protein_domains` | Arriba protein domains (GFF3). Downloaded with the Arriba v2.5.1 release if omitted. | — |
-| `--ascat_resources` | Directory of ASCAT 1000 Genomes resources: `G1000_loci_hg38/`, `G1000_alleles_hg38/`, `GC_G1000_hg38/` and `RT_G1000_hg38/`, as the pipeline downloads them. Downloaded if omitted. | — |
+| `--vep_cache` | Path to a local Ensembl VEP cache directory. Optional; downloaded if omitted. | Downloads `https://ftp.ensembl.org/pub/release-115/variation/indexed_vep_cache/homo_sapiens_vep_115_GRCh38.tar.gz` |
+| `--vep_plugins` | Directory containing the pVACtools Frameshift.pm and Wildtype.pm VEP plugins. Downloaded if omitted. | Downloads both plugins from `https://github.com/griffithlab/pVACtools/tree/v7.1.5/pvactools/tools/pvacseq/VEP_plugins` |
+| `--ctat_resource_lib` | CTAT genome library for STAR-Fusion: the `ctat_genome_lib_build_dir` directory of a plug-n-play bundle. Downloaded if omitted. | Downloads `https://data.broadinstitute.org/Trinity/CTAT_RESOURCE_LIB/GRCh38_gencode_v44_CTAT_lib_Oct292023.plug-n-play.tar.gz` |
+| `--arriba_blacklist` | Arriba blacklist. Downloaded with the Arriba v2.5.1 release if omitted. | `blacklist_hg38_GRCh38_v2.5.1.tsv.gz` from `https://github.com/suhrig/arriba/releases/download/v2.5.1/arriba_v2.5.1.tar.gz` |
+| `--arriba_known_fusions` | Arriba known fusions. Downloaded with the Arriba v2.5.1 release if omitted. | `known_fusions_hg38_GRCh38_v2.5.1.tsv.gz` from the same release |
+| `--arriba_protein_domains` | Arriba protein domains (GFF3). Downloaded with the Arriba v2.5.1 release if omitted. | `protein_domains_hg38_GRCh38_v2.5.1.gff3` from the same release |
+| `--ascat_resources` | Directory of ASCAT 1000 Genomes resources: `G1000_loci_hg38/`, `G1000_alleles_hg38/`, `GC_G1000_hg38/` and `RT_G1000_hg38/`, as the pipeline downloads them. Downloaded if omitted. | Downloads the four 1000G WGS hg38 archives from `https://zenodo.org/records/14008443`, adding a `chr` prefix to the loci when `--reference_includes_chr_prefix` is set |
 
 ### Variant calling options
 
@@ -195,65 +195,79 @@ Some modules are container-only while others are conda-only. To execute a full r
 
 ## Output
 
-Publishing is driven by the `output {}` block in `vaximile.nf`, which nests results under
-`<outdir>/<patient>/<somatic_name>/`.
+Publishing is driven by the `output {}` block in `vaximile.nf`. Results for each patient sit
+under `<outdir>/<patient>/`, split into tumor/normal pairs and single libraries.
 
 ### Directory structure
 
 ```text
 <outdir>/
 └── <patient>/
-    ├── multiqc/
-    │   └── <patient>_report.html
-    ├── pvactools_report/
-    │   └── combined MHC class I aggregated report across the patient's pairs
-    ├── <somatic_name>/          one directory per tumour/normal pair
-    │   ├── variants/     somatic VCF (+ index) and its tabular form
-    │   ├── hla/
-    │   │   ├── pVACtools-formatted allele list for the pair
-    │   │   └── loh/      lohhlamod LOH results and per-gene plots, and the ASCAT
-    │   │                 result set whose purity and ploidy they are built on
-    │   └── pvactools/    pVACseq and pVACfuse prediction directories
-    └── samples/                 everything belonging to a single library
+    ├── <patient>_report.html          MultiQC report
+    ├── <patient>_pvacseq_reports.tsv  combined MHC class I report across the patient's pairs
+    ├── somatic_samples/               one directory per tumor/normal pair
+    │   └── <somatic_name>/
+    │       ├── somatic/               somatic VCF (+ index) and its tabular form
+    │       ├── neoantigen_prediction/ pVACseq and pVACfuse output directories
+    │       ├── hla_loh/               lohhlamod results and per-gene plots
+    │       └── CNV/ascat/             ASCAT results
+    └── samples/                       one directory per library
         └── <sample_name>/
-            ├── alignment/ duplicate-marked BAM, recalibrated BAM, STAR BAM (+ indexes)
-            ├── germline/  germline VCF (+ index) and its tabular form, normals only
-            ├── hla/
-            │   ├── optitype/ class I calls and coverage plot
-            │   ├── hlahd/    class I and II calls
-            │   └── pVACtools-formatted allele list
-            └── salmon/    gene-level abundance, RNA samples only
+            ├── alignment/             duplicate-marked BAM, recalibrated BAM, STAR BAM (+ indexes)
+            ├── germline/              germline VCF (+ index) and its tabular form, normals only
+            ├── hla_typing/
+            │   ├── optitype/          class I calls and coverage plot
+            │   ├── hlahd/             class I and II calls
+            │   └── <sample_name>_hla_calls.csv  combined calls, formatted for pVACtools
+            └── salmon/                gene-level abundance, RNA libraries only
 ```
 
-Outputs split by whether they belong to a pair or to a single library. Pair directories sit
-directly under the patient; per-library results are collected under `samples/` so they do
-not interleave with them.
+A library shared between pairs - a normal used as the control for several tumors - is
+processed once, so its alignments, germline calls and HLA typing appear once under
+`samples/` rather than beneath each pair.
 
-A library shared between pairs - a normal used as the control for several tumours - is
-processed once, so its alignments, germline calls and per-sample HLA typing appear once
-under `samples/` rather than being duplicated beneath each pair.
+### Saved resources
+
+Downloaded resources and the alignment indexes the pipeline builds are saved in the launch
+directory, not the output directory, so later runs from the same directory reuse them. To
+use them from another directory, give the parameter shown.
+
+```text
+vaximile_resources/
+├── vep_cache/vep_cache/                --vep_cache
+├── vep_pvac_plugins/VEP_plugins/       --vep_plugins
+├── ctat_resource_dir/GRCh38_gencode_v44_CTAT_lib_Oct292023.plug-n-play/
+│   └── ctat_genome_lib_build_dir/      --ctat_resource_lib
+├── arriba_hg38/arriba_v2.5.1/database/ --arriba_blacklist, --arriba_known_fusions, --arriba_protein_domains
+├── ascat_hg38_chr/                     --ascat_resources (ascat_hg38_nochr without the chr prefix)
+├── bwa_index/                          --bwa_index
+├── star_index/STARGenomeDir/           --star_index
+└── salmon_index/<name>_salmon_index/   --salmon_index
+```
 
 ### Results by stage
 
 #### Quality control
 
-`multiqc/<patient>_report.html` aggregates, per patient: fastp reports for every DNA and
-RNA library, GATK base recalibration tables, samtools flagstat/coverage/idxstats, STAR
-alignment logs, salmon quantification summaries, OptiType and HLA-HD calls, VEP summaries
-for both germline and somatic annotation, and somalier relatedness tables.
+`<patient>_report.html` is the MultiQC report for the patient. It opens with how the run
+was launched and every parameter it used, then aggregates fastp reports for every DNA and
+RNA library, samtools and mosdepth coverage, GATK base recalibration tables, STAR and
+salmon summaries, VEP summaries, and somalier relatedness. Its custom sections cover the
+somatic calls (filtering metrics, substitution types, TMB, contamination, and VAF plots),
+the germline calls (caller overlap, het/hom, Ti/Tv, and VAF), HLA typing and LOH, ASCAT
+copy number, and the pVACseq tiers.
 
-The somalier pairs/samples tables in that report are the check for sample swaps — confirm
-the tumour and normal of each pair relate to each other before trusting downstream calls.
+The somalier tables in that report are the check for sample swaps - confirm the tumor and
+normal of each pair relate to each other before trusting downstream calls.
 
 #### Variant calling
 
-`variants/` holds the merged, filtered and annotated somatic callset. Three callers
+`somatic/` holds the merged, filtered and annotated somatic callset. Three callers
 contribute: Mutect2, Strelka2 (with Manta for indel candidates) and DeepSomatic. Each is
 filtered to `PASS` and normalised, then combined with GATK3 `CombineVariants` under
 `--minimumN 2` - an **n-1 consensus**, so a variant is kept when at least two of the three
-callers report it. The published VCF is therefore a consensus product rather than any
-single caller's raw output. The `.tsv` alongside it is the same content flattened for
-spreadsheet use.
+callers report it - and filtered to variants below 0.1% frequency in every population. The
+`.tsv` alongside it is the same content flattened for spreadsheet use.
 
 `germline/` holds the consensus germline callset for the normal sample, built the same way
 from three callers: GATK `HaplotypeCaller` (CNN-scored and tranche-filtered), Strelka2 in
@@ -262,29 +276,36 @@ phasing input for proximal variant detection in pVACseq.
 
 #### HLA typing
 
-Class I alleles come from OptiType, class I and II from HLA-HD, both run per library. The
-normal's calls are what feed pVACtools, since HLA type is germline.
+`hla_typing/` holds class I alleles from OptiType and class I and II alleles from HLA-HD,
+both run per library, and the two combined into one allele list for pVACtools. The
+normal's list is what feeds pVACtools, since HLA type is germline.
 
 #### HLA loss of heterozygosity
 
-`hla/loh/` holds the lohhlamod result table for the pair - per-allele copy number, the
-mismatch logR p-value and BAF - alongside per-gene coverage, logR and BAF plots, and the
-ASCAT result set the copy number inference is built on. The tumour
+`hla_loh/` holds the lohhlamod result table for the pair - per-allele copy number, the
+mismatch logR p-value and BAF - alongside per-gene coverage, logR and BAF plots. The tumor
 is realigned against the HLA reference mhcflow inferred for its own normal, so the two BAMs
 sit on one subject-specific reference.
 
+#### Copy number
+
+`CNV/ascat/` publishes the whole ASCAT result set for a pair - segments, CNV calls,
+purity/ploidy estimates, BAF and LogR tables, run metrics and plots. Its purity and ploidy
+are what the HLA LOH analysis uses.
+
 #### Neoantigen prediction
 
-`pvactools/` contains the pVACseq output for somatic variants and the pVACfuse output for
-RNA fusions called by Arriba and STAR-Fusion. `<patient>/pvactools_report/` is the
-aggregated MHC class I report combined across the patient's tumour/normal pairs.
+`neoantigen_prediction/` contains the pVACseq output for somatic variants and the pVACfuse
+output for RNA fusions called by Arriba and STAR-Fusion. `<patient>_pvacseq_reports.tsv` is
+the MHC class I aggregated report combined across the patient's tumor/normal pairs, with the
+allelic depth of each sample from the pair's somatic VCF.
 
 #### Expression
 
 `salmon/` publishes `quant.genes.sf`, the gene-level TPM table salmon aggregates from
 `--geneMap`. The transcript-level `quant.sf` and the rest of the salmon run directory are
-produced but consumed internally - for VCF expression annotation, strandedness prediction
-and MultiQC - rather than published.
+used internally - for VCF expression annotation, strandedness prediction and MultiQC -
+rather than published.
 
 #### Alignments
 
@@ -293,18 +314,11 @@ and MultiQC - rather than published.
 `_STAR_sorted.bam` for RNA. Mutect2 and HaplotypeCaller read the recalibrated BAMs;
 Strelka, Manta, DeepSomatic and DeepVariant read the duplicate-marked ones.
 
-#### Copy number
-
-`hla/loh/` publishes the whole ASCAT result set for a pair - segments, CNV calls,
-purity/ploidy estimates, BAF and LogR tables, run metrics and plots. It sits with the LOH
-results because its purity and ploidy are what that copy number inference uses, and the two
-are read together.
-
 ### Not published by default
 
-Per-caller intermediate VCFs, aligned BAMs, RNA fusion tables and
-the built alignment indices remain in the work directory. Add them to the `publish:` block
-in `vaximile.nf` and give them a `path {}` in the `output {}` block to change that.
+Per-caller intermediate VCFs, RNA fusion tables and the transcript-level salmon output
+remain in the work directory. Add them to the `publish:` block in `vaximile.nf` and give
+them a `path {}` in the `output {}` block to change that.
 
 ## Credits
 
