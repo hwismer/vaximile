@@ -1,6 +1,6 @@
 process MULTIQC {
 
-    // Per-patient MultiQC report, including custom HLA and copy-number sections.
+    // Per-patient MultiQC report, including custom HLA and copy-number sections and how the run was launched.
 
     label 'process_low'
     conda "bioconda::multiqc=1.34-0"
@@ -9,6 +9,7 @@ process MULTIQC {
 
     input:
         tuple val(patient), val(somatic_names), val(sample_names), path(files)
+        val(run_info)
 
     output:
         tuple val(patient), path("*_report.html"), emit: html
@@ -21,9 +22,35 @@ process MULTIQC {
     def rename_tsv = (clean_sample_names)
         .collect { s -> "^${s}.*\t${s}" }
         .join('\n')
+    def run_info_json = groovy.json.JsonOutput.toJson(run_info)
 
     """
     printf '%s\n' "${rename_tsv}" > ${patient}_rename.tsv
+
+    # Run Information section: how the pipeline was launched, and every parameter it used.
+    cat > run_info.json <<'JSON'
+${run_info_json}
+JSON
+    python3 - <<'PY'
+import html
+import json
+
+info = json.load(open("run_info.json"))
+
+
+def table(entries, code_keys):
+    rows = "".join(
+        f"<tr><th>{html.escape(k)}</th><td>{'<code>' + html.escape(v) + '</code>' if k in code_keys else html.escape(v)}</td></tr>"
+        for k, v in entries.items()
+    )
+    return f'<table class="table table-condensed">{rows}</table>'
+
+
+with open("run_info_mqc.html", "w") as fh:
+    fh.write('<!--\\nid: "run_info"\\nsection_name: "Run Information"\\ndescription: "How this run of the pipeline was launched, and every parameter it used, whether set on the command line or left at its default."\\n-->\\n')
+    fh.write("<h4>Run</h4>" + table(info["details"], {"Command"}))
+    fh.write("<h4>Parameters</h4>" + table({f"--{k}": v for k, v in info["params"].items()}, set()) + "\\n")
+PY
 
 	# Optitype custom content
     for f in *_result.tsv; do
@@ -45,6 +72,7 @@ num_datasets_plot_limit: 2000
 
 custom_content:
   order:
+    - run_info
     - somatic
     - germline
     - hla

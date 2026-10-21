@@ -44,6 +44,20 @@ def make_vcf_channel(vcf_param) {
         : Channel.empty()
 }
 
+// The pipeline's git commit: Nextflow knows it when run from GitHub, otherwise ask the local clone.
+def pipeline_commit() {
+    if ( workflow.commitId ) {
+        return workflow.commitId
+    }
+    try {
+        def commit = "git -C ${projectDir} rev-parse --short HEAD".execute().text.trim()
+        def dirty = "git -C ${projectDir} status --porcelain --untracked-files=no".execute().text.trim()
+        return commit ? (dirty ? "${commit} (with uncommitted changes)" : commit) : 'unknown'
+    } catch ( Exception e ) {
+        return 'unknown'
+    }
+}
+
 //**********************************************************************************************************************
 
 workflow VAXIMILE {
@@ -516,7 +530,24 @@ workflow VAXIMILE {
         .mix(mqc_germline_qc)
         .mix(mqc_mosdepth)
         .groupTuple()
-    multiqc = MULTIQC(mqc_reports).html
+    // How this run was launched and every parameter it used, for the report's Run Information section.
+    run_details = [
+        "Command": workflow.commandLine,
+        "Run name": workflow.runName,
+        "Session ID": workflow.sessionId,
+        "Started": workflow.start,
+        "Resumed": workflow.resume,
+        "Nextflow version": nextflow.version,
+        "Pipeline commit": pipeline_commit(),
+        "Profile": workflow.profile,
+        "Launch directory": workflow.launchDir,
+        "Work directory": workflow.workDir,
+        "Output directory": params.outdir,
+    ].collectEntries { k, v -> [k, v.toString()] }
+    run_params = params.sort().collectEntries { k, v -> [k, v == null ? '' : v.toString()] }
+    run_info = [details: run_details, params: run_params]
+
+    multiqc = MULTIQC(mqc_reports, run_info).html
     
     //**************************************************************************************************************************************
 
