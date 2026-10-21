@@ -68,7 +68,6 @@ Define where the pipeline should find input data and save output data.
 | --------- | ----------- | ------- |
 | `--samplesheet` | **Required.** Path to comma-separated file describing the patients, samples and FastQ files. | — |
 | `--capture_kits` | **Required.** Path to comma-separated file mapping capture kit names to their BED target files. | — |
-| `--vep_cache` | Path to a local Ensembl VEP cache directory. Optional; downloaded if omitted. | — |
 | `--outdir` | **Required.** The output directory where the results will be saved. | `./vaximile_out` |
 
 ### Reference genome options
@@ -92,6 +91,20 @@ Prebuilt indices. Any left unset are built from the reference during the run.
 | `--bwa_index` | Directory containing a prebuilt minibwa index. When not given, the index is built and saved to `vaximile_resources/bwa_index/` in the launch directory. | — |
 | `--star_index` | Directory containing a prebuilt STAR index. When not given, the index is built and saved to `vaximile_resources/star_index/STARGenomeDir/` in the launch directory. | — |
 | `--salmon_index` | Directory containing a prebuilt salmon index. When not given, the index is built and saved under `vaximile_resources/salmon_index/` in the launch directory. | — |
+
+### Downloaded resource options
+
+Resources the pipeline downloads when not given, once, into `./vaximile_resources/` in the launch directory, reusing them on later runs.
+
+| Parameter | Description | Default |
+| --------- | ----------- | ------- |
+| `--vep_cache` | Path to a local Ensembl VEP cache directory. Optional; downloaded if omitted. | — |
+| `--vep_plugins` | Directory containing the pVACtools Frameshift.pm and Wildtype.pm VEP plugins. Downloaded if omitted. | — |
+| `--ctat_resource_lib` | CTAT genome library for STAR-Fusion: the `ctat_genome_lib_build_dir` directory of a plug-n-play bundle. Downloaded if omitted. | — |
+| `--arriba_blacklist` | Arriba blacklist. Downloaded with the Arriba v2.5.1 release if omitted. | — |
+| `--arriba_known_fusions` | Arriba known fusions. Downloaded with the Arriba v2.5.1 release if omitted. | — |
+| `--arriba_protein_domains` | Arriba protein domains (GFF3). Downloaded with the Arriba v2.5.1 release if omitted. | — |
+| `--ascat_resources` | Directory of ASCAT 1000 Genomes resources: `G1000_loci_hg38/`, `G1000_alleles_hg38/`, `GC_G1000_hg38/` and `RT_G1000_hg38/`, as the pipeline downloads them. Downloaded if omitted. | — |
 
 ### Variant calling options
 

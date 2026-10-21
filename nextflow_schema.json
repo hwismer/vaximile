@@ -36,13 +36,6 @@
                     "description": "Path to comma-separated file mapping capture kit names to their BED target files.",
                     "fa_icon": "fas fa-file-csv"
                 },
-                "vep_cache": {
-                    "type": "string",
-                    "format": "directory-path",
-                    "description": "Path to a local Ensembl VEP cache directory. Optional; downloaded if omitted.",
-                    "help_text": "Leave unset and the pipeline pulls the release-115 GRCh38 human cache (~24 GiB) from https://ftp.ensembl.org/pub/release-115/variation/indexed_vep_cache/ into ./vaximile_resources/vep_cache, reusing it on later runs. Supply this only to point at a cache you already have, or to run against an assembly or species other than human GRCh38 - the release must be 115 to match the VEP the pipeline runs.",
-                    "fa_icon": "fas fa-folder-open"
-                },
                 "outdir": {
                     "type": "string",
                     "format": "directory-path",
@@ -117,6 +110,60 @@
                     "type": "string",
                     "format": "directory-path",
                     "description": "Directory containing a prebuilt salmon index. When not given, the index is built and saved under vaximile_resources/salmon_index/ in the launch directory.",
+                    "fa_icon": "fas fa-folder-open"
+                }
+            }
+        },
+        "downloaded_resource_options": {
+            "title": "Downloaded resource options",
+            "type": "object",
+            "fa_icon": "fas fa-download",
+            "description": "Resources the pipeline downloads when not given, once, into ./vaximile_resources/ in the launch directory, reusing them on later runs.",
+            "properties": {
+                "vep_cache": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Path to a local Ensembl VEP cache directory. Optional; downloaded if omitted.",
+                    "help_text": "Leave unset and the pipeline pulls the release-115 GRCh38 human cache (~24 GiB) from https://ftp.ensembl.org/pub/release-115/variation/indexed_vep_cache/ into ./vaximile_resources/vep_cache, reusing it on later runs. Supply this only to point at a cache you already have, or to run against an assembly or species other than human GRCh38 - the release must be 115 to match the VEP the pipeline runs.",
+                    "fa_icon": "fas fa-folder-open"
+                },
+                "vep_plugins": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Directory containing the pVACtools Frameshift.pm and Wildtype.pm VEP plugins. Downloaded if omitted.",
+                    "help_text": "Leave unset and the pipeline downloads the plugins for the pVACtools version it runs (7.1.5) into ./vaximile_resources/vep_pvac_plugins. Plugins from another pVACtools version may not match the pVACseq it runs.",
+                    "fa_icon": "fas fa-folder-open"
+                },
+                "ctat_resource_lib": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "CTAT genome library for STAR-Fusion: the ctat_genome_lib_build_dir directory of a plug-n-play bundle. Downloaded if omitted.",
+                    "help_text": "Leave unset and the pipeline downloads the GRCh38 GENCODE v44 plug-n-play bundle (Oct 29 2023) into ./vaximile_resources/ctat_resource_dir.",
+                    "fa_icon": "fas fa-folder-open"
+                },
+                "arriba_blacklist": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Arriba blacklist. Downloaded with the Arriba v2.5.1 release if omitted.",
+                    "fa_icon": "fas fa-file"
+                },
+                "arriba_known_fusions": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Arriba known fusions. Downloaded with the Arriba v2.5.1 release if omitted.",
+                    "fa_icon": "fas fa-file"
+                },
+                "arriba_protein_domains": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Arriba protein domains (GFF3). Downloaded with the Arriba v2.5.1 release if omitted.",
+                    "fa_icon": "fas fa-file"
+                },
+                "ascat_resources": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Directory of ASCAT 1000 Genomes resources: G1000_loci_hg38/, G1000_alleles_hg38/, GC_G1000_hg38/ and RT_G1000_hg38/. Downloaded if omitted.",
+                    "help_text": "Laid out as the pipeline downloads them into ./vaximile_resources/ascat_hg38_chr (or ascat_hg38_nochr), so a previous run's folder can be given directly. The loci files' contig names must match the reference, which is why the download adds a chr prefix when --reference_includes_chr_prefix is set.",
                     "fa_icon": "fas fa-folder-open"
                 }
             }
@@ -282,6 +329,9 @@
         },
         {
             "$ref": "#/$defs/alignment_index_options"
+        },
+        {
+            "$ref": "#/$defs/downloaded_resource_options"
         },
         {
             "$ref": "#/$defs/variant_calling_options"

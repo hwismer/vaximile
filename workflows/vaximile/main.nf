@@ -106,16 +106,49 @@ workflow VAXIMILE {
 
     //**************************************************************************************************************************************
     // Pull Resources
+    // Each comes from its parameter when given, otherwise it is downloaded once into ./vaximile_resources/.
+    // All are value channels, so every task that needs one can read it.
 
-    ctat_bundle = PULL_CTAT_RESOURCE_BUNDLE().ctat_resource_dir
-    arriba_resources = PULL_ARRIBA_RESOURCES().resources
-    vep_plugins = PULL_VEP_PVAC_PLUGINS().plugins
-
-    // Use --vep_cache if given, otherwise download it once. Must be a value channel for every VEP task.
+    ctat_bundle = params.ctat_resource_lib
+        ? channel.value(file(params.ctat_resource_lib, checkIfExists: true))
+        : PULL_CTAT_RESOURCE_BUNDLE().ctat_resource_dir
+    vep_plugins = params.vep_plugins
+        ? channel.value(file(params.vep_plugins, checkIfExists: true))
+        : PULL_VEP_PVAC_PLUGINS().plugins
     vep_cache = params.vep_cache
         ? channel.value(file(params.vep_cache, checkIfExists: true))
         : PULL_VEP_CACHE().cache
-    ascat_resources = PULL_ASCAT_RESOURCES(params.reference_includes_chr_prefix)
+
+    // Arriba: any of the three files not given comes from the downloaded release.
+    if ( params.arriba_blacklist && params.arriba_known_fusions && params.arriba_protein_domains ) {
+        arriba_resources = channel.value(tuple(
+            file(params.arriba_blacklist, checkIfExists: true),
+            file(params.arriba_known_fusions, checkIfExists: true),
+            file(params.arriba_protein_domains, checkIfExists: true)
+        ))
+    } else {
+        arriba_resources = PULL_ARRIBA_RESOURCES().resources.map { blacklist, known_fusions, protein_domains ->
+            tuple(
+                params.arriba_blacklist ? file(params.arriba_blacklist, checkIfExists: true) : blacklist,
+                params.arriba_known_fusions ? file(params.arriba_known_fusions, checkIfExists: true) : known_fusions,
+                params.arriba_protein_domains ? file(params.arriba_protein_domains, checkIfExists: true) : protein_domains
+            )
+        }
+    }
+
+    // ASCAT: --ascat_resources holds the four folders the download creates.
+    if ( params.ascat_resources ) {
+        ascat_alleles = channel.value(file("${params.ascat_resources}/G1000_alleles_hg38", checkIfExists: true))
+        ascat_loci = channel.value(file("${params.ascat_resources}/G1000_loci_hg38", checkIfExists: true))
+        ascat_gc = channel.value(file("${params.ascat_resources}/GC_G1000_hg38", checkIfExists: true))
+        ascat_rt = channel.value(file("${params.ascat_resources}/RT_G1000_hg38", checkIfExists: true))
+    } else {
+        ascat_download = PULL_ASCAT_RESOURCES(params.reference_includes_chr_prefix)
+        ascat_alleles = ascat_download.alleles
+        ascat_loci = ascat_download.loci
+        ascat_gc = ascat_download.GC
+        ascat_rt = ascat_download.RT
+    }
 
 
     //**************************************************************************************************************************************
@@ -306,12 +339,12 @@ workflow VAXIMILE {
         }
 
     
-    ascat = ASCAT(somatic_samples_bed, 
-        ascat_resources.alleles, 
-        ascat_resources.loci, 
+    ascat = ASCAT(somatic_samples_bed,
+        ascat_alleles,
+        ascat_loci,
         reference_genome,
-        ascat_resources.GC, 
-        ascat_resources.RT,
+        ascat_gc,
+        ascat_rt,
     )
 
     // HLA LOH: each tumour against its own normal's HLA reference, using ASCAT's purity and ploidy.
