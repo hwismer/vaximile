@@ -4,7 +4,8 @@ process CREATE_SALMON_INDEX {
     
     conda "bioconda::salmon=1.11.4"
     
-    publishDir "./resources/salmon/", mode: "copy"
+    // Saved with the downloaded resources for reuse; not on -stub-run, whose placeholders would overwrite a real index.
+    publishDir "./vaximile_resources/salmon_index/", mode: "copy", enabled: !workflow.stubRun
 
     tag "Creating salmon index on ${transcripts_fa}"
 

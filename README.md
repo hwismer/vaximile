@@ -89,9 +89,9 @@ Prebuilt indices. Any left unset are built from the reference during the run.
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
-| `--bwa_index` | Directory containing a prebuilt minibwa index. | — |
-| `--star_index` | Directory containing a prebuilt STAR 2.7.10 index. | — |
-| `--salmon_index` | Directory containing a prebuilt salmon index. | — |
+| `--bwa_index` | Directory containing a prebuilt minibwa index. When not given, the index is built and saved to `vaximile_resources/bwa_index/` in the launch directory. | — |
+| `--star_index` | Directory containing a prebuilt STAR index. When not given, the index is built and saved to `vaximile_resources/star_index/STARGenomeDir/` in the launch directory. | — |
+| `--salmon_index` | Directory containing a prebuilt salmon index. When not given, the index is built and saved under `vaximile_resources/salmon_index/` in the launch directory. | — |
 
 ### Variant calling options
 

@@ -9,7 +9,8 @@ process CREATE_STAR_INDEX {
 
     tag "Creating STAR index with ${reference_fa} and ${gtf}"
 
-    publishDir "./resources/star/", mode: "copy"
+    // Saved with the downloaded resources for reuse; not on -stub-run, whose placeholders would overwrite a real index.
+    publishDir "./vaximile_resources/star_index/", mode: "copy", enabled: !workflow.stubRun
 
     input:
         tuple path(reference_fa), path(reference_index)

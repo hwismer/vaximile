@@ -10,7 +10,8 @@ process CREATE_BWA_INDEX {
 
     tag "Creating BWA index for $reference_fa"
 
-    publishDir "./resources/bwa/", mode: "copy"
+    // Saved with the downloaded resources for reuse; not on -stub-run, whose placeholders would overwrite a real index.
+    publishDir "./vaximile_resources/bwa_index/", mode: "copy", enabled: !workflow.stubRun
 
     cache 'lenient'
 

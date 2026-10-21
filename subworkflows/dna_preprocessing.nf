@@ -71,7 +71,7 @@ def prebuilt_bwa_index(index_dir) {
                 "('.l2b', '.mbw') in place of bwa-mem2's '.0123'/'.amb'/'.ann'/'.bwt.2bit.64'/'.pac',\n" +
                 "so an index built by the older pipeline cannot be reused and must be rebuilt.\n\n" +
                 "Rebuild it by running once without --bwa_index; the new index is published to\n" +
-                "./resources/bwa/. Note that minibwa alignments are not identical to bwa-mem2's,\n" +
+                "./vaximile_resources/bwa_index/. Note that minibwa alignments are not identical to bwa-mem2's,\n" +
                 "so BAMs produced before and after the switch should not be mixed in one cohort.\n\n" +
                 "Directory contains: " + present.join(', ')
             )
