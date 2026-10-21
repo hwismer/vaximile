@@ -1,4 +1,4 @@
-// HLA: typing (OptiType, HLA-HD, mhcflow) and loss of heterozygosity.
+// HLA: typing (OptiType, HLA-HD) and loss of heterozygosity (mhcflow, lohhlamod).
 include { OPTITYPE } from "../modules/local/optitype/main"
 include { HLAHD } from "../modules/local/hlahd/main"
 include { HLA_CALLS_PVAC } from "../modules/local/hla_calls_pvac/main"
@@ -20,24 +20,10 @@ workflow HLA_TYPING_WORKFLOW {
     take:
         bams // (metamap, sorted bam, bai)
         chr_prefix
-        hla_fasta
-        hla_kmers
-        hla_freqs
 
     main:
 
         hla_bed = HLA_BED(chr_prefix).bed
-        
-        mhcflow_input = bams
-            .map { meta, bam, bai ->
-                tuple(meta, meta.sample_name, bam, bai)
-            }
-
-        // Value channel, so every MHCFLOW task reuses the one index.
-        hla_reference_indexed = NOVOALIGN_HLA_FASTA(hla_fasta).out.first()
-
-        mhcflow = MHCFLOW(mhcflow_input, hla_reference_indexed, hla_bed, hla_kmers, hla_freqs)
-
 
         fastqs = MHC_REGION_FASTQS(bams).reads
         //mhc_region = EXTRACT_MHC_REGION(bams)
@@ -64,12 +50,7 @@ workflow HLA_TYPING_WORKFLOW {
         hla_calls_pvac_input = HLA_CALLS_PVAC(combined_typing_results)
 
     emit:
-        // The subject-specific reference and realignment the LOH workflow builds on, and
-        // hla_bed, which HLA_LOH_WORKFLOW needs for the tumour's second mhcflow run and
-        // which is produced in here rather than by the caller.
-        mhcflow_hla_ref = mhcflow.sample_hla_ref
-        mhcflow_realn_bam = mhcflow.realn_bam
-        hla_bed = hla_bed
+        hla_bed = hla_bed  // MHC region, for HLA_LOH_WORKFLOW's mhcflow runs
         optitype = optitype.hla_calls
         hlahd = hlahd.final_hla_calls
         hlahd_tsv = hlahd_tsv
@@ -77,19 +58,30 @@ workflow HLA_TYPING_WORKFLOW {
 
 }
 
-// HLA LOH: realign each tumour against its own normal's HLA reference, then call loss with lohhlamod.
+// HLA LOH: mhcflow builds each normal's HLA reference, each tumour is realigned against its own
+// normal's reference, and lohhlamod calls loss. Runs only with --novoalign_dir, as mhcflow needs novoalign.
 workflow HLA_LOH_WORKFLOW {
 
     take:
-        markdup_bams      // (meta, bam, bai) - every DNA library, pre-mhcflow
-        sample_hla_ref    // (meta, hla_fasta, hla_nix) - MHCFLOW finalizer, per library
-        realn_bam         // (meta, realn_bam, realn_bai) - MHCFLOW finalizer, per library
+        markdup_bams      // (meta, bam, bai) - every DNA library
+        hla_reference     // (hla_fasta, hla_fai)
         purityploidy      // (somatic_meta, purityploidy) - ASCAT, per pair
         hla_bed
         hla_kmers
         hla_freqs
+        novoalign_dir     // --novoalign_dir: novoalign and novoindex
 
     main:
+
+        // Step 1: mhcflow on each normal, giving its HLA reference and its reads realigned to it.
+        // Value channel, so every MHCFLOW task reuses the one index.
+        hla_reference_indexed = NOVOALIGN_HLA_FASTA(hla_reference, novoalign_dir).out.first()
+        mhcflow_input = markdup_bams
+            .filter { meta, _bam, _bai -> meta.sample_type == "NORMAL" }
+            .map { meta, bam, bai -> tuple(meta, meta.sample_name, bam, bai) }
+        mhcflow = MHCFLOW(mhcflow_input, hla_reference_indexed, hla_bed, hla_kmers, hla_freqs, novoalign_dir)
+        sample_hla_ref = mhcflow.sample_hla_ref
+        realn_bam = mhcflow.realn_bam
 
         // fan_out_pairs re-keys a library by somatic_name, which is what puts a normal
         // shared by two tumours into both pairs - and what stops a tumour from being
@@ -108,7 +100,7 @@ workflow HLA_LOH_WORKFLOW {
 
         // Step 2: the tumour against the normal's reference, realignment only.
         realign_input = tumor_bams.join(normal_ref)
-        tumor_realn = MHCFLOW_REALIGN(realign_input, hla_bed, hla_kmers, hla_freqs).realn_bam
+        tumor_realn = MHCFLOW_REALIGN(realign_input, hla_bed, hla_kmers, hla_freqs, novoalign_dir).realn_bam
 
         // remainder: true so pairs without ASCAT results still get an LOH call, using lohhlamod's defaults.
         loh_input = tumor_realn

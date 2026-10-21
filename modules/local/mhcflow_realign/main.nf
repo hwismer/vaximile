@@ -13,6 +13,7 @@ process MHCFLOW_REALIGN {
         path hla_bed
         path hla_kmers
         path hla_freqs
+        path novoalign_dir
 
     output:
         tuple val(somatic_name), val(meta), path("${meta.sample_name}_realn/realigner/*.hla.realn.bam"), path("${meta.sample_name}_realn/realigner/*.hla.realn.bam.bai"), emit: realn_bam
@@ -20,6 +21,9 @@ process MHCFLOW_REALIGN {
     script:
     def args = task.ext.args ?: ''
     """
+    # novoalign and novoindex come from --novoalign_dir.
+    export PATH="\$(pwd)/${novoalign_dir}:\$PATH"
+
     mhcflow --bam $bam \
         --ref $hla_fasta \
         --bed $hla_bed \

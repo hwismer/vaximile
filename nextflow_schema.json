@@ -217,6 +217,13 @@
                     "format": "file-path",
                     "description": "HLA allele population frequency table.",
                     "default": "https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/HLA_FREQ.txt"
+                },
+                "novoalign_dir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Directory containing the novoalign and novoindex binaries, needed for HLA LOH. Without it, HLA LOH is skipped.",
+                    "help_text": "Novoalign is proprietary and was removed from bioconda in October 2026 at Novocraft's request, so the pipeline cannot install it. Download it from https://www.novocraft.com/support/download/. Novoalign V4 also needs its novoalign.lic licence file in the same directory; V3 runs without one, single-threaded. Without this parameter mhcflow, the tumor realignment and lohhlamod are skipped; HLA typing with OptiType and HLA-HD still runs.",
+                    "fa_icon": "fas fa-folder-open"
                 }
             }
         },

@@ -220,8 +220,7 @@ workflow VAXIMILE {
     
     // HLA typing runs per library; mhcflow requires a single read group per BAM.
     hla_input = markdup_bams
-    hla_workflow = HLA_TYPING_WORKFLOW(hla_input, params.reference_includes_chr_prefix,
-        hla_reference, hla_kmers, hla_freq)
+    hla_workflow = HLA_TYPING_WORKFLOW(hla_input, params.reference_includes_chr_prefix)
     
     // Typing output
     optitype = hla_workflow.optitype
@@ -348,15 +347,29 @@ workflow VAXIMILE {
     )
 
     // HLA LOH: each tumour against its own normal's HLA reference, using ASCAT's purity and ploidy.
-    hla_loh_workflow = HLA_LOH_WORKFLOW(
-        markdup_bams,
-        hla_workflow.mhcflow_hla_ref,
-        hla_workflow.mhcflow_realn_bam,
-        ascat.purityploidy,
-        hla_workflow.hla_bed,
-        hla_kmers,
-        hla_freq
-    )
+    // mhcflow needs novoalign, which is proprietary and no longer on bioconda, so this runs only
+    // when --novoalign_dir points at the user's own copy.
+    if ( params.novoalign_dir ) {
+        hla_loh_workflow = HLA_LOH_WORKFLOW(
+            markdup_bams,
+            hla_reference,
+            ascat.purityploidy,
+            hla_workflow.hla_bed,
+            hla_kmers,
+            hla_freq,
+            channel.value(file(params.novoalign_dir, checkIfExists: true))
+        )
+        loh_res = hla_loh_workflow.loh_res
+        loh_plots = hla_loh_workflow.loh_plots
+        loh_plots_png = hla_loh_workflow.loh_plots_png
+        loh_res_mqc = hla_loh_workflow.loh_res_mqc
+    } else {
+        log.warn "--novoalign_dir not given: skipping HLA LOH. See the README for how to supply Novoalign."
+        loh_res = channel.empty()
+        loh_plots = channel.empty()
+        loh_plots_png = channel.empty()
+        loh_res_mqc = channel.empty()
+    }
 
     // ASCAT plots and metrics for MultiQC, joined per pair.
     ascat_mqc = ASCAT_MQC(
@@ -520,10 +533,10 @@ workflow VAXIMILE {
     mqc_somalier_samples = somalier_samples.map{patient, samples -> tuple(patient, null, null,samples) }
     mqc_hlahd_tsv = hlahd_tsv.map{meta, tsv -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, tsv)}
     mqc_markdup = markdup_metrics.map{meta, metrics -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, metrics)}
-    mqc_loh_plots = hla_loh_workflow.loh_plots_png
+    mqc_loh_plots = loh_plots_png
         .transpose()
         .map{ _somatic_name, meta, png -> tuple(meta.patient, meta.somatic_name, null, png) }
-    mqc_loh_res = hla_loh_workflow.loh_res_mqc
+    mqc_loh_res = loh_res_mqc
         .map{ _somatic_name, meta, tsv -> tuple(meta.patient, meta.somatic_name, null, tsv) }
     mqc_ascat_plots = ascat_mqc.png
         .map{ _somatic_name, meta, png -> tuple(meta.patient, meta.somatic_name, null, png) }
@@ -591,8 +604,8 @@ workflow VAXIMILE {
     star_bam = star_bam                       // RNA, coordinate-sorted and indexed
     germline_vcf_table = germline_table       // tabular germline consensus, as for somatic
     ascat_results = ascat_results             // segments, CNVs, purity/ploidy, plots
-    hla_loh = hla_loh_workflow.loh_res        // per-pair HLA LOH results from lohhlamod
-    hla_loh_plots = hla_loh_workflow.loh_plots // per-gene coverage/logR/BAF profiles
+    hla_loh = loh_res                         // per-pair HLA LOH results from lohhlamod
+    hla_loh_plots = loh_plots                 // per-gene coverage/logR/BAF profiles
     somatic_vcf = somatic_vcf
     somatic_vcf_table = somatic_vcf_table
     germline_vcf = germline_vcf

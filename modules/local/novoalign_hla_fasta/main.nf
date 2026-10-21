@@ -1,24 +1,23 @@
 process NOVOALIGN_HLA_FASTA {
 
-    label 'process_single'
+    // Index the HLA reference for mhcflow with novoindex from --novoalign_dir.
 
-    conda "bioconda::novoalign=3.09.04"
+    label 'process_single'
 
     input:
         tuple path(hla_fasta), path(hla_fai)
+        path(novoalign_dir)
 
     output:
         tuple path(hla_fasta), path(hla_fai), path("${hla_fasta.baseName}.nix"), emit: out
 
     script:
     """
-    novoindex "${hla_fasta.baseName}.nix" $hla_fasta
-
+    ${novoalign_dir}/novoindex "${hla_fasta.baseName}.nix" $hla_fasta
     """
 
     stub:
     """
     touch "${hla_fasta.baseName}.nix"
-
     """
 }

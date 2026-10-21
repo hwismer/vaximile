@@ -12,6 +12,7 @@ process MHCFLOW {
         path hla_bed
         path hla_kmers
         path hla_freqs
+        path novoalign_dir
 
     output:
         tuple val(meta), path("${meta.sample_name}"), emit: out
@@ -21,6 +22,9 @@ process MHCFLOW {
     script:
     def args = task.ext.args ?: ''
     """
+    # novoalign and novoindex come from --novoalign_dir.
+    export PATH="\$(pwd)/${novoalign_dir}:\$PATH"
+
     mhcflow --bam $bam \
         --ref $hla_fasta \
         --bed $hla_bed \

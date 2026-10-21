@@ -32,15 +32,16 @@ consensus callset also drives proximal variant phasing for pVACseq.
 
 **HLA typing** — [OptiType](https://github.com/FRED-2/OptiType) (class I) and
 [HLA-HD](https://www.genome.med.kyoto-u.ac.jp/HLA-HD/) (class I and II) per library, whose
-calls go to pVACtools, plus [mhcflow](https://github.com/svm-zhang/mhcflow), which types
-each library against a sample-specific HLA reference for the LOH step.
+calls go to pVACtools.
 
 **CNV** — [ASCAT](https://github.com/VanLoo-lab/ascat) allele-specific copy number, which
 also supplies the tumour purity and ploidy the LOH step uses.
 
-**HLA LOH** — each tumour is realigned against the HLA reference mhcflow inferred for *its
+**HLA LOH** — [mhcflow](https://github.com/svm-zhang/mhcflow) types each normal against a
+sample-specific HLA reference, each tumour is realigned against the reference inferred for *its
 own normal*, and [lohhla-mod](https://github.com/svm-zhang/lohhla-mod) calls loss over the
-pair.
+pair. mhcflow needs Novoalign, which you supply with `--novoalign_dir`; without it this step
+is skipped.
 
 **RNA alignment and quantification** — [STAR](https://github.com/alexdobin/STAR) alignment
 and [salmon](https://combine-lab.github.io/salmon/) quantification at transcript and gene
@@ -125,6 +126,7 @@ Reference data for MHC region extraction and HLA allele calling.
 | `--hla_fasta_fai` | Index for the HLA reference FASTA. | `https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/abc_complete.fasta.fai` |
 | `--hla_kmers` | Unique HLA k-mer file used by the typing tools. | `https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/abc_v14.uniq` |
 | `--hla_freq` | HLA allele population frequency table. | `https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/HLA_FREQ.txt` |
+| `--novoalign_dir` | Directory containing the `novoalign` and `novoindex` binaries, needed for HLA LOH. **Without it, HLA LOH is skipped**; HLA typing with OptiType and HLA-HD still runs. Novoalign is proprietary and no longer on bioconda, so download it from [Novocraft](https://www.novocraft.com/support/download/). Novoalign V4 also needs its `novoalign.lic` in the same directory; V3 runs without one. | — |
 
 ### GATK resource bundle options
 
