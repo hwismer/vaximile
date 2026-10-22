@@ -1,7 +1,7 @@
 process PVACFUSE {
     
     label 'process_high_memory'
-    conda "bioconda::pvactools=7.1.5"
+    // Container only: pVACtools runs the IEDB predictors from /opt/iedb, which only the image has.
     container "griffithlab/pvactools:7.1.5"
 
     

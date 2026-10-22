@@ -3,7 +3,7 @@ process PVACSEQ {
     // Run pVACseq on a tumour/normal pair's somatic and phased germline VCFs.
 
     label 'process_very_high'
-    conda "bioconda::pvactools=7.1.5"
+    // Container only: pVACtools runs the IEDB predictors from /opt/iedb, which only the image has.
     container "griffithlab/pvactools:7.1.5"
 
     tag "pVACseq on ${somatic_name}"
