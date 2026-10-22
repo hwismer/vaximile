@@ -28,20 +28,21 @@ process DEEPSOMATIC {
 	def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
 	def args = task.ext.args ?: ''
     """
+    # Intermediates go in the task directory rather than \$TMPDIR, and are removed once the VCF is written.
     run_deepsomatic \
         --model_type=$model \
         --ref=$reference_fa \
         --reads_normal=$normal_bam \
         --reads_tumor=$tumor_bam \
         --output_vcf=${prefix}_deepsomatic.vcf.gz \
-        --output_gvcf=${prefix}_deepsomatic.gvcf.gz \
         --sample_name_tumor=${tumor_sample_name} \
         --sample_name_normal=${normal_sample_name} \
         --num_shards=$task.cpus \
+        --intermediate_results_dir=intermediate_results \
         --logging_dir=./logs \
         $args \
         --regions=$bed_regions
-
+    rm -rf intermediate_results
     """
 
     stub:
