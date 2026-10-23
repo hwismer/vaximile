@@ -70,9 +70,13 @@ mosdepth_config:
 plots_defer_loading_numseries: 2000
 num_datasets_plot_limit: 2000
 
+# Run Information goes last; MultiQC places lower orders further down the report.
+report_section_order:
+  run_info:
+    order: -1000
+
 custom_content:
   order:
-    - run_info
     - somatic
     - germline
     - hla
