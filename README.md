@@ -318,7 +318,8 @@ are what the HLA LOH analysis uses.
 `neoantigen_prediction/` contains the pVACseq output for somatic variants and the pVACfuse
 output for RNA fusions called by Arriba and STAR-Fusion. `<patient>_pvacseq_reports.tsv` is
 the MHC class I aggregated report combined across the patient's tumor/normal pairs, with the
-allelic depth of each sample from the pair's somatic VCF.
+allelic depth of each sample from the pair's somatic VCF and, when pVACseq's ML classifier
+ran, its call (`ML Prediction (score)`, e.g. `Accept (0.71)`) next to the tier.
 
 #### Expression
 

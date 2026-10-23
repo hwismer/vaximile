@@ -224,7 +224,7 @@ workflow PVACTOOLS_WORKFLOW {
 
     emit:
         // Before `pvacseq`, which rebinds the name to the output directories.
-        pvacseq_aggregated = pvacseq.pvaseq_mhc_i_aggr // (meta, MHC class I aggregated report), per pair
+        pvacseq_aggregated = pvacseq.pvaseq_mhc_i_aggr // (meta, MHC class I aggregated report, with the ML call when it ran), per pair
         pvacseq = pvacseq.pvacseq_dir
         pvacseq_mhc_i_combined = combined_report
         pvacfuse = pvacfuse

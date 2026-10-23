@@ -16,7 +16,7 @@ process PVACSEQ {
         path(human_ref_peptides)
     output:
         tuple val(somatic_meta), path("*_pvacseq"), emit: pvacseq_dir
-        tuple val(somatic_meta), path("*_pvacseq/MHC_Class_I/*MHC_I.all_epitopes.aggregated.tsv"), emit: pvaseq_mhc_i_aggr
+        tuple val(somatic_meta), path("*.MHC_I.report.tsv"), emit: pvaseq_mhc_i_aggr
 
     script:
         def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
@@ -34,12 +34,22 @@ process PVACSEQ {
             --iedb-install-directory /opt/iedb \
             --peptide-fasta $human_ref_peptides \
             -t $task.cpus
+
+        # The class I aggregated report for later steps: the ML classifier's copy, which adds its
+        # call, when it ran (it needs class II results too), otherwise pVACseq's own.
+        report="${prefix}_pvacseq/MHC_Class_I/${tumor_sample_name}.MHC_I.all_epitopes.aggregated"
+        if [ -e "\$report.ML_predict.tsv" ]; then
+            cp "\$report.ML_predict.tsv" ${tumor_sample_name}.MHC_I.report.tsv
+        else
+            cp "\$report.tsv" ${tumor_sample_name}.MHC_I.report.tsv
+        fi
         """
 
     stub:
         def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
         """
         mkdir -p ${prefix}_pvacseq/MHC_Class_I
-        touch ${prefix}_pvacseq/MHC_Class_I/${prefix}_MHC_I.all_epitopes.aggregated.tsv
+        touch ${prefix}_pvacseq/MHC_Class_I/${tumor_sample_name}.MHC_I.all_epitopes.aggregated.tsv
+        touch ${tumor_sample_name}.MHC_I.report.tsv
         """
 }

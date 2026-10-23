@@ -284,6 +284,15 @@ if report:
               "results: candidates on a lost allele will not be presented by the tumor.",
               NEOANTIGENS, "bargraph", {PAIR: dict(sorted(alleles.items()))},
               {"title": "Neoantigens: Pass candidates per allele", "ylab": "Candidates", "cpswitch_counts_label": "Candidates"})
+
+# pVACseq's ML classifier: its call ("Accept (0.71)"), present only when the classifier ran.
+if report and "ML Prediction (score)" in report[0]:
+    calls = Counter(row["ML Prediction (score)"].split(" ")[0] for row in report)
+    write_mqc(f"{PAIR}_neoantigen_ml_mqc.json", "neoantigen_ml", "ML predictions",
+              "pVACseq's machine-learning call for each variant: Accept, Review or Reject. NA means the "
+              "classifier could not score the variant.",
+              NEOANTIGENS, "bargraph", {PAIR: {c: calls.get(c, 0) for c in ["Accept", "Review", "Reject", "NA"]}},
+              {"title": "Neoantigens: ML predictions", "ylab": "Variants", "cpswitch_counts_label": "Variants"})
 PY
     """
 
