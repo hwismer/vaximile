@@ -28,55 +28,39 @@ process HLA_CALLS_PVAC {
     import json
     import re
 
-    GENES = ["A", "B", "C"]
-    CLASS_II_GENES = ["DRB1", "DRB3", "DRB4", "DRB5", "DQA1", "DQB1", "DPA1", "DPB1"]
+    CLASS_I = ["A", "B", "C"]
+    CLASS_II = ["DRB1", "DRB3", "DRB4", "DRB5", "DQA1", "DQB1", "DPA1", "DPB1"]
 
-    # "HLA-A*02:01:01:02L" or "A*02:01" -> "HLA-A*02:01"; None for untyped or null (N) alleles.
-    def two_field(name):
-        name = name.strip().split(",")[0]
-        m = re.match(r"(?:HLA-)?([A-Z0-9]+)\\*(\\d+):(\\d+)", name)
-        if not m or name.endswith("N"):
-            return None
-        return f"HLA-{m.group(1)}*{m.group(2)}:{m.group(3)}"
-
-    def calls(first, second):
-        return sorted(a for a in (two_field(first), two_field(second)) if a)
-
-    def short(alleles):
-        return ", ".join(a.replace("HLA-", "") for a in alleles)
+    # Two-field names without "HLA-": "HLA-A*02:01:01" -> "A*02:01". Untyped and null (N) alleles are dropped.
+    def two_field(*names):
+        matches = [(re.match(r"(?:HLA-)?(\\w+\\*\\d+:\\d+)", n.strip()), n.strip()) for n in names]
+        return sorted(m.group(1) for m, n in matches if m and not n.endswith("N"))
 
     with open("${optitype_result}") as fh:
         row = next(csv.DictReader(fh, delimiter="\\t"))
-    optitype = {g: calls(row.get(f"{g}1", ""), row.get(f"{g}2", "")) for g in GENES}
+    optitype = {g: two_field(row[f"{g}1"], row[f"{g}2"]) for g in CLASS_I}
 
     # HLA-HD: gene, allele 1, allele 2 ("-" when homozygous).
     hlahd = {}
     with open("${hlahd_result}") as fh:
         for line in fh:
-            fields = line.rstrip("\\n").split("\\t")
-            if fields[0] in GENES + CLASS_II_GENES and len(fields) >= 3:
-                second = fields[1] if fields[2].strip() == "-" else fields[2]
-                hlahd[fields[0]] = calls(fields[1], second)
+            gene, first, second = (line.rstrip("\\n").split("\\t") + ["", ""])[:3]
+            hlahd[gene] = two_field(first, first if second.strip() == "-" else second)
 
-    consensus, notes = {}, []
-    for g in GENES:
-        opti, hd = optitype[g], hlahd.get(g, [])
-        consensus[g] = opti or hd
-        if opti and hd and opti != hd:
-            notes.append(f"{g}: OptiType {short(opti)}; HLA-HD {short(hd)}")
-        elif not opti:
-            notes.append(f"{g}: HLA-HD only" if hd else f"{g}: not typed")
+    consensus = {g: optitype[g] or hlahd.get(g, []) for g in CLASS_I}
+    notes = [f"{g}: OptiType {', '.join(optitype[g]) or 'none'}; HLA-HD {', '.join(hlahd.get(g, [])) or 'none'}"
+             for g in CLASS_I if optitype[g] != hlahd.get(g, [])]
 
-    # pVACtools names class II alleles without "HLA-", and pairs the DQ and DP chains itself.
-    class_i = sorted({a for g in GENES for a in consensus[g]})
-    class_ii = sorted({a.replace("HLA-", "") for g in CLASS_II_GENES for a in hlahd.get(g, [])})
+    # pVACtools names class I alleles with "HLA-" and class II without, and pairs the DQ and DP chains itself.
+    class_i = sorted({"HLA-" + a for g in CLASS_I for a in consensus[g]})
+    class_ii = sorted({a for g in CLASS_II for a in hlahd.get(g, [])})
     if not class_i:
         raise SystemExit("No class I alleles typed by OptiType or HLA-HD")
     with open("${prefix}_hla_calls.csv", "w") as fh:
         fh.write(",".join(class_i + class_ii) + "\\n")
 
-    row = {g: short(consensus[g]) for g in GENES}
-    row["class_ii"] = short(class_ii)
+    row = {g: ", ".join(consensus[g]) for g in CLASS_I}
+    row["class_ii"] = ", ".join(class_ii)
     row["notes"] = "; ".join(notes) or "OptiType and HLA-HD agree"
     content = {
         "id": "hla_consensus",
