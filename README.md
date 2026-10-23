@@ -280,8 +280,10 @@ phasing input for proximal variant detection in pVACseq.
 #### HLA typing
 
 `hla_typing/` holds class I alleles from OptiType and class I and II alleles from HLA-HD,
-both run per library, and the two combined into one allele list for pVACtools. The
-normal's list is what feeds pVACtools, since HLA type is germline.
+both run per library, and the allele list for pVACtools. Class I is the two tools'
+consensus, using OptiType's calls where they disagree; class II is from HLA-HD. The
+normal's list is what feeds pVACtools, since HLA type is germline. The MultiQC report's
+HLA Consensus table shows each library's list and any disagreement.
 
 #### HLA loss of heterozygosity
 

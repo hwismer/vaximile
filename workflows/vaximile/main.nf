@@ -449,6 +449,7 @@ workflow VAXIMILE {
             base_recal,
             markdup_metrics,
             optitype.map { meta, tsv, _pdf -> tuple(meta, tsv) },
+            hla_workflow.consensus_mqc,
             hlahd_tsv,
             salmon_dir,
             rna.star_final_log,
