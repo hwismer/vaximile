@@ -6,14 +6,12 @@ include { PULL_VEP_CACHE } from "../../modules/local/pull_vep_cache/main"
 include { PULL_CTAT_RESOURCE_BUNDLE } from "../../modules/local/pull_ctat_resource_bundle/main"
 include { PULL_ARRIBA_RESOURCES } from "../../modules/local/pull_arriba_resources/main"
 include { PULL_ASCAT_RESOURCES } from "../../modules/local/pull_ascat_resources/main"
-include { MULTIQC } from "../../modules/local/multiqc/main"
 include { ASCAT } from "../../modules/local/ascat/main"
 include { dedupe_libraries; fan_out_pairs; pair_tumor_normal } from "../../subworkflows/pipeline_init.nf"
 
 // Subworkflows
 include { DNA_QC_WORKFLOW } from "../../subworkflows/dna_preprocessing.nf"
 include { RNA_QC_WORKFLOW } from "../../subworkflows/rnaseq.nf"
-include { SOMALIER } from "../../subworkflows/dna_preprocessing.nf"
 include { DNA_ALIGN_AND_PREPROC } from "../../subworkflows/dna_preprocessing.nf"
 include { BWA_INDEX } from "../../subworkflows/dna_preprocessing.nf"
 include { PREPARE_REFERENCE_FASTA } from "../../subworkflows/reference.nf"
@@ -29,11 +27,7 @@ include { FUSION_CALLING } from "../../subworkflows/rnaseq.nf"
 include { PVAC_INPUT_PREP_WORKFLOW } from "../../subworkflows/pvactools.nf"
 include { PVACTOOLS_WORKFLOW } from "../../subworkflows/pvactools.nf"
 include { DEEPSOMATIC_WORKFLOW } from "../../subworkflows/somatic_variant_calling.nf"
-include { SOMATIC_QC } from "../../modules/local/somatic_qc/main"
-include { GERMLINE_QC } from "../../modules/local/germline_qc/main"
-include { MOSDEPTH } from "../../modules/local/mosdepth/main"
-include { PICARD_ARTIFACT_METRICS } from "../../modules/local/picard_artifact_metrics/main"
-include { VAF_GRIDS } from "../../modules/local/vaf_grids/main"
+include { QC } from "../../subworkflows/qc.nf"
 
 //**************************************************************************************************************************************
 
@@ -43,20 +37,6 @@ def make_vcf_channel(vcf_param) {
     return vcf_param
         ? Channel.value(tuple(file(vcf_param), file("${vcf_param}.tbi")))
         : Channel.empty()
-}
-
-// The pipeline's git commit: Nextflow knows it when run from GitHub, otherwise ask the local clone.
-def pipeline_commit() {
-    if ( workflow.commitId ) {
-        return workflow.commitId
-    }
-    try {
-        def commit = "git -C ${projectDir} rev-parse --short HEAD".execute().text.trim()
-        def dirty = "git -C ${projectDir} status --porcelain --untracked-files=no".execute().text.trim()
-        return commit ? (dirty ? "${commit} (with uncommitted changes)" : commit) : 'unknown'
-    } catch ( Exception e ) {
-        return 'unknown'
-    }
 }
 
 //**********************************************************************************************************************
@@ -212,9 +192,6 @@ workflow VAXIMILE {
     base_recal = preproc_bam_workflow.base_recal // Base recalibration tables from GATK (meta, recal_table)
     markdup_metrics = preproc_bam_workflow.markdup_metrics // samtools markdup duplicate stats (meta, metrics)
     pileup_summaries = preproc_bam_workflow.pileup_summaries // Pileup summaries from GATK (meta, pileup summary)
-    flagstats = preproc_bam_workflow.flagstat // samtools flagstat output (meta, flagstat)
-    coverage = preproc_bam_workflow.coverage // samtools coverage output (meta, coverage tsv)
-    idxstats = preproc_bam_workflow.idxstats // samtools idxstats output (meta, stats tsv)
     
     //**************************************************************************************************************************************
     // HLA Typing
@@ -462,159 +439,43 @@ workflow VAXIMILE {
     pvacfuse = pvactools.pvacfuse
 
 
-    somalier = SOMALIER(markdup_bams, reference_genome, somalier_sites)
-    somalier_pairs = somalier.pairs
-    somalier_samples = somalier.samples
-
     //**************************************************************************************************************************************
-    // Variant and coverage QC for the MultiQC report
+    // Quality control and the MultiQC report
 
-    // Somatic, per pair: each caller's calls, the consensus, the final calls, contamination, the capture BED and pVACseq's report.
-    somatic_qc_input = somatic_consensus_workflow.caller_vcfs
-        .map { meta, _caller, vcf, _tbi -> tuple(meta.somatic_name, vcf) }
-        .groupTuple(size: 3)
-        .join(somatic_consensus.map { meta, vcf -> tuple(meta.somatic_name, meta, vcf) })
-        .join(somatic_vcf.map { meta, vcf, _tbi -> tuple(meta.somatic_name, vcf) })
-        .join(mutect2.contamination.map { meta, table -> tuple(meta.somatic_name, table) })
-        .map { _name, caller_vcfs, meta, consensus, final_vcf, contamination ->
-            tuple(meta.capture_kit, meta, caller_vcfs, consensus, final_vcf, contamination)
-        }
-        .combine(capture_kits, by: 0)
-        .map { _kit, meta, caller_vcfs, consensus, final_vcf, contamination, bed ->
-            tuple(meta.somatic_name, meta, caller_vcfs, consensus, final_vcf, contamination, bed)
-        }
-        // remainder: true so a pair whose pVACseq run failed still gets its variant QC.
-        .join(pvactools.pvacseq_aggregated.map { meta, report -> tuple(meta.somatic_name, report) }, remainder: true)
-        .filter { items -> items[1] instanceof Map }
-        .map { _name, meta, caller_vcfs, consensus, final_vcf, contamination, bed, report ->
-            tuple(meta, caller_vcfs, consensus, final_vcf, contamination, bed, report ?: [])
-        }
-    somatic_qc_workflow = SOMATIC_QC(somatic_qc_input)
-    somatic_qc = somatic_qc_workflow.mqc
+    // Reports from earlier steps that MultiQC reads as they are, as (meta, file or files).
+    qc_reports = dna_fastp.fastp_reports
+        .mix(
+            rna_fastp.fastp_reports,
+            base_recal,
+            markdup_metrics,
+            optitype.map { meta, tsv, _pdf -> tuple(meta, tsv) },
+            hlahd_tsv,
+            salmon_dir,
+            rna.star_final_log,
+            vep_report,
+            germline_vep_report,
+            ascat_mqc.png.map { _name, meta, png -> tuple(meta, png) },
+            ascat_mqc.tsv.map { _name, meta, tsv -> tuple(meta, tsv) },
+            loh_plots_png.map { _name, meta, pngs -> tuple(meta, pngs) },
+            loh_res_mqc.map { _name, meta, tsv -> tuple(meta, tsv) }
+        )
 
-    // Germline, per normal: each caller's calls and the consensus.
-    germline_qc_input = germline.caller_vcfs
-        .map { meta, _caller, vcf, _tbi -> tuple(meta.sample_name, vcf) }
-        .groupTuple(size: 3)
-        .join(germline_vcf.map { meta, vcf, _tbi -> tuple(meta.sample_name, meta, vcf) })
-        .map { _name, caller_vcfs, meta, consensus -> tuple(meta, caller_vcfs, consensus) }
-    germline_qc_workflow = GERMLINE_QC(germline_qc_input)
-    germline_qc = germline_qc_workflow.mqc
-
-    // The VAF histograms and scatter plots, drawn per patient with one panel per pair or normal.
-    vaf_tables = somatic_qc_workflow.vaf_tables
-        .mix(germline_qc_workflow.vaf_tables)
-        .map { meta, tables -> tuple(meta.patient, tables) }
-        .groupTuple()
-        .map { patient, tables -> tuple(patient, tables.flatten()) }
-    vaf_grids = VAF_GRIDS(vaf_tables).png
-
-    // Coverage over the capture regions, per DNA library.
-    mosdepth_input = markdup_bams
-        .map { meta, bam, bai -> tuple(meta.capture_kit, meta, bam, bai) }
-        .combine(capture_kits, by: 0)
-        .map { _kit, meta, bam, bai, bed -> tuple(meta, bam, bai, bed) }
-    mosdepth = MOSDEPTH(mosdepth_input).dist
-
-    // Oxidation and other library damage, per DNA library.
-    artifact_metrics = PICARD_ARTIFACT_METRICS(markdup_bams, reference_genome, reference_dict).mqc
-
-
-    //**************************************************************************************************************************************
-    // MultiQC Report Creation
-    mqc_dna_fastp_reports = dna_fastp.fastp_reports.map{ meta, json -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule ,json) }
-    mqc_rna_fastp_reports = rna_fastp.fastp_reports.map{ meta, json -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name + "_" + meta.molecule ,json) }
-    mqc_base_recal = preproc_bam_workflow.base_recal.map{ meta, table -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name + "_" + meta.molecule ,table) } 
-    mqc_optitype = optitype.map{ meta, tsv_file, pdf -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name + "_" + meta.molecule, tsv_file) }
-    mqc_salmon_tx = salmon_dir.map{ meta, quant -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name+ "_" + meta.molecule ,quant) }
-    mqc_star_log = rna.star_final_log.map{ meta, log -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name+ "_" + meta.molecule, log) }
-    mqc_vep_report = vep_report.map{meta, html -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.tumor_meta.sample_name+ "_" + meta.molecule, html) }
-    mqc_flagstats = flagstats.map{meta, tsv -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name+ "_" + meta.molecule, tsv) }
-    mqc_coverage = coverage.map{meta, tsv -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name+ "_" + meta.molecule, tsv) }
-    mqc_idxstats = idxstats.map{meta, tsv -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name),meta.sample_name+ "_" + meta.molecule, tsv) }
-    mqc_germline_vep = germline_vep_report.map{meta, html -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, html)}
-    mqc_somalier_pairs = somalier_pairs.map{patient, pairs -> tuple(patient, null, null,pairs) }
-    mqc_somalier_samples = somalier_samples.map{patient, samples -> tuple(patient, null, null,samples) }
-    mqc_hlahd_tsv = hlahd_tsv.map{meta, tsv -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, tsv)}
-    mqc_markdup = markdup_metrics.map{meta, metrics -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, metrics)}
-    mqc_loh_plots = loh_plots_png
-        .transpose()
-        .map{ _somatic_name, meta, png -> tuple(meta.patient, meta.somatic_name, null, png) }
-    mqc_loh_res = loh_res_mqc
-        .map{ _somatic_name, meta, tsv -> tuple(meta.patient, meta.somatic_name, null, tsv) }
-    mqc_ascat_plots = ascat_mqc.png
-        .map{ _somatic_name, meta, png -> tuple(meta.patient, meta.somatic_name, null, png) }
-    mqc_ascat_metrics = ascat_mqc.tsv
-        .map{ _somatic_name, meta, tsv -> tuple(meta.patient, meta.somatic_name, null, tsv) }
-    mqc_somatic_qc = somatic_qc
-        .flatMap{ meta, files -> [files].flatten().collect { f -> tuple(meta.patient, meta.somatic_name, null, f) } }
-    mqc_vaf_grids = vaf_grids
-        .flatMap{ patient, pngs -> [pngs].flatten().collect { f -> tuple(patient, null, null, f) } }
-    mqc_germline_qc = germline_qc
-        .flatMap{ meta, files -> [files].flatten().collect { f -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, f) } }
-    mqc_mosdepth = mosdepth
-        .flatMap{ meta, global, region, summary -> [global, region, summary].collect { f -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, f) } }
-    mqc_artifact_metrics = artifact_metrics
-        .flatMap{ meta, oxog, table -> [oxog, table].collect { f -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, f) } }
-
-
-    mqc_reports = mqc_dna_fastp_reports
-        .mix(mqc_rna_fastp_reports)
-        .mix(mqc_base_recal)
-        .mix(mqc_optitype)
-        .mix(mqc_salmon_tx)
-        .mix(mqc_star_log)
-        .mix(mqc_vep_report)
-        .mix(mqc_flagstats)
-        .mix(mqc_coverage)
-        .mix(mqc_idxstats)
-        .mix(mqc_germline_vep)
-        .mix(mqc_somalier_pairs)
-        .mix(mqc_somalier_samples)
-        .mix(mqc_hlahd_tsv)
-        .mix(mqc_markdup)
-        .mix(mqc_loh_plots)
-        .mix(mqc_loh_res)
-        .mix(mqc_ascat_plots)
-        .mix(mqc_ascat_metrics)
-        .mix(mqc_somatic_qc)
-        .mix(mqc_vaf_grids)
-        .mix(mqc_germline_qc)
-        .mix(mqc_mosdepth)
-        .mix(mqc_artifact_metrics)
-        .groupTuple()
-    // How this run was launched and every parameter it used, for the report's Run Information section.
-    run_details = [
-        "Command": workflow.commandLine,
-        "Run name": workflow.runName,
-        "Session ID": workflow.sessionId,
-        "Started": workflow.start,
-        "Resumed": workflow.resume,
-        "Nextflow version": nextflow.version,
-        "Pipeline commit": pipeline_commit(),
-        "Profile": workflow.profile,
-        "Launch directory": workflow.launchDir,
-        "Work directory": workflow.workDir,
-        "Output directory": params.outdir,
-    ].collectEntries { k, v -> [k, v.toString()] }
-    // Resources left unset are downloaded or built into ./vaximile_resources/; show those paths instead.
-    def resources = "${workflow.launchDir}/vaximile_resources"
-    def resource_defaults = [
-        "bwa_index": "${resources}/bwa_index/ (built)",
-        "star_index": "${resources}/star_index/STARGenomeDir (built)",
-        "salmon_index": "${resources}/salmon_index/${file(params.transcriptome_reference).name}_salmon_index (built)",
-        "ctat_resource_lib": "${resources}/ctat_resource_dir/GRCh38_gencode_v44_CTAT_lib_Oct292023.plug-n-play/ctat_genome_lib_build_dir (downloaded)",
-        "vep_cache": "${resources}/vep_cache/vep_cache (downloaded)",
-        "vep_plugins": "${resources}/vep_pvac_plugins/VEP_plugins (downloaded)",
-        "arriba_blacklist": "${resources}/arriba_hg38/arriba_v2.5.1/database/blacklist_hg38_GRCh38_v2.5.1.tsv.gz (downloaded)",
-        "arriba_known_fusions": "${resources}/arriba_hg38/arriba_v2.5.1/database/known_fusions_hg38_GRCh38_v2.5.1.tsv.gz (downloaded)",
-        "arriba_protein_domains": "${resources}/arriba_hg38/arriba_v2.5.1/database/protein_domains_hg38_GRCh38_v2.5.1.gff3 (downloaded)",
-        "ascat_resources": "${resources}/ascat_hg38_${params.reference_includes_chr_prefix ? 'chr' : 'nochr'} (downloaded)",
-    ]
-    run_params = params.sort().collectEntries { k, v -> [k, v != null ? v.toString() : (resource_defaults[k] ?: '')] }
-    run_info = [details: run_details, params: run_params]
-
-    multiqc = MULTIQC(mqc_reports, run_info).html
+    qc = QC(
+        markdup_bams,
+        capture_kits,
+        reference_genome,
+        reference_dict,
+        somalier_sites,
+        somatic_consensus_workflow.caller_vcfs,
+        somatic_consensus,
+        somatic_vcf,
+        mutect2.contamination,
+        pvactools.pvacseq_aggregated,
+        germline.caller_vcfs,
+        germline_vcf,
+        qc_reports
+    )
+    multiqc = qc.multiqc
     
     //**************************************************************************************************************************************
 

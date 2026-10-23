@@ -8,7 +8,7 @@ process MULTIQC {
     tag "Running MultiQC on ${patient}"
 
     input:
-        tuple val(patient), val(somatic_names), val(sample_names), path(files)
+        tuple val(patient), val(sample_names), path(files)
         val(run_info)
 
     output:

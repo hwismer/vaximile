@@ -1,4 +1,4 @@
-// DNA preprocessing: QC, BWA index, alignment and BQSR, duplicate marking, and somalier.
+// DNA preprocessing: read trimming, BWA index, alignment and BQSR, and duplicate marking.
 include { FASTP } from "../modules/local/fastp/main"
 include { CREATE_BWA_INDEX } from "../modules/local/create_bwa_index/main"
 include { BWA_MAP } from "../modules/local/bwa_map/main"
@@ -7,13 +7,8 @@ include { BASE_RECALIBRATOR_GATHER } from "../modules/local/base_recalibrator_ga
 include { APPLY_BQSR_SCATTER } from "../modules/local/apply_bqsr_scatter/main"
 include { APPLY_BQSR_GATHER } from "../modules/local/apply_bqsr_gather/main"
 include { GET_PILEUP_SUMMARIES } from "../modules/local/get_pileup_summaries/main"
-include { SAMTOOLS_FLAGSTAT } from "../modules/local/samtools_flagstat/main"
-include { SAMTOOLS_COVERAGE } from "../modules/local/samtools_coverage/main"
-include { SAMTOOLS_IDXSTATS } from "../modules/local/samtools_idxstats/main"
 include { SAMTOOLS_SORMADUP } from "../modules/nf-core/samtools/sormadup/main"
 include { INDEX_BAM } from "../modules/local/index_bam/main"
-include { SOMALIER_EXTRACT } from "../modules/local/somalier_extract/main"
-include { SOMALIER_RELATE } from "../modules/local/somalier_relate/main"
 
 workflow DNA_QC_WORKFLOW {
 
@@ -198,21 +193,13 @@ workflow DNA_ALIGN_AND_PREPROC {
         bqsr_sort = bqsr_gather
 
         pileup_summaries = GET_PILEUP_SUMMARIES(bqsr_sort, common_germline).table
-        
-        flagstat = SAMTOOLS_FLAGSTAT(mark_dup).flagstat
-        coverage = SAMTOOLS_COVERAGE(mark_dup).tsv
-        idxstats = SAMTOOLS_IDXSTATS(mark_dup).tsv
 
-        
     emit:
         preproc_bams = bqsr_sort // For somatic calling
         markdup_bams = mark_dup // Non-recalibrated BAMS for callers like Strelka that don't expect recalibrated scores
         base_recal = base_recal_gathered // Recalibration metrics for MultiQC report
         markdup_metrics = markdup_metrics // Duplicate stats from samtools markdup for MultiQC
         pileup_summaries = pileup_summaries
-        flagstat = flagstat
-        coverage = coverage
-        idxstats = idxstats
 
 }
 
@@ -251,33 +238,4 @@ workflow BAM_MARKDUPLICATES {
     emit:
         bam     = indexed          // tuple(meta, bam, bai)
         metrics = markdup_metrics  // tuple(meta, metrics) - duplicate stats for MultiQC
-}
-
-workflow SOMALIER {
-
-    take:
-        sample_bams
-        reference_genome
-        somalier_sites_vcf
-
-    main:
-        extract = SOMALIER_EXTRACT(sample_bams, reference_genome, somalier_sites_vcf).somalier
-        extract_unique = extract.unique { meta, files -> 
-            meta.sample_name
-        }
-        extract_by_patient = extract_unique.map{meta, extracted ->
-            tuple(meta.patient, meta, extracted)
-        }
-        .groupTuple()
-
-        relate = SOMALIER_RELATE(extract_by_patient)
-    
-    emit:
-        extract = extract
-        pairs = relate.pairs
-        samples = relate.samples
-        groups = relate.groups
-        html = relate.html
-        
-
 }
