@@ -64,96 +64,95 @@ deamination) from Picard.
 
 ### Input/output options
 
-Define where the pipeline should find input data and save output data.
+Input samplesheets and output directory.
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
-| `--samplesheet` | **Required.** Path to comma-separated file describing the patients, samples and FastQ files. | — |
-| `--capture_kits` | **Required.** Path to comma-separated file mapping capture kit names to their BED target files. | — |
-| `--outdir` | **Required.** The output directory where the results will be saved. | `./vaximile_out` |
+| `--samplesheet` | **Required.** CSV of patients, samples and FASTQs. | — |
+| `--capture_kits` | **Required.** CSV mapping capture kit names to target BEDs. | — |
+| `--outdir` | **Required.** Output directory. | `./vaximile_out` |
 
 ### Reference genome options
 
-Reference genome, annotation and transcriptome files.
+Reference genome, annotation, transcriptome and proteome.
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
-| `--reference_fa` | Reference genome FASTA. Gzipped input is decompressed and indexed automatically. | `https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/GRCh38.primary_assembly.genome.fa.gz` |
-| `--reference_includes_chr_prefix` | Set to false when the reference contigs are named without a 'chr' prefix. | `true` |
-| `--gtf` | Gene annotation GTF used for RNA alignment, quantification and fusion calling. | `https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.annotation.gtf.gz` |
-| `--transcriptome_reference` | Transcriptome FASTA used to build the salmon index. | `https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz` |
-| `--human_ref_peptides` | Reference proteome peptide FASTA used by pVACtools for reference proteome similarity. | `https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz` |
+| `--reference_fa` | Reference genome FASTA, plain or gzipped. | `https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/GRCh38.primary_assembly.genome.fa.gz` |
+| `--reference_includes_chr_prefix` | Whether the reference contigs are named with 'chr'. | `true` |
+| `--gtf` | Gene annotation GTF for RNA alignment, quantification and fusion calling. | `https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.annotation.gtf.gz` |
+| `--transcriptome_reference` | Transcriptome FASTA for the salmon index. | `https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz` |
+| `--human_ref_peptides` | Reference proteome FASTA for pVACtools' proteome similarity check. | `https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz` |
 
 ### Alignment index options
 
-Prebuilt indices. Any left unset are built from the reference during the run.
+Prebuilt indexes. Any left unset are built and saved to `./vaximile_resources/`.
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
-| `--bwa_index` | Directory containing a prebuilt minibwa index. When not given, the index is built and saved to `vaximile_resources/bwa_index/` in the launch directory. | — |
-| `--star_index` | Directory containing a prebuilt STAR index. When not given, the index is built and saved to `vaximile_resources/star_index/STARGenomeDir/` in the launch directory. | — |
-| `--salmon_index` | Directory containing a prebuilt salmon index. When not given, the index is built and saved under `vaximile_resources/salmon_index/` in the launch directory. | — |
+| `--bwa_index` | Prebuilt minibwa index directory. | — |
+| `--star_index` | Prebuilt STAR index directory. | — |
+| `--salmon_index` | Prebuilt salmon index directory. | — |
 
 ### Downloaded resource options
 
-Resources the pipeline downloads when not given, once, into `./vaximile_resources/` in the launch directory, reusing them on later runs. Each default is the download it makes; giving a parameter skips that download. See [Saved resources](#saved-resources) for where each one is saved.
+Downloaded once into `./vaximile_resources/` when not given, and reused on later runs. Each default is the download it makes; see [Saved resources](#saved-resources) for where each one goes.
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
-| `--vep_cache` | Path to a local Ensembl VEP cache directory. Optional; downloaded if omitted. | Downloads `https://ftp.ensembl.org/pub/release-115/variation/indexed_vep_cache/homo_sapiens_vep_115_GRCh38.tar.gz` |
-| `--vep_plugins` | Directory containing the pVACtools Frameshift.pm and Wildtype.pm VEP plugins. Downloaded if omitted. | Downloads both plugins from `https://github.com/griffithlab/pVACtools/tree/v7.1.5/pvactools/tools/pvacseq/VEP_plugins` |
-| `--ctat_resource_lib` | CTAT genome library for STAR-Fusion: the `ctat_genome_lib_build_dir` directory of a plug-n-play bundle. Downloaded if omitted. | Downloads `https://data.broadinstitute.org/Trinity/CTAT_RESOURCE_LIB/GRCh38_gencode_v44_CTAT_lib_Oct292023.plug-n-play.tar.gz` |
-| `--arriba_blacklist` | Arriba blacklist. Downloaded with the Arriba v2.5.1 release if omitted. | `blacklist_hg38_GRCh38_v2.5.1.tsv.gz` from `https://github.com/suhrig/arriba/releases/download/v2.5.1/arriba_v2.5.1.tar.gz` |
-| `--arriba_known_fusions` | Arriba known fusions. Downloaded with the Arriba v2.5.1 release if omitted. | `known_fusions_hg38_GRCh38_v2.5.1.tsv.gz` from the same release |
-| `--arriba_protein_domains` | Arriba protein domains (GFF3). Downloaded with the Arriba v2.5.1 release if omitted. | `protein_domains_hg38_GRCh38_v2.5.1.gff3` from the same release |
-| `--ascat_resources` | Directory of ASCAT 1000 Genomes resources: `G1000_loci_hg38/`, `G1000_alleles_hg38/`, `GC_G1000_hg38/` and `RT_G1000_hg38/`, as the pipeline downloads them. Downloaded if omitted. | Downloads the four 1000G WGS hg38 archives from `https://zenodo.org/records/14008443`, adding a `chr` prefix to the loci when `--reference_includes_chr_prefix` is set |
+| `--vep_cache` | Ensembl VEP cache directory, release 115. | Downloads `https://ftp.ensembl.org/pub/release-115/variation/indexed_vep_cache/homo_sapiens_vep_115_GRCh38.tar.gz` |
+| `--vep_plugins` | Directory with pVACtools' `Frameshift.pm` and `Wildtype.pm` VEP plugins. | Downloads both plugins from `https://github.com/griffithlab/pVACtools/tree/v7.1.5/pvactools/tools/pvacseq/VEP_plugins` |
+| `--ctat_resource_lib` | STAR-Fusion CTAT library: the `ctat_genome_lib_build_dir` of a plug-n-play bundle. | Downloads `https://data.broadinstitute.org/Trinity/CTAT_RESOURCE_LIB/GRCh38_gencode_v44_CTAT_lib_Oct292023.plug-n-play.tar.gz` |
+| `--arriba_blacklist` | Arriba blacklist. | `blacklist_hg38_GRCh38_v2.5.1.tsv.gz` from `https://github.com/suhrig/arriba/releases/download/v2.5.1/arriba_v2.5.1.tar.gz` |
+| `--arriba_known_fusions` | Arriba known fusions. | `known_fusions_hg38_GRCh38_v2.5.1.tsv.gz` from the same release |
+| `--arriba_protein_domains` | Arriba protein domains GFF3. | `protein_domains_hg38_GRCh38_v2.5.1.gff3` from the same release |
+| `--ascat_resources` | ASCAT 1000 Genomes resource directory, laid out as the pipeline saves it. | Downloads the four 1000G WGS hg38 archives from `https://zenodo.org/records/14008443`, adding a `chr` prefix to the loci when `--reference_includes_chr_prefix` is set |
 
 ### Variant calling options
 
-Interval scattering behaviour for the GATK-based callers.
+Interval scattering for the GATK callers.
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
-| `--interval_padding` | Bases of padding added around each calling interval. | `100` |
-| `--scatter_count` | Number of interval shards to scatter variant calling across. | `30` |
+| `--interval_padding` | Bases of padding around each calling interval. | `100` |
+| `--scatter_count` | Number of interval shards for variant calling. | `30` |
 
-### HLA typing options
+### HLA LOH options
 
-Reference data for MHC region extraction and HLA allele calling.
+Used only for HLA LOH; HLA typing needs none of them.
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
-| `--hla_fasta` | HLA class I reference FASTA. | `https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/abc_complete.fasta` |
-| `--hla_fasta_fai` | Index for the HLA reference FASTA. | `https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/abc_complete.fasta.fai` |
-| `--hla_kmers` | Unique HLA k-mer file used by the typing tools. | `https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/abc_v14.uniq` |
-| `--hla_freq` | HLA allele population frequency table. | `https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/HLA_FREQ.txt` |
-| `--novoalign_dir` | Directory containing the `novoalign` and `novoindex` binaries, needed for HLA LOH. **Without it, HLA LOH is skipped**; HLA typing with OptiType and HLA-HD still runs. Novoalign is proprietary and no longer on bioconda, so download it from [Novocraft](https://www.novocraft.com/support/download/). Novoalign V4 also needs its `novoalign.lic` in the same directory; V3 runs without one. | — |
+| `--hla_fasta` | Polysolver HLA class I reference FASTA. | `https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/abc_complete.fasta` |
+| `--hla_fasta_fai` | Index of the HLA reference FASTA. | `https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/abc_complete.fasta.fai` |
+| `--hla_kmers` | Polysolver unique HLA k-mer file. | `https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/abc_v14.uniq` |
+| `--hla_freq` | Polysolver HLA allele frequency table. | `https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/HLA_FREQ.txt` |
+| `--novoalign_dir` | Directory with the `novoalign` and `novoindex` binaries. **HLA LOH is skipped without it.** Novoalign is no longer on bioconda; download it from [Novocraft](https://www.novocraft.com/support/download/). V4 also needs `novoalign.lic` in the same directory. | — |
 
 ### GATK resource bundle options
 
-Known-sites VCFs used for BQSR, contamination estimation and somatic filtering. Each must have a matching .tbi.
+GATK resource VCFs. Each needs a matching .tbi.
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
-| `--common_germline` | Common germline biallelic SNP sites for contamination estimation. | `gs://gatk-best-practices/somatic-hg38/small_exac_common_3.hg38.vcf.gz` |
-| `--known_sites_dbsnp` | dbSNP known sites VCF for BQSR. | `gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf.gz` |
-| `--known_sites_1000g_snps` | 1000 Genomes high-confidence SNPs for BQSR. | `gs://gcp-public-data--broad-references/hg38/v0/1000G_phase1.snps.high_confidence.hg38.vcf.gz` |
-| `--known_indels` | Known indels VCF for BQSR. | `gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.known_indels.vcf.gz` |
-| `--gnomad` | gnomAD allele-frequency-only VCF for Mutect2. | `gs://gatk-best-practices/somatic-hg38/af-only-gnomad.hg38.vcf.gz` |
-| `--pon` | Panel of normals VCF for Mutect2. | `gs://gatk-best-practices/somatic-hg38/1000g_pon.hg38.vcf.gz` |
-| `--hapmap` | HapMap VCF for germline variant recalibration. | `gs://gcp-public-data--broad-references/hg38/v0/hapmap_3.3.hg38.vcf.gz` |
-| `--mills` | Mills gold standard indels VCF. | `gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz` |
-| `--somalier_sites` | Sites VCF used by somalier for relatedness checks. | `https://github.com/brentp/somalier/files/3412456/sites.hg38.vcf.gz` |
+| `--common_germline` | Common germline SNPs for contamination estimation. | `gs://gatk-best-practices/somatic-hg38/small_exac_common_3.hg38.vcf.gz` |
+| `--known_sites_dbsnp` | dbSNP, known sites for BQSR. | `gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf.gz` |
+| `--known_sites_1000g_snps` | 1000 Genomes high-confidence SNPs, known sites for BQSR. | `gs://gcp-public-data--broad-references/hg38/v0/1000G_phase1.snps.high_confidence.hg38.vcf.gz` |
+| `--known_indels` | Known indels for BQSR. | `gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.known_indels.vcf.gz` |
+| `--gnomad` | gnomAD allele frequencies for Mutect2. | `gs://gatk-best-practices/somatic-hg38/af-only-gnomad.hg38.vcf.gz` |
+| `--pon` | Panel of normals for Mutect2. | `gs://gatk-best-practices/somatic-hg38/1000g_pon.hg38.vcf.gz` |
+| `--hapmap` | HapMap SNPs, a truth set for germline CNN filtering. | `gs://gcp-public-data--broad-references/hg38/v0/hapmap_3.3.hg38.vcf.gz` |
+| `--mills` | Mills gold standard indels, for BQSR and germline CNN filtering. | `gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz` |
+| `--somalier_sites` | Sites for somalier's relatedness check. | `https://github.com/brentp/somalier/files/3412456/sites.hg38.vcf.gz` |
 
 ### Generic options
 
-Less common options for the pipeline, typically set in a config file.
+Rarely changed options.
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
-| `--publish_dir_mode` | Method used to save pipeline results to output directory. | `copy` |
-| `--version` | Display version and exit. | `false` |
-| `--help` | Display help text. | `false` |
+| `--publish_dir_mode` | How results are saved to the output directory. | `copy` |
+| `--help` | Show this help. | `false` |
 
 ### Samplesheet 
 One sample per line. A complete somatic grouping consists of a tumor sample, normal sample, and a tumor RNA sample.

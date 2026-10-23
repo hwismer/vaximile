@@ -17,6 +17,9 @@ process DEEPVARIANT {
 	def model_map = [
         exome      : 'WES',
         genome     : 'WGS',
+        // DeepVariant has no FFPE models.
+        exome_ffpe : 'WES',
+        genome_ffpe: 'WGS'
     ]
 
 	def model = model_map[sequencing_type]

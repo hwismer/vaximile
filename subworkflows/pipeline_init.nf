@@ -1,5 +1,5 @@
 // Pipeline initialisation: parameter validation, samplesheet parsing and shared helpers.
-include { validateParameters; paramsSummaryLog } from "plugin/nf-schema"
+include { validateParameters } from "plugin/nf-schema"
 
 
 
@@ -24,9 +24,10 @@ workflow PIPELINE_INITIALISATION {
         .splitCsv(header: true)
         .map { row ->
 
-            // Be semi-flexible in parsing the sequencing type
-            def molecule = (row.sequencing_type.toLowerCase() == 'rna') ? 'RNA' :
-                (row.sequencing_type.toLowerCase() in ['exome', 'genome', "exome_FFPE", "genome_FFPE"]) ? 'DNA' :
+            // Lowercase, so exome_FFPE matches the modules' exome_ffpe.
+            def sequencing_type = row.sequencing_type.toLowerCase()
+            def molecule = sequencing_type == 'rna' ? 'RNA' :
+                sequencing_type in ['exome', 'genome', 'exome_ffpe', 'genome_ffpe'] ? 'DNA' :
                 null
 
             def meta = [
@@ -35,7 +36,7 @@ workflow PIPELINE_INITIALISATION {
                 sample_name: row.sample_name,
                 sex: row.sex,
                 sample_type: row.sample_type.toUpperCase(),
-                sequencing_type: row.sequencing_type,
+                sequencing_type: sequencing_type,
                 capture_kit: row.capture_kit,
                 molecule: molecule
             ]

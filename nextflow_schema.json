@@ -9,7 +9,7 @@
             "title": "Input/output options",
             "type": "object",
             "fa_icon": "fas fa-terminal",
-            "description": "Define where the pipeline should find input data and save output data.",
+            "description": "Input samplesheets and output directory.",
             "required": [
                 "samplesheet",
                 "capture_kits",
@@ -23,7 +23,7 @@
                     "schema": "assets/schema_input.json",
                     "mimetype": "text/csv",
                     "pattern": "^\\S+\\.csv$",
-                    "description": "Path to comma-separated file describing the patients, samples and FastQ files.",
+                    "description": "CSV of patients, samples and FASTQs.",
                     "fa_icon": "fas fa-file-csv"
                 },
                 "capture_kits": {
@@ -33,13 +33,13 @@
                     "schema": "assets/schema_capture_kits.json",
                     "mimetype": "text/csv",
                     "pattern": "^\\S+\\.csv$",
-                    "description": "Path to comma-separated file mapping capture kit names to their BED target files.",
+                    "description": "CSV mapping capture kit names to target BEDs.",
                     "fa_icon": "fas fa-file-csv"
                 },
                 "outdir": {
                     "type": "string",
                     "format": "directory-path",
-                    "description": "The output directory where the results will be saved.",
+                    "description": "Output directory.",
                     "default": "./vaximile_out",
                     "fa_icon": "fas fa-folder-open"
                 }
@@ -49,39 +49,39 @@
             "title": "Reference genome options",
             "type": "object",
             "fa_icon": "fas fa-dna",
-            "description": "Reference genome, annotation and transcriptome files.",
+            "description": "Reference genome, annotation, transcriptome and proteome.",
             "properties": {
                 "reference_fa": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Reference genome FASTA. Gzipped input is decompressed and indexed automatically.",
+                    "description": "Reference genome FASTA, plain or gzipped.",
                     "fa_icon": "fas fa-file",
                     "default": "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/GRCh38.primary_assembly.genome.fa.gz"
                 },
                 "reference_includes_chr_prefix": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Set to false when the reference contigs are named without a 'chr' prefix.",
+                    "description": "Whether the reference contigs are named with 'chr'.",
                     "fa_icon": "fas fa-tag"
                 },
                 "gtf": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Gene annotation GTF used for RNA alignment, quantification and fusion calling.",
+                    "description": "Gene annotation GTF for RNA alignment, quantification and fusion calling.",
                     "fa_icon": "fas fa-file",
                     "default": "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.annotation.gtf.gz"
                 },
                 "transcriptome_reference": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Transcriptome FASTA used to build the salmon index.",
+                    "description": "Transcriptome FASTA for the salmon index.",
                     "fa_icon": "fas fa-file",
                     "default": "https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz"
                 },
                 "human_ref_peptides": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Reference proteome peptide FASTA used by pVACtools for reference proteome similarity.",
+                    "description": "Reference proteome FASTA for pVACtools' proteome similarity check.",
                     "fa_icon": "fas fa-file",
                     "default": "https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz"
                 }
@@ -91,25 +91,25 @@
             "title": "Alignment index options",
             "type": "object",
             "fa_icon": "fas fa-database",
-            "description": "Prebuilt indices. Any left unset are built from the reference during the run.",
+            "description": "Prebuilt indexes. Any left unset are built and saved to ./vaximile_resources/.",
             "properties": {
                 "bwa_index": {
                     "type": "string",
                     "format": "directory-path",
-                    "description": "Directory containing a prebuilt minibwa index. When not given, the index is built and saved to vaximile_resources/bwa_index/ in the launch directory.",
-                    "help_text": "Must hold the two files minibwa writes (.l2b, .mbw), named after the *prepared* reference FASTA, i.e. '<reference_fa stem>_prc.fa.<ext>'. minibwa is given the reference FASTA as its index prefix, so an index built from a differently named FASTA will not be found. The pipeline checks this at launch and lists what is missing. The simplest valid directory is what a run without this parameter saves to ./vaximile_resources/bwa_index/.",
+                    "description": "Prebuilt minibwa index directory.",
+                    "help_text": "Must hold the .l2b and .mbw files named '<reference_fa stem>_prc.fa.<ext>'. A previous run's ./vaximile_resources/bwa_index/ works as is.",
                     "fa_icon": "fas fa-folder-open"
                 },
                 "star_index": {
                     "type": "string",
                     "format": "directory-path",
-                    "description": "Directory containing a prebuilt STAR index. When not given, the index is built and saved to vaximile_resources/star_index/STARGenomeDir/ in the launch directory.",
+                    "description": "Prebuilt STAR index directory.",
                     "fa_icon": "fas fa-folder-open"
                 },
                 "salmon_index": {
                     "type": "string",
                     "format": "directory-path",
-                    "description": "Directory containing a prebuilt salmon index. When not given, the index is built and saved under vaximile_resources/salmon_index/ in the launch directory.",
+                    "description": "Prebuilt salmon index directory.",
                     "fa_icon": "fas fa-folder-open"
                 }
             }
@@ -118,52 +118,52 @@
             "title": "Downloaded resource options",
             "type": "object",
             "fa_icon": "fas fa-download",
-            "description": "Resources the pipeline downloads when not given, once, into ./vaximile_resources/ in the launch directory, reusing them on later runs.",
+            "description": "Downloaded once into ./vaximile_resources/ when not given, and reused on later runs.",
             "properties": {
                 "vep_cache": {
                     "type": "string",
                     "format": "directory-path",
-                    "description": "Path to a local Ensembl VEP cache directory. Optional; downloaded if omitted.",
-                    "help_text": "Leave unset and the pipeline pulls the release-115 GRCh38 human cache (~24 GiB) from https://ftp.ensembl.org/pub/release-115/variation/indexed_vep_cache/ into ./vaximile_resources/vep_cache, reusing it on later runs. Supply this only to point at a cache you already have, or to run against an assembly or species other than human GRCh38 - the release must be 115 to match the VEP the pipeline runs.",
+                    "description": "Ensembl VEP cache directory, release 115.",
+                    "help_text": "Default: the GRCh38 human cache (~24 GiB). Must be release 115 to match the pipeline's VEP.",
                     "fa_icon": "fas fa-folder-open"
                 },
                 "vep_plugins": {
                     "type": "string",
                     "format": "directory-path",
-                    "description": "Directory containing the pVACtools Frameshift.pm and Wildtype.pm VEP plugins. Downloaded if omitted.",
-                    "help_text": "Leave unset and the pipeline downloads the plugins for the pVACtools version it runs (7.1.5) into ./vaximile_resources/vep_pvac_plugins. Plugins from another pVACtools version may not match the pVACseq it runs.",
+                    "description": "Directory with pVACtools' Frameshift.pm and Wildtype.pm VEP plugins.",
+                    "help_text": "Should come from pVACtools 7.1.5, the version the pipeline runs.",
                     "fa_icon": "fas fa-folder-open"
                 },
                 "ctat_resource_lib": {
                     "type": "string",
                     "format": "directory-path",
-                    "description": "CTAT genome library for STAR-Fusion: the ctat_genome_lib_build_dir directory of a plug-n-play bundle. Downloaded if omitted.",
-                    "help_text": "Leave unset and the pipeline downloads the GRCh38 GENCODE v44 plug-n-play bundle (Oct 29 2023) into ./vaximile_resources/ctat_resource_dir.",
+                    "description": "STAR-Fusion CTAT library: the ctat_genome_lib_build_dir of a plug-n-play bundle.",
+                    "help_text": "Default: the GRCh38 GENCODE v44 bundle (Oct 29 2023).",
                     "fa_icon": "fas fa-folder-open"
                 },
                 "arriba_blacklist": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Arriba blacklist. Downloaded with the Arriba v2.5.1 release if omitted.",
+                    "description": "Arriba blacklist.",
                     "fa_icon": "fas fa-file"
                 },
                 "arriba_known_fusions": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Arriba known fusions. Downloaded with the Arriba v2.5.1 release if omitted.",
+                    "description": "Arriba known fusions.",
                     "fa_icon": "fas fa-file"
                 },
                 "arriba_protein_domains": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Arriba protein domains (GFF3). Downloaded with the Arriba v2.5.1 release if omitted.",
+                    "description": "Arriba protein domains GFF3.",
                     "fa_icon": "fas fa-file"
                 },
                 "ascat_resources": {
                     "type": "string",
                     "format": "directory-path",
-                    "description": "Directory of ASCAT 1000 Genomes resources: G1000_loci_hg38/, G1000_alleles_hg38/, GC_G1000_hg38/ and RT_G1000_hg38/. Downloaded if omitted.",
-                    "help_text": "Laid out as the pipeline downloads them into ./vaximile_resources/ascat_hg38_chr (or ascat_hg38_nochr), so a previous run's folder can be given directly. The loci files' contig names must match the reference, which is why the download adds a chr prefix when --reference_includes_chr_prefix is set.",
+                    "description": "ASCAT 1000 Genomes resource directory.",
+                    "help_text": "Holds G1000_loci_hg38/, G1000_alleles_hg38/, GC_G1000_hg38/ and RT_G1000_hg38/, as a previous run saves them. Loci contig names must match the reference.",
                     "fa_icon": "fas fa-folder-open"
                 }
             }
@@ -172,57 +172,57 @@
             "title": "Variant calling options",
             "type": "object",
             "fa_icon": "fas fa-cut",
-            "description": "Interval scattering behaviour for the GATK-based callers.",
+            "description": "Interval scattering for the GATK callers.",
             "properties": {
                 "interval_padding": {
                     "type": "integer",
                     "default": 100,
-                    "description": "Bases of padding added around each calling interval.",
+                    "description": "Bases of padding around each calling interval.",
                     "fa_icon": "fas fa-arrows-alt-h"
                 },
                 "scatter_count": {
                     "type": "integer",
                     "default": 30,
-                    "description": "Number of interval shards to scatter variant calling across.",
+                    "description": "Number of interval shards for variant calling.",
                     "fa_icon": "fas fa-th"
                 }
             }
         },
-        "hla_typing_options": {
-            "title": "HLA typing options",
+        "hla_loh_options": {
+            "title": "HLA LOH options",
             "type": "object",
             "fa_icon": "fas fa-shield-virus",
-            "description": "Reference data for MHC region extraction and HLA allele calling.",
+            "description": "Used only for HLA LOH; HLA typing needs none of them.",
             "properties": {
                 "hla_fasta": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "HLA class I reference FASTA.",
+                    "description": "Polysolver HLA class I reference FASTA.",
                     "default": "https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/abc_complete.fasta"
                 },
                 "hla_fasta_fai": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Index for the HLA reference FASTA.",
+                    "description": "Index of the HLA reference FASTA.",
                     "default": "https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/abc_complete.fasta.fai"
                 },
                 "hla_kmers": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Unique HLA k-mer file used by the typing tools.",
+                    "description": "Polysolver unique HLA k-mer file.",
                     "default": "https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/abc_v14.uniq"
                 },
                 "hla_freq": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "HLA allele population frequency table.",
+                    "description": "Polysolver HLA allele frequency table.",
                     "default": "https://raw.githubusercontent.com/jason-weirather/hla-polysolver/9326ac2ef9b112b9bc5f25222854296097b58be5/data/HLA_FREQ.txt"
                 },
                 "novoalign_dir": {
                     "type": "string",
                     "format": "directory-path",
-                    "description": "Directory containing the novoalign and novoindex binaries, needed for HLA LOH. Without it, HLA LOH is skipped.",
-                    "help_text": "Novoalign is proprietary and was removed from bioconda in October 2026 at Novocraft's request, so the pipeline cannot install it. Download it from https://www.novocraft.com/support/download/. Novoalign V4 also needs its novoalign.lic licence file in the same directory; V3 runs without one, single-threaded. Without this parameter mhcflow, the tumor realignment and lohhlamod are skipped; HLA typing with OptiType and HLA-HD still runs.",
+                    "description": "Directory with the novoalign and novoindex binaries. HLA LOH is skipped without it.",
+                    "help_text": "Novoalign is proprietary and no longer on bioconda; download it from https://www.novocraft.com/support/download/. V4 also needs novoalign.lic in the same directory.",
                     "fa_icon": "fas fa-folder-open"
                 }
             }
@@ -231,60 +231,60 @@
             "title": "GATK resource bundle options",
             "type": "object",
             "fa_icon": "fas fa-archive",
-            "description": "Known-sites VCFs used for BQSR, contamination estimation and somatic filtering. Each must have a matching .tbi.",
+            "description": "GATK resource VCFs. Each needs a matching .tbi.",
             "properties": {
                 "common_germline": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Common germline biallelic SNP sites for contamination estimation.",
+                    "description": "Common germline SNPs for contamination estimation.",
                     "default": "gs://gatk-best-practices/somatic-hg38/small_exac_common_3.hg38.vcf.gz"
                 },
                 "known_sites_dbsnp": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "dbSNP known sites VCF for BQSR.",
+                    "description": "dbSNP, known sites for BQSR.",
                     "default": "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf.gz"
                 },
                 "known_sites_1000g_snps": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "1000 Genomes high-confidence SNPs for BQSR.",
+                    "description": "1000 Genomes high-confidence SNPs, known sites for BQSR.",
                     "default": "gs://gcp-public-data--broad-references/hg38/v0/1000G_phase1.snps.high_confidence.hg38.vcf.gz"
                 },
                 "known_indels": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Known indels VCF for BQSR.",
+                    "description": "Known indels for BQSR.",
                     "default": "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.known_indels.vcf.gz"
                 },
                 "gnomad": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "gnomAD allele-frequency-only VCF for Mutect2.",
+                    "description": "gnomAD allele frequencies for Mutect2.",
                     "default": "gs://gatk-best-practices/somatic-hg38/af-only-gnomad.hg38.vcf.gz"
                 },
                 "pon": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Panel of normals VCF for Mutect2.",
+                    "description": "Panel of normals for Mutect2.",
                     "default": "gs://gatk-best-practices/somatic-hg38/1000g_pon.hg38.vcf.gz"
                 },
                 "hapmap": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "HapMap VCF for germline variant recalibration.",
+                    "description": "HapMap SNPs, a truth set for germline CNN filtering.",
                     "default": "gs://gcp-public-data--broad-references/hg38/v0/hapmap_3.3.hg38.vcf.gz"
                 },
                 "mills": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Mills gold standard indels VCF.",
+                    "description": "Mills gold standard indels, for BQSR and germline CNN filtering.",
                     "default": "gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz"
                 },
                 "somalier_sites": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Sites VCF used by somalier for relatedness checks.",
+                    "description": "Sites for somalier's relatedness check.",
                     "default": "https://github.com/brentp/somalier/files/3412456/sites.hg38.vcf.gz"
                 }
             }
@@ -293,12 +293,12 @@
             "title": "Generic options",
             "type": "object",
             "fa_icon": "fas fa-file-import",
-            "description": "Less common options for the pipeline, typically set in a config file.",
+            "description": "Rarely changed options.",
             "properties": {
                 "publish_dir_mode": {
                     "type": "string",
                     "default": "copy",
-                    "description": "Method used to save pipeline results to output directory.",
+                    "description": "How results are saved to the output directory.",
                     "enum": [
                         "symlink",
                         "rellink",
@@ -310,16 +310,9 @@
                     "hidden": true,
                     "fa_icon": "fas fa-copy"
                 },
-                "version": {
-                    "type": "boolean",
-                    "description": "Display version and exit.",
-                    "hidden": true,
-                    "fa_icon": "fas fa-question-circle",
-                    "default": false
-                },
                 "help": {
                     "type": "boolean",
-                    "description": "Display help text.",
+                    "description": "Show this help.",
                     "hidden": true,
                     "fa_icon": "fas fa-question-circle",
                     "default": false
@@ -344,7 +337,7 @@
             "$ref": "#/$defs/variant_calling_options"
         },
         {
-            "$ref": "#/$defs/hla_typing_options"
+            "$ref": "#/$defs/hla_loh_options"
         },
         {
             "$ref": "#/$defs/gatk_resource_options"
