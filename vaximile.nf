@@ -2,7 +2,6 @@
 
 include { VAXIMILE } from './workflows/vaximile'
 include { PIPELINE_INITIALISATION } from './subworkflows/pipeline_init.nf'
-include { PIPELINE_COMPLETION } from './subworkflows/pipeline_init.nf'
 
 
 // MAIN WORKFLOW
@@ -22,10 +21,6 @@ workflow {
     VAXIMILE(
         PIPELINE_INITIALISATION.out.samplesheet,
         PIPELINE_INITIALISATION.out.capture_kits
-    )
-
-    PIPELINE_COMPLETION(
-        VAXIMILE.out.multiqc_reports
     )
 
     publish:

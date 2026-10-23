@@ -53,26 +53,6 @@ workflow PIPELINE_INITIALISATION {
     capture_kits = ch_capture_kits
 }
 
-workflow PIPELINE_COMPLETION {
-
-    take:
-    multiqc_report // channel: [ patient, report ]
-
-    main:
-
-    // Capture `workflow` here; it is null inside the onComplete closure.
-    def wf = workflow
-    def outdir = params.outdir
-
-    wf.onComplete {
-        log.info(
-            wf.success
-                ? "Pipeline completed successfully. Results in ${outdir}"
-                : "Pipeline completed with errors. Exit status: ${wf.exitStatus}"
-        )
-    }
-}
-
 // Functions
 
 // Log every parameter by schema section, marking non-defaults (nf-schema's own summary shows only non-defaults).
