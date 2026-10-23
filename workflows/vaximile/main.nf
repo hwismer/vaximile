@@ -590,7 +590,21 @@ workflow VAXIMILE {
         "Work directory": workflow.workDir,
         "Output directory": params.outdir,
     ].collectEntries { k, v -> [k, v.toString()] }
-    run_params = params.sort().collectEntries { k, v -> [k, v == null ? '' : v.toString()] }
+    // Resources left unset are downloaded or built into ./vaximile_resources/; show those paths instead.
+    def resources = "${workflow.launchDir}/vaximile_resources"
+    def resource_defaults = [
+        "bwa_index": "${resources}/bwa_index/ (built)",
+        "star_index": "${resources}/star_index/STARGenomeDir (built)",
+        "salmon_index": "${resources}/salmon_index/${file(params.transcriptome_reference).name}_salmon_index (built)",
+        "ctat_resource_lib": "${resources}/ctat_resource_dir/GRCh38_gencode_v44_CTAT_lib_Oct292023.plug-n-play/ctat_genome_lib_build_dir (downloaded)",
+        "vep_cache": "${resources}/vep_cache/vep_cache (downloaded)",
+        "vep_plugins": "${resources}/vep_pvac_plugins/VEP_plugins (downloaded)",
+        "arriba_blacklist": "${resources}/arriba_hg38/arriba_v2.5.1/database/blacklist_hg38_GRCh38_v2.5.1.tsv.gz (downloaded)",
+        "arriba_known_fusions": "${resources}/arriba_hg38/arriba_v2.5.1/database/known_fusions_hg38_GRCh38_v2.5.1.tsv.gz (downloaded)",
+        "arriba_protein_domains": "${resources}/arriba_hg38/arriba_v2.5.1/database/protein_domains_hg38_GRCh38_v2.5.1.gff3 (downloaded)",
+        "ascat_resources": "${resources}/ascat_hg38_${params.reference_includes_chr_prefix ? 'chr' : 'nochr'} (downloaded)",
+    ]
+    run_params = params.sort().collectEntries { k, v -> [k, v != null ? v.toString() : (resource_defaults[k] ?: '')] }
     run_info = [details: run_details, params: run_params]
 
     multiqc = MULTIQC(mqc_reports, run_info).html
