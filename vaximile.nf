@@ -4,15 +4,12 @@ include { VAXIMILE } from './workflows/vaximile'
 include { PIPELINE_INITIALISATION } from './subworkflows/pipeline_init.nf'
 include { PIPELINE_COMPLETION } from './subworkflows/pipeline_init.nf'
 
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    RUN MAIN WORKFLOW
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+// MAIN WORKFLOW
 workflow {
 
     main:
 
-    // --help is printed by nf-schema before the workflow runs; exit here rather than continue.
     if (params.help || params.containsKey('helpFull')) {
         System.exit(0)
     }
@@ -52,15 +49,13 @@ workflow {
     salmon_gene = VAXIMILE.out.salmon_gene
 }
 
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    PUBLISH TARGETS
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-// Publish pair-level outputs under <somatic_name>/ and per-library outputs under samples/<sample_name>/.
+// Somatic metamaps will have the somatic_name tag in then while single samples wont. 
+// Create publish scope based on somatic_name presence.
 def publish_scope(meta) {
     return meta.somatic_name ? "somatic_samples/${meta.somatic_name}" : "samples/${meta.sample_name}"
 }
 
+// OUTPUTS
 output {
     multiqc_reports {
         path { patient, report -> "${params.outdir}/${patient}/" }
