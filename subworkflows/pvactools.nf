@@ -198,22 +198,22 @@ workflow PVAC_INPUT_PREP_WORKFLOW {
 workflow PVACTOOLS_WORKFLOW {
 
     take:
-        pvacseq_input // (somatic_name, somatic_meta, somatic_vcf, somatic_vcf_index, phased_vcf, phase_vcf_index, hla_calls)
-        pvacfuse_input // (somatic_name, arriba_meta, arriba_fusions, star_meta, star_fusions, hla_meta, hla_calls)
+        pvacseq_input // (somatic_name, somatic_meta, somatic_vcf, somatic_vcf_index, phased_vcf, phase_vcf_index, hla_meta, hla_alleles)
+        pvacfuse_input // (somatic_name, arriba_meta, arriba_fusions, star_meta, star_fusions, hla_meta, hla_alleles)
         proteome_reference
 
     main:
 
     pvacseq_ch = pvacseq_input
-        .map { somatic_name, somatic_meta, somatic_vcf, somatic_vcf_index, phased_vcf, phased_vcf_index, hla_meta, hla_pvac_input ->
-            tuple(somatic_name, somatic_meta, somatic_meta.tumor_meta.sample_name, somatic_meta.normal_meta.sample_name, somatic_vcf, somatic_vcf_index, phased_vcf, phased_vcf_index, hla_meta, hla_pvac_input)
+        .map { somatic_name, somatic_meta, somatic_vcf, somatic_vcf_index, phased_vcf, phased_vcf_index, hla_meta, hla_alleles ->
+            tuple(somatic_name, somatic_meta, somatic_meta.tumor_meta.sample_name, somatic_meta.normal_meta.sample_name, somatic_vcf, somatic_vcf_index, phased_vcf, phased_vcf_index, hla_meta, hla_alleles)
         }
 
     pvacseq = PVACSEQ(pvacseq_ch, proteome_reference)
     pvacfuse = PVACFUSE(pvacfuse_input, proteome_reference).pvacfuse_dir
 
     // Pair each report with the somatic VCF it came from, for each sample's AD.
-    somatic_vcfs = pvacseq_input.map { somatic_name, somatic_meta, somatic_vcf, somatic_vcf_index, phased_vcf, phased_vcf_index, hla_meta, hla_pvac_input ->
+    somatic_vcfs = pvacseq_input.map { somatic_name, somatic_meta, somatic_vcf, somatic_vcf_index, phased_vcf, phased_vcf_index, _hla_meta, _hla_alleles ->
         tuple(somatic_meta, somatic_vcf)
     }
     pvacseq_patient = pvacseq.pvaseq_mhc_i_aggr.join(somatic_vcfs)

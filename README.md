@@ -70,6 +70,7 @@ Input samplesheets and output directory.
 | --------- | ----------- | ------- |
 | `--samplesheet` | **Required.** CSV of patients, samples and FASTQs. | — |
 | `--capture_kits` | **Required.** CSV mapping capture kit names to target BEDs. | — |
+| `--hla_overrides` | CSV of somatic_name and alleles, replacing the typed HLA alleles for those pairs. See [HLA overrides](#hla-overrides). | — |
 | `--outdir` | **Required.** Output directory. | `./vaximile_out` |
 
 ### Reference genome options
@@ -193,6 +194,20 @@ One sample per line. A complete somatic grouping consists of a tumor sample, nor
 nextflow run . -profile singularity,conda --samplesheet ./samplesheet.csv --capture_kits ./capture_kits.csv --outdir ./vaximile_out -resume
 ```
 Some modules are container-only while others are conda-only. To execute a full run without problems, both will need to be enabled.
+
+### HLA overrides
+
+`--hla_overrides` replaces the typed HLA alleles for chosen pairs, e.g. with clinical typing.
+`alleles` is the full list pVACseq and pVACfuse use for that pair, quoted and comma-separated,
+with class I as `HLA-A*02:01` and class II without the prefix, as `DRB1*15:01`. It replaces
+class I and class II; pairs not listed keep the typed calls.
+
+`hla_overrides.csv`
+
+```csv
+somatic_name,alleles
+PatientX_T1_N1,"HLA-A*02:01,HLA-A*24:02,HLA-B*15:01,HLA-B*44:02,HLA-C*07:02,DRB1*15:01,DQA1*01:02,DQB1*06:02"
+```
 
 
 ## Output

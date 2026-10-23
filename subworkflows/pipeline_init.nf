@@ -100,6 +100,14 @@ def validateReferenceInputs() {
     if (params.vep_cache && !file(params.vep_cache).exists()) {
         error("VEP cache directory not found: ${params.vep_cache}")
     }
+    if (params.hla_overrides) {
+        def pairs = file(params.samplesheet).splitCsv(header: true).collect { row -> row.somatic_name } as Set
+        file(params.hla_overrides).splitCsv(header: true, quote: '"').each { row ->
+            if (!(row.somatic_name in pairs)) {
+                error("--hla_overrides lists somatic_name '${row.somatic_name}', which is not in the samplesheet")
+            }
+        }
+    }
 }
 
 

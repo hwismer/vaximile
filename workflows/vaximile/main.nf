@@ -416,10 +416,26 @@ workflow VAXIMILE {
     //**************************************************************************************************************************************
     // PVACtools Neoantigen Prediction - Somatic Variants / RNA Fusions /
 
-    // pVACtools uses the normal's HLA calls (HLA type is germline), fanned out to every pair.
+    // pVACtools uses the normal's HLA calls (HLA type is germline), fanned out to every pair,
+    // unless --hla_overrides gives a pair its own alleles.
+    hla_overrides = params.hla_overrides
+        ? channel.fromPath(params.hla_overrides, checkIfExists: true)
+            .splitCsv(header: true, quote: '"')
+            .map { row -> tuple(row.somatic_name, row.alleles.replaceAll(/\s/, '')) }
+        : channel.empty()
+
     combined_hla_somatic_name = fan_out_pairs(
         hla_pvac_input.filter { meta, _calls -> meta.sample_type == "NORMAL" }
     )
+        .map { somatic_name, meta, calls -> tuple(somatic_name, meta, calls.text.trim()) }
+        // remainder: true keeps the pairs without an override. Unknown pairs are rejected at launch.
+        .join(hla_overrides, remainder: true)
+        .map { somatic_name, meta, typed, override ->
+            if ( override ) {
+                log.info("${somatic_name}: using HLA alleles from --hla_overrides instead of the typed calls")
+            }
+            tuple(somatic_name, meta, override ?: typed)
+        }
 
     somatic_phased = somatic_vcf.join(phased_vcf).map{meta, somatic_vcf_final, somatic_index, phased_vcf_final, phased_index ->
         tuple(meta.somatic_name, meta, somatic_vcf_final, somatic_index, phased_vcf_final, phased_index)

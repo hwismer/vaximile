@@ -7,7 +7,7 @@ process PVACFUSE {
     
     tag "pVACfuse on ${somatic_name}"
     input:
-        tuple val(somatic_name), val(arriba_meta), path(arriba_fusions), val(star_meta), path(starfusion_calls), val(hla_meta), path(hla_pvac_input)
+        tuple val(somatic_name), val(arriba_meta), path(arriba_fusions), val(star_meta), path(starfusion_calls), val(hla_meta), val(hla_alleles)
         path human_ref_peptides
 
     output:
@@ -20,7 +20,7 @@ process PVACFUSE {
         pvacfuse run \
             $arriba_fusions \
             "${somatic_name}" \
-            \$(head $hla_pvac_input -n 1) \
+            "${hla_alleles}" \
             all \
             "${prefix}_pvacfuse" \
             --starfusion-file $starfusion_calls \

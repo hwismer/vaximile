@@ -12,7 +12,7 @@ process PVACSEQ {
             val(somatic_meta), val(tumor_sample_name), val(normal_sample_name),
             path(somatic_vcf), path(somatic_vcf_index),
             path(phased_vcf), path(phased_vcf_index), 
-            val(hla_meta), path(hla_pvac_input)
+            val(hla_meta), val(hla_alleles)
         path(human_ref_peptides)
     output:
         tuple val(somatic_meta), path("*_pvacseq"), emit: pvacseq_dir
@@ -25,7 +25,7 @@ process PVACSEQ {
         pvacseq run \
             $somatic_vcf \
             ${tumor_sample_name} \
-            \$(head $hla_pvac_input -n 1) \
+            "${hla_alleles}" \
             all \
             "${prefix}_pvacseq" \
             $args \

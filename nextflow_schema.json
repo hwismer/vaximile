@@ -36,6 +36,17 @@
                     "description": "CSV mapping capture kit names to target BEDs.",
                     "fa_icon": "fas fa-file-csv"
                 },
+                "hla_overrides": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "schema": "assets/schema_hla_overrides.json",
+                    "mimetype": "text/csv",
+                    "pattern": "^\\S+\\.csv$",
+                    "description": "CSV of somatic_name and alleles, replacing the typed HLA alleles for those pairs.",
+                    "help_text": "Columns somatic_name and alleles. alleles is the full pVACtools allele list for the pair, in quotes and comma-separated, e.g. \"HLA-A*02:01,HLA-B*07:02,DRB1*15:01\". It replaces both class I and class II.",
+                    "fa_icon": "fas fa-file-csv"
+                },
                 "outdir": {
                     "type": "string",
                     "format": "directory-path",
