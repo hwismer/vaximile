@@ -62,6 +62,9 @@ PY
 exclude_modules:
   - optitype
 
+# No Software Versions section: versions are pinned in each module instead.
+skip_versions_section: true
+
 mosdepth_config:
   general_stats_coverage: [20, 50, 100]
 
