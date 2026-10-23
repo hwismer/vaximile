@@ -253,7 +253,7 @@ vaximile_resources/
 #### Quality control
 
 `<patient>_report.html` is the MultiQC report for the patient. It aggregates fastp reports
-for every DNA and RNA library, samtools and mosdepth coverage, GATK base recalibration
+for every DNA and RNA library, samtools stats and mosdepth coverage, GATK base recalibration
 tables, STAR and salmon summaries, VEP summaries, and somalier relatedness. Its custom
 sections cover the somatic calls (filtering metrics, substitution types, TMB, contamination,
 and VAF plots), the germline calls (caller overlap, het/hom, Ti/Tv, and VAF), HLA typing and

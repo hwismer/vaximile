@@ -1,7 +1,6 @@
 // Quality control: alignment stats, coverage, library damage, relatedness and variant QC, gathered
 // with every other step's reports into one MultiQC report per patient.
 include { SAMTOOLS_FLAGSTAT } from "../modules/local/samtools_flagstat/main"
-include { SAMTOOLS_COVERAGE } from "../modules/local/samtools_coverage/main"
 include { SAMTOOLS_IDXSTATS } from "../modules/local/samtools_idxstats/main"
 include { MOSDEPTH } from "../modules/local/mosdepth/main"
 include { PICARD_ARTIFACT_METRICS } from "../modules/local/picard_artifact_metrics/main"
@@ -80,7 +79,6 @@ workflow QC {
 
     // Alignment stats, capture coverage and library damage, per DNA library.
     flagstat = SAMTOOLS_FLAGSTAT(markdup_bams).flagstat
-    coverage = SAMTOOLS_COVERAGE(markdup_bams).tsv
     idxstats = SAMTOOLS_IDXSTATS(markdup_bams).tsv
 
     mosdepth_input = markdup_bams
@@ -141,7 +139,6 @@ workflow QC {
     library_and_pair_files = reports
         .mix(
             flagstat,
-            coverage,
             idxstats,
             mosdepth.map { meta, global, region, summary -> tuple(meta, [global, region, summary]) },
             artifact_metrics.map { meta, oxog, table -> tuple(meta, [oxog, table]) },
