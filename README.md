@@ -56,8 +56,9 @@ somatic variants and pVACfuse on fusions.
 
 **Report** — one [MultiQC](https://multiqc.info/) report per patient, including the HLA LOH
 and ASCAT results, somatic and germline variant QC (VAFs, caller overlap, filtering funnel,
-substitution spectrum, TMB), pVACseq tier summaries, and capture coverage from
-[mosdepth](https://github.com/brentp/mosdepth).
+substitution spectrum, TMB), pVACseq tier summaries, capture coverage from
+[mosdepth](https://github.com/brentp/mosdepth), and library damage (8-oxoG oxidation,
+deamination) from Picard.
 
 ## Parameters
 
@@ -251,13 +252,14 @@ vaximile_resources/
 
 #### Quality control
 
-`<patient>_report.html` is the MultiQC report for the patient. It opens with how the run
-was launched and every parameter it used, then aggregates fastp reports for every DNA and
-RNA library, samtools and mosdepth coverage, GATK base recalibration tables, STAR and
-salmon summaries, VEP summaries, and somalier relatedness. Its custom sections cover the
-somatic calls (filtering metrics, substitution types, TMB, contamination, and VAF plots),
-the germline calls (caller overlap, het/hom, Ti/Tv, and VAF), HLA typing and LOH, ASCAT
-copy number, and the pVACseq tiers.
+`<patient>_report.html` is the MultiQC report for the patient. It aggregates fastp reports
+for every DNA and RNA library, samtools and mosdepth coverage, GATK base recalibration
+tables, STAR and salmon summaries, VEP summaries, and somalier relatedness. Its custom
+sections cover the somatic calls (filtering metrics, substitution types, TMB, contamination,
+and VAF plots), the germline calls (caller overlap, het/hom, Ti/Tv, and VAF), HLA typing and
+LOH, ASCAT copy number, the pVACseq tiers, and sequencing artifacts from Picard
+CollectOxoGMetrics and CollectSequencingArtifactMetrics. It ends with how the run was
+launched and every parameter it used, including where downloaded or built resources went.
 
 The somalier tables in that report are the check for sample swaps - confirm the tumor and
 normal of each pair relate to each other before trusting downstream calls.

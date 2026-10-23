@@ -32,6 +32,7 @@ include { DEEPSOMATIC_WORKFLOW } from "../../subworkflows/somatic_variant_callin
 include { SOMATIC_QC } from "../../modules/local/somatic_qc/main"
 include { GERMLINE_QC } from "../../modules/local/germline_qc/main"
 include { MOSDEPTH } from "../../modules/local/mosdepth/main"
+include { PICARD_ARTIFACT_METRICS } from "../../modules/local/picard_artifact_metrics/main"
 include { VAF_GRIDS } from "../../modules/local/vaf_grids/main"
 
 //**************************************************************************************************************************************
@@ -515,6 +516,9 @@ workflow VAXIMILE {
         .map { _kit, meta, bam, bai, bed -> tuple(meta, bam, bai, bed) }
     mosdepth = MOSDEPTH(mosdepth_input).dist
 
+    // Oxidation and other library damage, per DNA library.
+    artifact_metrics = PICARD_ARTIFACT_METRICS(markdup_bams, reference_genome, reference_dict).mqc
+
 
     //**************************************************************************************************************************************
     // MultiQC Report Creation
@@ -550,6 +554,8 @@ workflow VAXIMILE {
         .flatMap{ meta, files -> [files].flatten().collect { f -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, f) } }
     mqc_mosdepth = mosdepth
         .flatMap{ meta, global, region, summary -> [global, region, summary].collect { f -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, f) } }
+    mqc_artifact_metrics = artifact_metrics
+        .flatMap{ meta, oxog, table -> [oxog, table].collect { f -> tuple(meta.patient, (meta.somatic_names ?: meta.somatic_name), meta.sample_name + "_" + meta.molecule, f) } }
 
 
     mqc_reports = mqc_dna_fastp_reports
@@ -575,6 +581,7 @@ workflow VAXIMILE {
         .mix(mqc_vaf_grids)
         .mix(mqc_germline_qc)
         .mix(mqc_mosdepth)
+        .mix(mqc_artifact_metrics)
         .groupTuple()
     // How this run was launched and every parameter it used, for the report's Run Information section.
     run_details = [

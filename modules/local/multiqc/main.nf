@@ -82,6 +82,7 @@ custom_content:
     - hla
     - cnv
     - neoantigens
+    - sequencing_artifacts
 
 custom_data:
   hla_calls:
