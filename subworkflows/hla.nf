@@ -37,7 +37,7 @@ workflow HLA_TYPING_WORKFLOW {
         optitype = OPTITYPE(optitype_input)
         hlahd = HLAHD(fastqs)
         
-        // Combine HLA calls as input for consensus calls
+        // Pair each library's OptiType and HLA-HD calls for HLA_CALLS_PVAC
         combined_typing_results = optitype.hla_calls.join(hlahd.final_hla_calls)
         
         hlahd_to_tsv_input = hlahd.final_hla_calls
@@ -46,16 +46,16 @@ workflow HLA_TYPING_WORKFLOW {
             }
 
         hlahd_tsv = HLAHD_TO_TSV(hlahd_to_tsv_input).hlahd_tsv
-        // Consensus calls for pVACtools
-        hla_consensus = HLA_CALLS_PVAC(combined_typing_results)
+        // Alleles for pVACtools: class I from OptiType, class II from HLA-HD
+        hla_alleles = HLA_CALLS_PVAC(combined_typing_results)
 
     emit:
         hla_bed = hla_bed  // MHC region, for HLA_LOH_WORKFLOW's mhcflow runs
         optitype = optitype.hla_calls
         hlahd = hlahd.final_hla_calls
         hlahd_tsv = hlahd_tsv
-        pvac_input = hla_consensus.pvac_calls
-        consensus_mqc = hla_consensus.mqc
+        pvac_input = hla_alleles.pvac_calls
+        alleles_mqc = hla_alleles.mqc
 
 }
 

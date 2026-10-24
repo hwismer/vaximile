@@ -1,22 +1,21 @@
 process HLA_CALLS_PVAC {
 
-    // HLA alleles for pVACtools, and a MultiQC table of them. Class I is the consensus of OptiType
-    // and HLA-HD: where they disagree at a gene OptiType's calls are used, and the disagreement is
-    // listed in the table. Class II comes from HLA-HD alone. Calls are trimmed to two fields and
-    // null alleles dropped.
+    // HLA alleles for pVACtools, and a MultiQC table of them: class I from OptiType, class II from
+    // HLA-HD. The table also notes class I genes where HLA-HD disagrees. Calls are trimmed to two
+    // fields and null alleles dropped.
 
     label 'process_low'
 
     conda "python=3.10"
 
-    tag "HLA consensus calls for ${meta.sample_name}"
+    tag "HLA alleles for ${meta.sample_name}"
 
     input:
         tuple val(meta), path(optitype_result), path(optitype_pdf), path(hlahd_result)
 
     output:
         tuple val(meta), path("*_hla_calls.csv"), emit: pvac_calls
-        tuple val(meta), path("*_hla_consensus_mqc.json"), emit: mqc
+        tuple val(meta), path("*_hla_alleles_mqc.json"), emit: mqc
 
     script:
     def prefix = task.ext.prefix ?: "${meta.sample_name}"
@@ -47,45 +46,44 @@ process HLA_CALLS_PVAC {
             gene, first, second = (line.rstrip("\\n").split("\\t") + ["", ""])[:3]
             hlahd[gene] = two_field(first, first if second.strip() == "-" else second)
 
-    consensus = {g: optitype[g] or hlahd.get(g, []) for g in CLASS_I}
-    notes = [f"{g}: OptiType {', '.join(optitype[g]) or 'none'}; HLA-HD {', '.join(hlahd.get(g, [])) or 'none'}"
+    notes = [f"{g}: HLA-HD {', '.join(hlahd.get(g, [])) or 'none'}"
              for g in CLASS_I if optitype[g] != hlahd.get(g, [])]
 
     # pVACtools names class I alleles with "HLA-" and class II without, and pairs the DQ and DP chains itself.
-    class_i = sorted({"HLA-" + a for g in CLASS_I for a in consensus[g]})
+    class_i = sorted({"HLA-" + a for g in CLASS_I for a in optitype[g]})
     class_ii = sorted({a for g in CLASS_II for a in hlahd.get(g, [])})
     if not class_i:
-        raise SystemExit("No class I alleles typed by OptiType or HLA-HD")
+        raise SystemExit("No class I alleles typed by OptiType")
     with open("${prefix}_hla_calls.csv", "w") as fh:
         fh.write(",".join(class_i + class_ii) + "\\n")
 
-    row = {g: ", ".join(consensus[g]) for g in CLASS_I}
+    row = {g: ", ".join(optitype[g]) for g in CLASS_I}
     row["class_ii"] = ", ".join(class_ii)
-    row["notes"] = "; ".join(notes) or "OptiType and HLA-HD agree"
+    row["notes"] = "; ".join(notes) or "HLA-HD agrees"
     content = {
-        "id": "hla_consensus",
-        "section_name": "Consensus",
-        "description": "Alleles passed to pVACseq, at two-field resolution with null alleles removed. Class I is the consensus of OptiType and HLA-HD; where they disagree at a gene, OptiType's calls are used and both are listed in Notes. Class II is from HLA-HD alone.",
+        "id": "hla_pvacseq_alleles",
+        "section_name": "pVACseq alleles",
+        "description": "Alleles passed to pVACseq, at two-field resolution with null alleles removed: class I from OptiType, class II from HLA-HD. Notes lists class I genes where HLA-HD's calls differ.",
         "parent_id": "hla",
         "parent_name": "HLA",
         "plot_type": "table",
-        "pconfig": {"id": "hla_consensus", "title": "HLA Consensus"},
+        "pconfig": {"id": "hla_pvacseq_alleles", "title": "HLA: pVACseq alleles"},
         "headers": {
-            "A": {"title": "HLA-A"},
-            "B": {"title": "HLA-B"},
-            "C": {"title": "HLA-C"},
+            "A": {"title": "HLA-A (OptiType)"},
+            "B": {"title": "HLA-B (OptiType)"},
+            "C": {"title": "HLA-C (OptiType)"},
             "class_ii": {"title": "Class II (HLA-HD)"},
             "notes": {"title": "Notes"},
         },
         "data": {"${library}": row},
     }
-    with open("${prefix}_hla_consensus_mqc.json", "w") as fh:
+    with open("${prefix}_hla_alleles_mqc.json", "w") as fh:
         json.dump(content, fh, indent=1)
     """
 
     stub:
     def prefix = task.ext.prefix ?: "${meta.sample_name}"
     """
-    touch "${prefix}_hla_calls.csv" "${prefix}_hla_consensus_mqc.json"
+    touch "${prefix}_hla_calls.csv" "${prefix}_hla_alleles_mqc.json"
     """
 }
