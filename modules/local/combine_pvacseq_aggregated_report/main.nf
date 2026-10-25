@@ -3,13 +3,13 @@ process COMBINE_PVACSEQ_AGGREGATED_REPORT {
     label 'process_low'
     conda "python=3.10 pandas=2.1"
     
-    tag "Combing pVACseq reports for ${patient}"
+    tag "Combining pVACseq ${mhc_class} reports for ${patient}"
 
     input:
-        tuple val(patient), path(reports), path(vcfs)
+        tuple val(patient), val(mhc_class), path(reports), path(vcfs)
 
     output:
-        tuple val(patient), path("*_pvacseq_reports.tsv"), emit: tsv
+        tuple val(patient), val(mhc_class), path("*_reports.tsv"), emit: tsv
 
     script:
 
@@ -74,7 +74,7 @@ process COMBINE_PVACSEQ_AGGREGATED_REPORT {
     if "ML Prediction (score)" in df.columns:
         ml = df.pop("ML Prediction (score)")
         df.insert(df.columns.get_loc("Tier") + 1, "ML Prediction (score)", ml)
-    df.to_csv("${prefix}_pvacseq_reports.tsv", sep = "\\t", index = False)
+    df.to_csv("${prefix}_pvacseq_${mhc_class}_reports.tsv", sep = "\\t", index = False)
     """
 
     stub:
@@ -82,7 +82,7 @@ process COMBINE_PVACSEQ_AGGREGATED_REPORT {
     def prefix = task.ext.prefix ?: "${patient}"
 
     """
-    touch ${prefix}_pvacseq_reports.tsv
+    touch ${prefix}_pvacseq_${mhc_class}_reports.tsv
     """
 
 }

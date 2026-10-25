@@ -16,7 +16,8 @@ process PVACSEQ {
         path(human_ref_peptides)
     output:
         tuple val(somatic_meta), path("*_pvacseq"), emit: pvacseq_dir
-        tuple val(somatic_meta), path("*.MHC_I.report.tsv"), emit: pvaseq_mhc_i_aggr
+        tuple val(somatic_meta), path("*.MHC_I.report.tsv"), emit: mhc_i_report
+        tuple val(somatic_meta), path("*.MHC_II.report.tsv"), optional: true, emit: mhc_ii_report
 
     script:
         def prefix = task.ext.prefix ?: "${somatic_meta.somatic_name}"
@@ -43,6 +44,11 @@ process PVACSEQ {
         else
             cp "\$report.tsv" ${tumor_sample_name}.MHC_I.report.tsv
         fi
+        # The class II aggregated report, when class II alleles were given.
+        report="${prefix}_pvacseq/MHC_Class_II/${tumor_sample_name}.MHC_II.all_epitopes.aggregated.tsv"
+        if [ -e "\$report" ]; then
+            cp "\$report" ${tumor_sample_name}.MHC_II.report.tsv
+        fi
         """
 
     stub:
@@ -50,6 +56,6 @@ process PVACSEQ {
         """
         mkdir -p ${prefix}_pvacseq/MHC_Class_I
         touch ${prefix}_pvacseq/MHC_Class_I/${tumor_sample_name}.MHC_I.all_epitopes.aggregated.tsv
-        touch ${tumor_sample_name}.MHC_I.report.tsv
+        touch ${tumor_sample_name}.MHC_I.report.tsv ${tumor_sample_name}.MHC_II.report.tsv
         """
 }

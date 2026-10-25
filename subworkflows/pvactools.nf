@@ -216,17 +216,25 @@ workflow PVACTOOLS_WORKFLOW {
     somatic_vcfs = pvacseq_input.map { somatic_name, somatic_meta, somatic_vcf, somatic_vcf_index, phased_vcf, phased_vcf_index, _hla_meta, _hla_alleles ->
         tuple(somatic_meta, somatic_vcf)
     }
-    pvacseq_patient = pvacseq.pvaseq_mhc_i_aggr.join(somatic_vcfs)
-        .map { meta, report, vcf -> tuple(meta.patient, report, vcf) }
-        .groupTuple()
-    combined_report = COMBINE_PVACSEQ_AGGREGATED_REPORT(pvacseq_patient).tsv
+    // One combined report per patient for each MHC class.
+    pvacseq_patient = pvacseq.mhc_i_report.map { meta, report -> tuple(meta, 'mhc_i', report) }
+        .mix(pvacseq.mhc_ii_report.map { meta, report -> tuple(meta, 'mhc_ii', report) })
+        .combine(somatic_vcfs, by: 0)
+        .map { meta, mhc_class, report, vcf -> tuple(meta.patient, mhc_class, report, vcf) }
+        .groupTuple(by: [0, 1])
+    combined_reports = COMBINE_PVACSEQ_AGGREGATED_REPORT(pvacseq_patient).tsv
+        .branch { _patient, mhc_class, _tsv ->
+            mhc_i: mhc_class == 'mhc_i'
+            mhc_ii: mhc_class == 'mhc_ii'
+        }
 
 
     emit:
         // Before `pvacseq`, which rebinds the name to the output directories.
-        pvacseq_aggregated = pvacseq.pvaseq_mhc_i_aggr // (meta, MHC class I aggregated report, with the ML call when it ran), per pair
+        pvacseq_aggregated = pvacseq.mhc_i_report // (meta, MHC class I aggregated report, with the ML call when it ran), per pair
         pvacseq = pvacseq.pvacseq_dir
-        pvacseq_mhc_i_combined = combined_report
+        pvacseq_mhc_i_combined = combined_reports.mhc_i.map { patient, _mhc_class, tsv -> tuple(patient, tsv) }
+        pvacseq_mhc_ii_combined = combined_reports.mhc_ii.map { patient, _mhc_class, tsv -> tuple(patient, tsv) }
         pvacfuse = pvacfuse
 
 }

@@ -40,6 +40,7 @@ workflow {
     hla_pvac_input = VAXIMILE.out.hla_pvac_input
     pvacseq = VAXIMILE.out.pvacseq
     pvacseq_mhc_i_combined = VAXIMILE.out.pvacseq_mhc_i_combined
+    pvacseq_mhc_ii_combined = VAXIMILE.out.pvacseq_mhc_ii_combined
     pvacfuse = VAXIMILE.out.pvacfuse
     salmon_gene = VAXIMILE.out.salmon_gene
 }
@@ -74,6 +75,9 @@ output {
         path { meta, pvacseq_dir -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/neoantigen_prediction/" }
     }
     pvacseq_mhc_i_combined {
+        path { patient, report -> "${params.outdir}/${patient}/" }
+    }
+    pvacseq_mhc_ii_combined {
         path { patient, report -> "${params.outdir}/${patient}/" }
     }
     pvacfuse {

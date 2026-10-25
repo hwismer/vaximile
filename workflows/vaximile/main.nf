@@ -452,6 +452,7 @@ workflow VAXIMILE {
 
     pvacseq = pvactools.pvacseq
     pvacseq_mhc_i_combined = pvactools.pvacseq_mhc_i_combined
+    pvacseq_mhc_ii_combined = pvactools.pvacseq_mhc_ii_combined
     pvacfuse = pvactools.pvacfuse
 
 
@@ -513,6 +514,7 @@ workflow VAXIMILE {
     hla_pvac_input = hla_pvac_input
     pvacseq = pvacseq
     pvacseq_mhc_i_combined = pvacseq_mhc_i_combined
+    pvacseq_mhc_ii_combined = pvacseq_mhc_ii_combined
     pvacfuse = pvacfuse
     salmon_gene = salmon_gene
 }
