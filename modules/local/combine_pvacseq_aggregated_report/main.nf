@@ -70,10 +70,10 @@ process COMBINE_PVACSEQ_AGGREGATED_REPORT {
     
     df = df.sort_values(["Tier", "sum_rank", "IC50 MT", "Gene", "AA Change"],kind="mergesort").drop(columns="sum_rank").reset_index(drop=True)
 
-    # pVACseq's ML call, when the classifier ran, next to the tier.
-    if "ML Prediction (score)" in df.columns:
-        ml = df.pop("ML Prediction (score)")
-        df.insert(df.columns.get_loc("Tier") + 1, "ML Prediction (score)", ml)
+    # pVACseq's ML call next to the tier. It only exists for class I, so it's NA otherwise
+    # to keep the same columns in both reports.
+    ml = df.pop("ML Prediction (score)") if "ML Prediction (score)" in df.columns else "NA"
+    df.insert(df.columns.get_loc("Tier") + 1, "ML Prediction (score)", ml)
     df.to_csv("${prefix}_pvacseq_${mhc_class}_reports.tsv", sep = "\\t", index = False)
     """
 

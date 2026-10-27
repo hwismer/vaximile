@@ -75,10 +75,10 @@ output {
         path { meta, pvacseq_dir -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/neoantigen_prediction/" }
     }
     pvacseq_mhc_i_combined {
-        path { patient, report -> "${params.outdir}/${patient}/" }
+        path { patient, report -> "${params.outdir}/${patient}/pvac_aggregated/pvacseq/" }
     }
     pvacseq_mhc_ii_combined {
-        path { patient, report -> "${params.outdir}/${patient}/" }
+        path { patient, report -> "${params.outdir}/${patient}/pvac_aggregated/pvacseq/" }
     }
     pvacfuse {
         path { meta, pvacfuse_dir -> "${params.outdir}/${meta.patient}/${publish_scope(meta)}/neoantigen_prediction" }

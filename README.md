@@ -206,8 +206,9 @@ Each patient's results go in `<outdir>/<patient>/`.
 <outdir>/
 └── <patient>/
     ├── <patient>_report.html          MultiQC report
-    ├── <patient>_pvacseq_mhc_i_reports.tsv   pVACseq class I reports for all of the patient's pairs
-    ├── <patient>_pvacseq_mhc_ii_reports.tsv  the same for class II
+    ├── pvac_aggregated/pvacseq/
+    │   ├── <patient>_pvacseq_mhc_i_reports.tsv   class I reports for all of the patient's pairs
+    │   └── <patient>_pvacseq_mhc_ii_reports.tsv  the same for class II
     ├── somatic_samples/
     │   └── <somatic_name>/
     │       ├── somatic/               somatic VCF and table
@@ -222,10 +223,10 @@ Each patient's results go in `<outdir>/<patient>/`.
             └── salmon/                gene TPMs (RNA)
 ```
 
-- **`<patient>_pvacseq_mhc_i_reports.tsv`** and **`_mhc_ii_reports.tsv`** join each pair's
-  pVACseq aggregated report for that class, ranked by tier, with every sample's allelic depth.
-  The class I report also has pVACseq's ML call (`ML Prediction (score)`, e.g. `Accept (0.71)`)
-  next to the tier when the classifier runs.
+- **`pvac_aggregated/pvacseq/`** holds one report per MHC class that joins each pair's pVACseq
+  aggregated report for that class, ranked by tier, with every sample's allelic depth.
+  Both have the same columns apart from the per-allele counts. `ML Prediction (score)` (e.g.
+  `Accept (0.71)`) is pVACseq's ML call for class I; it's NA in the class II report.
 - **The MultiQC report** covers read, alignment and coverage QC, library damage, sample
   relatedness, somatic and germline variant QC, HLA alleles and LOH, copy number and pVACseq
   results. Check the somalier tables first: each pair's tumor and normal should be related.
